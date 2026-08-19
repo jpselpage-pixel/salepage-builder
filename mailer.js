@@ -1,12 +1,12 @@
 /**
- * mailer.js — ส่งอีเมลจริงผ่าน SMTP (nodemailer)
+ * mailer.js — ส่งอีเมลจริงผ่าน Gmail API (HTTPS 443) หรือ SMTP (nodemailer)
  *
- * ค่า config อ่านจากตาราง settings ก่อน (แอดมินกรอกได้ที่ /admin/otp.html)
- * แล้วค่อยใช้ค่า .env เป็นค่าเริ่มต้น
+ * การทำงาน (เลือกช่องทางอัตโนมัติ):
+ *  1. ตั้งค่า Gmail API ครบ (clientId/clientSecret/refreshToken) → ใช้ Gmail API (HTTPS 443 — ใช้ได้ทุกที่ รวม Railway)
+ *  2. ไม่มี Gmail API แต่มี SMTP → ใช้ SMTP (ใช้ได้บนเครื่อง แต่ Railway block port 587/465)
+ *  3. โหมด dev หรือยังไม่ได้ตั้งค่าอะไร → จำลอง (console + ลิงก์ dev)
  *
- * การทำงาน:
- *  - ตั้งค่า SMTP ครบ + ปิดโหมด dev → ส่งอีเมลจริงผ่าน nodemailer
- *  - โหมด dev หรือยังไม่ตั้งค่า SMTP → จำลอง (พิมพ์ที่ console + แสดงลิงก์ dev)
+ * วิธีสร้าง Gmail API credentials: ดู scripts/gmail-oauth.js
  */
 'use strict';
 
@@ -36,57 +36,135 @@ function getSmtpConfig() {
   };
 }
 
+function getGmailApiConfig() {
+  const clientId = db.getSetting('gmail_client_id') || process.env.GMAIL_CLIENT_ID || '';
+  const clientSecret = db.getSetting('gmail_client_secret') || process.env.GMAIL_CLIENT_SECRET || '';
+  const refreshToken = db.getSetting('gmail_refresh_token') || process.env.GMAIL_REFRESH_TOKEN || '';
+  const user = db.getSetting('gmail_user') || process.env.GMAIL_USER || '';
+  return {
+    clientId,
+    clientSecret,
+    refreshToken,
+    user,
+    configured: Boolean(clientId && clientSecret && refreshToken && user),
+  };
+}
+
 let transporter = null;
 function _resetTransporter() { transporter = null; }
 
+// ---------------------------------------------------------------------------
+// Gmail API (OAuth2 + HTTPS 443) — ใช้ได้บน Railway
+// ---------------------------------------------------------------------------
+async function getGmailAccessToken(cfg) {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: cfg.clientId,
+      client_secret: cfg.clientSecret,
+      refresh_token: cfg.refreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok || !data.access_token) {
+    throw new Error(data.error_description || data.error || 'Gmail token error');
+  }
+  return data.access_token;
+}
+
+async function sendViaGmailApi({ to, subject, htmlBody, cfg }) {
+  const accessToken = await getGmailAccessToken(cfg);
+  // สร้าง RFC822 email (MIME base64url)
+  const from = cfg.user;
+  const email = [
+    `To: ${to}`,
+    `From: ${from}`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: 7bit',
+    '',
+    htmlBody,
+  ].join('\r\n');
+  const raw = Buffer.from(email, 'utf8').toString('base64url');
+
+  const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + accessToken,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ raw }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error?.message || data.error || 'Gmail API send error');
+  }
+  return { ok: true, messageId: data.id };
+}
+
 /**
- * ส่งอีเมลจริง (ถ้าตั้งค่า SMTP ครบ + ปิด dev) — ไม่เช่นนั้นจำลองที่ console
- * @returns {{ ok: boolean, simulated?: boolean, messageId?: string, error?: string }}
+ * ส่งอีเมลจริง (Gmail API → SMTP → จำลอง ตามลำดับ) — ไม่เช่นนั้นจำลองที่ console
+ * @returns {{ ok: boolean, simulated?: boolean, messageId?: string, error?: string, channel?: string }}
  */
 async function sendEmail({ to, subject, htmlBody }) {
-  const cfg = getSmtpConfig();
+  const gmailCfg = getGmailApiConfig();
+  const smtpCfg = getSmtpConfig();
   const dev = devModeEnabled();
 
-  if (cfg.configured && !dev) {
+  // 1) Gmail API — ใช้ได้ทุกที่ (รวม Railway)
+  if (gmailCfg.configured && !dev) {
+    try {
+      const r = await sendViaGmailApi({ to, subject, htmlBody, cfg: gmailCfg });
+      return { ...r, channel: 'gmail-api' };
+    } catch (err) {
+      console.error('❌ Gmail API ส่งไม่สำเร็จ:', err.message);
+      return { ok: false, channel: 'gmail-api', error: err.message || 'ส่งอีเมลไม่สำเร็จ' };
+    }
+  }
+
+  // 2) SMTP (nodemailer) — ใช้ได้บนเครื่อง (Railway block port)
+  if (smtpCfg.configured && !dev) {
     try {
       if (!transporter) {
         const nodemailer = require('nodemailer');
         const dns = require('node:dns');
-        // Railway ยังไม่มี IPv6 outbound — resolve hostname → IPv4 แล้วใช้ IP ตรงๆ (กัน ENETUNREACH)
         const ipv4 = await new Promise((resolve) => {
-          dns.resolve4(cfg.host, (err, addrs) => resolve(err || !addrs || !addrs.length ? null : addrs[0]));
+          dns.resolve4(smtpCfg.host, (err, addrs) => resolve(err || !addrs || !addrs.length ? null : addrs[0]));
         });
         transporter = nodemailer.createTransport({
-          host: ipv4 || cfg.host,
-          port: cfg.port,
-          secure: cfg.port === 465, // 465 = SSL, 587 = STARTTLS
-          auth: { user: cfg.user, pass: cfg.pass },
-          tls: { rejectUnauthorized: false, servername: cfg.host }, // SNI ให้ cert ตรงกับ hostname จริง
+          host: ipv4 || smtpCfg.host,
+          port: smtpCfg.port,
+          secure: smtpCfg.port === 465,
+          auth: { user: smtpCfg.user, pass: smtpCfg.pass },
+          tls: { rejectUnauthorized: false, servername: smtpCfg.host },
           connectionTimeout: 15000,
           greetingTimeout: 15000,
           socketTimeout: 15000,
         });
       }
       const info = await transporter.sendMail({
-        from: cfg.from,
+        from: smtpCfg.from,
         to,
         subject,
         html: htmlBody,
       });
-      return { ok: true, messageId: info.messageId };
+      return { ok: true, messageId: info.messageId, channel: 'smtp' };
     } catch (err) {
-      return { ok: false, error: err.message || 'ส่งอีเมลไม่สำเร็จ' };
+      return { ok: false, channel: 'smtp', error: err.message || 'ส่งอีเมลไม่สำเร็จ' };
     }
   }
 
-  // โหมดจำลอง (dev เปิด หรือยังไม่ตั้งค่า SMTP)
+  // 3) โหมดจำลอง (dev เปิด หรือยังไม่ได้ตั้งค่าอะไร)
   console.log('📧 [อีเมล — โหมดจำลอง]');
   console.log('   ถึง: ' + to);
   console.log('   หัวข้อ: ' + subject);
   console.log('   เนื้อหา:');
   console.log('   ' + htmlBody.replace(/<[^>]+>/g, '').replace(/\n+/g, '\n   ').trim());
-  if (!cfg.configured && !dev) {
-    console.log('   ⚠️ เตือน: ปิดโหมด dev แล้วแต่ยังไม่ตั้งค่า SMTP → กรุณากรอกค่าที่หน้าแอดมิน');
+  if (!dev) {
+    console.log('   ⚠️ เตือน: ปิดโหมด dev แล้วแต่ยังไม่ได้ตั้งค่า Gmail API/SMTP → กรุณากรอกค่าที่หน้าแอดมิน');
   }
   return { ok: true, simulated: true };
 }
@@ -97,16 +175,15 @@ async function sendEmail({ to, subject, htmlBody }) {
  */
 function sendVerificationEmail({ email, token, baseUrl }) {
   const link = `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
-  const subject = 'ยืนยันอีเมล — ร้านค้าออนไลน์';
+  const subject = 'ยืนยันอีเมล — SalePage';
   const htmlBody = `
     <p>สวัสดีครับ/ค่ะ,</p>
-    <p>ขอบคุณที่สมัครสมาชิกกับร้านค้าออนไลน์ของเรา</p>
+    <p>ขอบคุณที่สมัครสมาชิกกับ SalePage ของเรา</p>
     <p>กรุณาคลิกปุ่มด้านล่างเพื่อยืนยันอีเมลของคุณ (ลิงก์มีอายุ 24 ชั่วโมง):</p>
     <p><a href="${link}" style="background:#667eea;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;">ยืนยันอีเมล</a></p>
     <p>หรือคัดลอกลิงก์: ${link}</p>
     <p>หากคุณไม่ได้สมัครสมาชิก กรุณาเพิกเฉยอีเมลนี้</p>
   `;
-  // ส่งแบบไม่บล็อก — ผลลัพธ์ไปที่ console
   sendEmail({ to: email, subject, htmlBody }).catch((err) => console.error('❌ ส่งอีเมลยืนยันผิดพลาด:', err.message));
   return { link, token };
 }
@@ -116,7 +193,7 @@ function sendVerificationEmail({ email, token, baseUrl }) {
  * โหมด dev: แสดงรหัสที่ console + server.js แนบ devOtp กลับให้ทดสอบ
  */
 function sendOtpEmail({ email, code }) {
-  const subject = 'รหัสยืนยัน (OTP) — ร้านค้าออนไลน์';
+  const subject = 'รหัสยืนยัน (OTP) — SalePage';
   const htmlBody = `
     <p>สวัสดีครับ/ค่ะ,</p>
     <p>คุณได้ขอรหัสยืนยันเพื่อกู้รหัสผ่านบัญชีของคุณ</p>
@@ -127,4 +204,13 @@ function sendOtpEmail({ email, code }) {
   sendEmail({ to: email, subject, htmlBody }).catch((err) => console.error('❌ ส่ง OTP ทางอีเมลผิดพลาด:', err.message));
 }
 
-module.exports = { sendVerificationEmail, sendOtpEmail, sendEmail, getSmtpConfig, devModeEnabled, _resetTransporter, DEV_MODE };
+module.exports = {
+  sendVerificationEmail,
+  sendOtpEmail,
+  sendEmail,
+  getSmtpConfig,
+  getGmailApiConfig,
+  devModeEnabled,
+  _resetTransporter,
+  DEV_MODE,
+};

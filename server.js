@@ -1380,6 +1380,7 @@ app.post('/api/google-setup/complete', requirePendingGoogle, async (req, res) =>
 app.get('/api/admin/smtp-status', requireAdmin, (req, res) => {
   const mailer = require('./mailer');
   const cfg = mailer.getSmtpConfig();
+  const gmail = mailer.getGmailApiConfig();
   res.json({
     ok: true,
     status: {
@@ -1390,6 +1391,14 @@ app.get('/api/admin/smtp-status', requireAdmin, (req, res) => {
       from: cfg.from || null,
       source: db.getSetting('smtp_host') ? 'admin' : 'env',
       devMode: devMode(),
+      gmail: {
+        configured: gmail.configured,
+        clientId: gmail.clientId || null,
+        clientSecret: gmail.clientSecret || null,
+        refreshToken: gmail.refreshToken || null,
+        user: gmail.user || null,
+        userMasked: gmail.user ? gmail.user.slice(0, 3) + '…' : null,
+      },
     },
   });
 });
@@ -1464,6 +1473,71 @@ app.post('/api/admin/smtp-test', requireAdmin, async (req, res) => {
       : 'ส่งอีเมลทดสอบสำเร็จแล้ว (ตรวจที่อินบ็อกซ์ของคุณ)',
     simulated: Boolean(result.simulated),
   });
+});
+
+// ---------------------------------------------------------------------------
+// Admin — Gmail API (HTTPS 443 — ใช้ได้บน Railway)
+// ---------------------------------------------------------------------------
+app.post('/api/admin/gmail-settings', requireAdmin, (req, res) => {
+  const { clientId, clientSecret, refreshToken, user } = req.body || {};
+  let changed = 0;
+
+  if (clientId !== undefined && clientId !== '') {
+    if (!/^[\w.-]+\.apps\.googleusercontent\.com$/.test(String(clientId).trim())) {
+      return res.status(400).json({ ok: false, message: 'Gmail Client ID ไม่ถูกต้อง (ควรลงท้าย .apps.googleusercontent.com)' });
+    }
+    db.setSetting('gmail_client_id', String(clientId).trim());
+    changed++;
+  }
+  if (clientSecret !== undefined && clientSecret !== '') {
+    db.setSetting('gmail_client_secret', String(clientSecret));
+    changed++;
+  }
+  if (refreshToken !== undefined && refreshToken !== '') {
+    db.setSetting('gmail_refresh_token', String(refreshToken));
+    changed++;
+  }
+  if (user !== undefined && user !== '') {
+    if (!isValidEmail(String(user).trim())) {
+      return res.status(400).json({ ok: false, message: 'Gmail User (อีเมลผู้ส่ง) ไม่ถูกต้อง' });
+    }
+    db.setSetting('gmail_user', String(user).trim());
+    changed++;
+  }
+
+  require('./mailer')._resetTransporter();
+  console.log(`👑 [แอดมิน] บันทึกการตั้งค่า Gmail API (${changed} รายการ)`);
+  res.json({
+    ok: true,
+    message: changed > 0 ? `บันทึกการตั้งค่า Gmail API แล้ว (${changed} รายการ)` : 'ไม่มีรายการที่เปลี่ยนแปลง',
+  });
+});
+
+// ทดสอบส่งอีเมลผ่าน Gmail API (ต้องตั้งค่า Gmail API ครบ + ปิด dev ถึงจะส่งจริง)
+app.post('/api/admin/gmail-test', requireAdmin, async (req, res) => {
+  const to = String(req.body?.to || '').trim();
+  if (!isValidEmail(to)) {
+    return res.status(400).json({ ok: false, message: 'กรุณากรอกอีเมลปลายทางสำหรับทดสอบ' });
+  }
+  const mailer = require('./mailer');
+  const cfg = mailer.getGmailApiConfig();
+  if (!cfg.configured) {
+    return res.status(400).json({ ok: false, message: 'ยังไม่ได้ตั้งค่า Gmail API (Client ID/Secret/Refresh Token/User)' });
+  }
+  try {
+    const result = await mailer.sendEmail({
+      to,
+      subject: 'ทดสอบ Gmail API — SalePage',
+      htmlBody: '<p>✅ ทดสอบ Gmail API สำเร็จ ถ้าคุณได้รับอีเมลนี้ แสดงว่าระบบพร้อมใช้งานจริงแล้ว</p>',
+    });
+    if (!result.ok) {
+      return res.status(400).json({ ok: false, message: result.error || 'ส่งอีเมลทดสอบไม่สำเร็จ' });
+    }
+    console.log(`👑 [แอดมิน] ทดสอบ Gmail API → ${to}`);
+    res.json({ ok: true, message: 'ส่งอีเมลทดสอบผ่าน Gmail API สำเร็จแล้ว (ตรวจที่อินบ็อกซ์ของคุณ)' });
+  } catch (err) {
+    return res.status(400).json({ ok: false, message: err.message || 'ส่งอีเมลทดสอบไม่สำเร็จ' });
+  }
 });
 
 // ---------------------------------------------------------------------------
