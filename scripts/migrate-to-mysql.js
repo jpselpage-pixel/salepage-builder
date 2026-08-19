@@ -54,7 +54,7 @@ if (!DATABASE_URL) {
   console.log(`📦 settings: ${settings.length} รายการ`);
   for (const s of settings) {
     await pool.execute(
-      'INSERT INTO settings (key, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+      'INSERT INTO settings (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
       [s.key, s.value]
     );
   }

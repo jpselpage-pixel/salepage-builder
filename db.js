@@ -88,7 +88,7 @@ async function initSchema() {
   `);
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS settings (
-      key   VARCHAR(100) PRIMARY KEY,
+      \`key\`   VARCHAR(100) PRIMARY KEY,
       value TEXT NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
@@ -115,7 +115,7 @@ const settingsCache = new Map();
 
 async function loadSettingsCache() {
   settingsCache.clear();
-  const [rows] = await pool.execute('SELECT key, value FROM settings');
+  const [rows] = await pool.execute('SELECT `key`, value FROM settings');
   for (const r of rows) settingsCache.set(r.key, r.value);
 }
 
@@ -131,7 +131,7 @@ function getSetting(key) {
 async function setSetting(key, value) {
   const v = String(value);
   await pool.execute(
-    'INSERT INTO settings (key, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+    'INSERT INTO settings (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
     [key, v]
   );
   settingsCache.set(key, v);
