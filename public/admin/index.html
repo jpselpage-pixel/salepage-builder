@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ภาพรวม | ระบบหลังบ้าน</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="brand-name">หลังบ้าน</span>
+      </div>
+
+      <div class="side-label">เมนู</div>
+      <a class="side-link active" href="/admin/">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        ภาพรวม
+      </a>
+      <a class="side-link" href="/admin/otp.html">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M6 9h4M6 13h8M15 9l2 2m0 0l2-2m-2 2v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        จัดการ SMS-OTP
+      </a>
+      <a class="side-link" href="/admin/users.html">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ผู้ใช้งาน
+      </a>
+      <div class="sidebar-footer">
+        <a class="sidebar-user" href="/admin/profile.html" title="ข้อมูลส่วนตัว">
+          <div class="avatar" id="adminAvatar">A</div>
+          <div>
+            <div class="u-email" id="adminEmail">—</div>
+            <div class="u-role">แอดมิน</div>
+          </div>
+        </a>
+        <a class="side-link" href="#" id="logoutBtn">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ออกจากระบบ
+        </a>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <div class="topbar">
+        <div>
+          <h1>ภาพรวมระบบ</h1>
+          <p>สถิติผู้ใช้และระบบยืนยันตัวตน (SMS-OTP)</p>
+        </div>
+        <button class="icon-btn" id="refreshBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          รีเฟรช
+        </button>
+      </div>
+
+      <div class="stat-grid" id="statsGrid">
+        <div class="stat-card accent"><div class="stat-value" id="statUsers">–</div><div class="stat-label">ผู้ใช้ทั้งหมด</div></div>
+        <div class="stat-card"><div class="stat-value" id="statActive">–</div><div class="stat-label">ผู้ใช้ที่ยืนยันแล้ว</div></div>
+        <div class="stat-card"><div class="stat-value" id="statOtpTotal">–</div><div class="stat-label">OTP ทั้งหมด</div></div>
+        <div class="stat-card"><div class="stat-value" id="statOtpValid">–</div><div class="stat-label">OTP ยังใช้ได้</div></div>
+        <div class="stat-card"><div class="stat-value" id="statOtpUsed">–</div><div class="stat-label">OTP ใช้แล้ว</div></div>
+        <div class="stat-card"><div class="stat-value" id="statOtpExpired">–</div><div class="stat-label">OTP หมดอายุ</div></div>
+      </div>
+
+      <div class="admin-card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M6 9h4M6 13h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          OTP ล่าสุด
+          <a class="icon-btn primary" href="/admin/otp.html" style="margin-left:auto;text-decoration:none;padding:7px 14px;">จัดการทั้งหมด</a>
+        </h2>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>อีเมล</th>
+                <th>ปลายทาง</th>
+                <th>ประเภท</th>
+                <th>สถานะ</th>
+                <th>สร้างเมื่อ</th>
+              </tr>
+            </thead>
+            <tbody id="recentBody">
+              <tr><td colspan="5" class="empty-state">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const toast = document.getElementById('toast');
+    const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const ICON_ALERT = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    let toastTimer = null;
+    function showToast(msg) {
+      toast.innerHTML = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message || 'เกิดข้อผิดพลาด');
+      return data;
+    }
+
+    const PURPOSE_LABEL = { signup: 'สมัครสมาชิก', password_reset: 'กู้รหัสผ่าน' };
+    const STATUS_LABEL = { valid: 'ยังใช้ได้', used: 'ใช้แล้ว', expired: 'หมดอายุ' };
+    const STATUS_CLASS = { valid: 'pill-valid', used: 'pill-used', expired: 'pill-expired' };
+
+    function mask(v) {
+      const d = String(v).replace(/[^0-9]/g, '');
+      return d.length >= 7 ? d.slice(0, 3) + '-***-' + d.slice(-4) : v;
+    }
+
+    async function loadStats() {
+      const { stats } = await api('/api/admin/stats');
+      document.getElementById('statUsers').textContent = stats.users;
+      document.getElementById('statActive').textContent = stats.activeUsers;
+      document.getElementById('statOtpTotal').textContent = stats.otpTotal;
+      document.getElementById('statOtpValid').textContent = stats.otpValid;
+      document.getElementById('statOtpUsed').textContent = stats.otpUsed;
+      document.getElementById('statOtpExpired').textContent = stats.otpExpired;
+    }
+
+    async function loadRecent() {
+      const { logs } = await api('/api/admin/otp-logs?limit=10');
+      const tbody = document.getElementById('recentBody');
+      if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">ยังไม่มีรายการ OTP</td></tr>';
+        return;
+      }
+      tbody.innerHTML = logs.map((l) => `
+        <tr>
+          <td class="email-cell">${escapeHtml(l.email)}</td>
+          <td class="mono">${l.purpose === 'password_reset' ? escapeHtml(l.contact) : mask(l.contact)}</td>
+          <td>${PURPOSE_LABEL[l.purpose] || l.purpose}</td>
+          <td><span class="pill ${STATUS_CLASS[l.status]}">${STATUS_LABEL[l.status]}</span></td>
+          <td class="mono">${l.created_at}</td>
+        </tr>`).join('');
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    async function init() {
+      try {
+        const me = await api('/api/me');
+        if (me.user.role !== 'admin') { window.location.href = '/login.html'; return; }
+        document.getElementById('adminEmail').textContent = me.user.email;
+        document.getElementById('adminAvatar').textContent = me.user.email.charAt(0).toUpperCase();
+        await Promise.all([loadStats(), loadRecent()]);
+      } catch (err) {
+        window.location.href = '/login.html';
+      }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+      const rb = document.getElementById('refreshBtn');
+      rb.classList.add('spinning'); rb.disabled = true;
+      Promise.all([loadStats(), loadRecent()])
+        .then(() => showToast(ICON_CHECK + 'อัปเดตข้อมูลแล้ว'))
+        .catch(() => showToast(ICON_ALERT + 'โหลดข้อมูลไม่สำเร็จ'))
+        .finally(() => { rb.classList.remove('spinning'); rb.disabled = false; });
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    init();
+  </script>
+</body>
+</html>

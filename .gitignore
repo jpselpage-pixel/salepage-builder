@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+
+# env
+.env
+
+# database (ไม่ควรอัปโหลดข้อมูลจริงขึ้น GitHub)
+*.db
+*.db-wal
+*.db-shm
+shop.db*
+
+# logs
+*.log
+
+# uploads (รูปที่ผู้ใช้อัปโหลด)
+public/uploads/
+
+# os / editor
+.DS_Store
+Thumbs.db
+
+# test artifacts
+gui-test-screenshots/
+.zcode/

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบ | ร้านค้าออนไลน์</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/theme.js"></script>
+</head>
+<body>
+  <div class="auth-layout">
+    <!-- พาเนลแบรนด์ (ซ้าย) -->
+    <aside class="brand-panel">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+      <div class="grid-overlay"></div>
+
+      <div class="brand-header">
+        <div class="brand-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="brand-name">ร้านค้าออนไลน์</span>
+      </div>
+
+      <div class="brand-content">
+        <h1>ช้อปปิ้งออนไลน์<br>สะดวก ง่าย ปลอดภัย</h1>
+        <p>ยินดีต้อนรับกลับสู่ร้านค้าออนไลน์ของเรา ลงชื่อเข้าใช้เพื่อจัดการคำสั่งซื้อและบัญชีของคุณ</p>
+        <div class="brand-features">
+          <div class="brand-feature">
+            <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            ยืนยันตัวตนด้วยรหัส OTP ปลอดภัยทุกคำสั่งซื้อ
+          </div>
+          <div class="brand-feature">
+            <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            ติดตามสถานะคำสั่งซื้อได้ตลอด 24 ชั่วโมง
+          </div>
+          <div class="brand-feature">
+            <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            ข้อมูลส่วนบุคคลของคุณถูกปกป้องตามมาตรฐาน PDPA
+          </div>
+        </div>
+      </div>
+
+      <div class="brand-footer">© 2026 ร้านค้าออนไลน์ — สงวนลิขสิทธิ์</div>
+    </aside>
+
+    <!-- พาเนลฟอร์ม (ขวา) -->
+    <main class="form-panel">
+      <button class="theme-toggle" type="button" aria-label="สลับธีม">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" style="display:none">
+          <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none">
+          <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="auth-card">
+        <div class="auth-head">
+          <div class="mobile-brand">
+            <div class="brand-logo">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="brand-name">ร้านค้าออนไลน์</span>
+          </div>
+          <h1>ยินดีต้อนรับกลับ!</h1>
+          <p>เข้าสู่ระบบเพื่อจัดการบัญชีและคำสั่งซื้อของคุณ</p>
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <form id="loginForm" novalidate>
+          <div class="field">
+            <label for="email">อีเมล</label>
+            <input type="email" id="email" name="email" placeholder="คุณ@example.com" autocomplete="email" required>
+          </div>
+
+          <div class="field">
+            <label for="password">รหัสผ่าน</label>
+            <div class="input-wrap">
+              <input type="password" id="password" name="password" placeholder="กรอกรหัสผ่านของคุณ" autocomplete="current-password" required style="padding-right:46px;">
+              <button type="button" class="toggle-password" data-target="password" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="row-inline">
+            <a href="forgot.html" class="link-muted">ลืมรหัสผ่าน?</a>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="submitBtn">เข้าสู่ระบบ</button>
+        </form>
+
+        <div class="divider">หรือดำเนินการต่อด้วย</div>
+
+        <button class="btn btn-google" id="googleBtn" type="button">
+          <svg viewBox="0 0 48 48">
+            <path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/>
+            <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 18.9 12 24 12c3.1 0 5.9 1.2 8 3l5.7-5.7C34.4 6.1 29.5 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/>
+            <path fill="#4CAF50" d="M24 44c5.5 0 10.4-2 14.2-5.3l-6.6-5.6C29.7 34.7 27 36 24 36c-5.2 0-9.7-3.3-11.3-8l-6.5 5C9.6 39.6 16.3 44 24 44z"/>
+            <path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.3-2.2 4.3-4 5.7l6.6 5.6c-.5.4 6.1-4.4 6.1-13.4 0-1.3-.1-2.6-.4-3.8z"/>
+          </svg>
+          เข้าสู่ระบบด้วย Google
+        </button>
+
+        <p class="auth-switch">
+          ยังไม่มีบัญชี? <a href="register.html">สมัครสมาชิก</a>
+        </p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const errorMsg = document.getElementById('errorMsg');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // แสดง/ซ่อนรหัสผ่าน
+    document.querySelectorAll('.toggle-password').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target);
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        btn.querySelector('svg').innerHTML = isHidden
+          ? '<path d="M17.9 17.9A11 11 0 011 12s4-8 11-8a10.8 10.8 0 014.5 1M9.9 4.2A10.7 10.7 0 0112 4c7 0 11 8 11 8a17.9 17.9 0 01-2.2 3.2M6.6 6.6A17.9 17.9 0 011 12s4 8 11 8a10.7 10.7 0 006-1.8M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
+          : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>';
+      });
+    });
+
+    function showError(message) {
+      errorMsg.textContent = message;
+      errorMsg.style.display = 'block';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.style.display = 'none';
+
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        showError('กรุณากรอกอีเมลและรหัสผ่านให้ครบถ้วน');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.classList.add('loading');
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        });
+        const data = await res.json();
+
+        if (!data.ok) {
+          showError(data.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+          return;
+        }
+
+        // ถ้ามี ?next= (ถูกเด้งมาจากหน้าที่ต้องล็อกอิน) → กลับไปหน้านั้น
+        const nextParam = new URLSearchParams(window.location.search).get('next');
+        const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : null;
+        window.location.href = safeNext || data.redirect || '/dashboard/pages';
+      } catch {
+        showError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('loading');
+      }
+    });
+
+    document.getElementById('googleBtn').addEventListener('click', async () => {
+      try {
+        const res = await fetch('/api/auth/google/url');
+        const data = await res.json();
+        if (data.ok && data.url) {
+          window.location.href = data.url;
+        } else {
+          showError('ไม่สามารถเริ่มเข้าสู่ระบบด้วย Google ได้');
+        }
+      } catch {
+        showError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      }
+    });
+  </script>
+</body>
+</html>

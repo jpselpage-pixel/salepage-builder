@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ลืมรหัสผ่าน | ร้านค้าออนไลน์</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/theme.js"></script>
+  <style>
+    /* ตัวบอกขั้นตอน */
+    .stepper { display: flex; justify-content: center; gap: 8px; margin: -6px 0 24px; }
+    .stepper .dot {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700;
+      background: var(--surface-2); color: var(--muted);
+      border: 1px solid var(--border);
+      transition: all 0.25s ease;
+    }
+    .stepper .dot.active { background: var(--accent-gradient); color: #fff; border-color: transparent; box-shadow: 0 4px 10px rgba(99,102,241,.35); }
+    .stepper .line { width: 26px; height: 2px; align-self: center; background: var(--border); border-radius: 2px; }
+    .stepper .line.active { background: var(--accent); }
+
+    .otp-note { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 18px; line-height: 1.6; }
+    .otp-note strong { color: var(--text); }
+
+    .done-box { text-align: center; padding: 10px 0; }
+    .done-box .icon { font-size: 52px; margin-bottom: 12px; }
+    .done-box .btn { margin-top: 22px; width: auto; padding-left: 32px; padding-right: 32px; }
+  </style>
+</head>
+<body>
+  <div class="auth-layout">
+    <!-- พาเนลแบรนด์ (ซ้าย) -->
+    <aside class="brand-panel">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+      <div class="grid-overlay"></div>
+
+      <div class="brand-header">
+        <div class="brand-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="brand-name">ร้านค้าออนไลน์</span>
+      </div>
+
+      <div class="brand-content">
+        <h1>ลืมรหัสผ่าน<br>ไม่ใช่ปัญหา</h1>
+        <p>กู้รหัสผ่านกลับคืนได้ในไม่กี่นาที ด้วยการยืนยันตัวตนผ่านรหัส OTP ที่ส่งไปยังอีเมลของคุณ</p>
+        <div class="brand-features">
+          <div class="brand-feature">
+            <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            ใช้รหัส OTP ทางอีเมลยืนยันตัวตน
+          </div>
+          <div class="brand-feature">
+            <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            โทเคนยืนยันมีอายุ 10 นาทีเท่านั้น
+          </div>
+          <div class="brand-feature">
+            <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            เปลี่ยนรหัสเสร็จ ออกจากระบบทุกเครื่องทันที
+          </div>
+        </div>
+      </div>
+
+      <div class="brand-footer">© 2026 ร้านค้าออนไลน์ — สงวนลิขสิทธิ์</div>
+    </aside>
+
+    <!-- พาเนลฟอร์ม (ขวา) -->
+    <main class="form-panel">
+      <button class="theme-toggle" type="button" aria-label="สลับธีม">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" style="display:none">
+          <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none">
+          <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="auth-card">
+        <div class="auth-head">
+          <div class="mobile-brand">
+            <div class="brand-logo">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="brand-name">ร้านค้าออนไลน์</span>
+          </div>
+          <h1 id="stepTitle">ลืมรหัสผ่าน</h1>
+          <p id="stepSubtitle">กรอกอีเมลเพื่อรับรหัสยืนยัน (OTP)</p>
+        </div>
+
+        <!-- ตัวบอกขั้นตอน 1 → 2 → 3 -->
+        <div class="stepper">
+          <span class="dot" id="stepDot1">1</span><span class="line" id="stepLine1"></span>
+          <span class="dot" id="stepDot2">2</span><span class="line" id="stepLine2"></span>
+          <span class="dot" id="stepDot3">3</span>
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <!-- ขั้นที่ 1: กรอกอีเมล -->
+        <div id="step1">
+          <div class="field">
+            <label for="email">อีเมล</label>
+            <input type="email" id="email" placeholder="คุณ@example.com" autocomplete="email">
+            <span class="field-error" id="emailError"></span>
+          </div>
+          <button class="btn btn-primary" id="sendOtpBtn">ส่งรหัส OTP ทางอีเมล</button>
+          <p class="auth-switch"><a href="login.html">← กลับไปเข้าสู่ระบบ</a></p>
+        </div>
+
+        <!-- ขั้นที่ 2: กรอกรหัส OTP -->
+        <div id="step2" style="display:none;">
+          <div class="dev-banner" id="devBanner">
+            <svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="vertical-align:-2px;margin-right:6px;"><path d="M9 3h6M10 3v6.5L4.6 18.4A2 2 0 006.5 22h11a2 2 0 001.9-3.6L14 9.5V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> <strong>โหมดทดสอบ (dev)</strong><br>
+            รหัส OTP ของคุณ: <span class="code" id="devOtpText">—</span>
+          </div>
+          <p class="otp-note">เราส่งรหัสยืนยันไปยัง<br><strong id="otpEmailLabel">—</strong></p>
+          <div class="otp-inputs" id="otpInputs">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="หลักที่ 1">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 2">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 3">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 4">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 5">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 6">
+          </div>
+          <button class="btn btn-primary" id="verifyOtpBtn">ยืนยันรหัส</button>
+          <p class="resend-row">
+            ไม่ได้รับรหัส? <button id="resendBtn">ส่งรหัสใหม่</button>
+            <span id="resendTimer"></span>
+          </p>
+          <p class="back-row"><a href="#" id="backToStep1">← แก้ไขอีเมล</a></p>
+        </div>
+
+        <!-- ขั้นที่ 3: ตั้งรหัสผ่านใหม่ -->
+        <div id="step3" style="display:none;">
+          <div class="field">
+            <label for="newPassword">รหัสผ่านใหม่</label>
+            <div class="input-wrap">
+              <input type="password" id="newPassword" placeholder="อย่างน้อย 8 ตัวอักษร" autocomplete="new-password" style="padding-right:46px;">
+              <button type="button" class="toggle-password" data-target="newPassword" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+              </button>
+            </div>
+            <div class="strength-wrap">
+              <div class="strength-bar">
+                <span data-strength="0"></span><span data-strength="1"></span><span data-strength="2"></span>
+                <span data-strength="3"></span><span data-strength="4"></span><span data-strength="5"></span>
+              </div>
+              <div class="strength-label" id="strengthLabel"></div>
+            </div>
+            <span class="field-error" id="newPasswordError"></span>
+          </div>
+
+          <div class="field">
+            <label for="confirmPassword">ยืนยันรหัสผ่านใหม่</label>
+            <div class="input-wrap">
+              <input type="password" id="confirmPassword" placeholder="กรอกรหัสผ่านอีกครั้ง" autocomplete="new-password" style="padding-right:46px;">
+              <button type="button" class="toggle-password" data-target="confirmPassword" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+              </button>
+            </div>
+            <span class="field-error" id="confirmError"></span>
+          </div>
+
+          <button class="btn btn-primary" id="resetBtn">ตั้งรหัสผ่านใหม่</button>
+          <p class="back-row"><a href="#" id="backToStep2">← กลับไปกรอกรหัส OTP</a></p>
+        </div>
+
+        <!-- เสร็จสิ้น -->
+        <div id="done" style="display:none;">
+          <div class="done-box">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" width="52" height="52" style="color:var(--success);"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 12.5l2.5 2.5 4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <h2 style="margin-bottom:8px;">ตั้งรหัสผ่านใหม่สำเร็จ!</h2>
+            <p style="color:var(--muted);font-size:14px;line-height:1.7;">ระบบได้ออกจากระบบทุกเครื่องแล้ว<br>กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่</p>
+            <a class="btn btn-primary" href="login.html">ไปหน้าเข้าสู่ระบบ</a>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ข้อมูลชั่วคราวของ flow กู้รหัสผ่าน
+    const FLOW_KEY = 'forgotFlow';
+    let flow = null;
+    try { flow = JSON.parse(sessionStorage.getItem(FLOW_KEY)); } catch { /* ignore */ }
+    if (!flow) flow = {};
+
+    const errorMsg = document.getElementById('errorMsg');
+    const TITLES = {
+      1: ['ลืมรหัสผ่าน', 'กรอกอีเมลเพื่อรับรหัสยืนยัน (OTP)'],
+      2: ['ตรวจสอบรหัสยืนยัน', 'กรอกรหัส OTP ที่ส่งไปยังอีเมลของคุณ'],
+      3: ['ตั้งรหัสผ่านใหม่', 'เลือกรหัสผ่านใหม่ที่จำง่ายและปลอดภัย'],
+    };
+
+    function showStep(n) {
+      ['step1', 'step2', 'step3'].forEach((id, i) => {
+        document.getElementById(id).style.display = (i + 1 === n) ? '' : 'none';
+      });
+      document.getElementById('done').style.display = 'none';
+      document.getElementById('stepTitle').textContent = TITLES[n][0];
+      document.getElementById('stepSubtitle').textContent = TITLES[n][1];
+      // อัปเดต stepper
+      for (let i = 1; i <= 3; i++) {
+        document.getElementById('stepDot' + i).classList.toggle('active', i <= n);
+        if (i < 3) document.getElementById('stepLine' + i).classList.toggle('active', i < n);
+      }
+      errorMsg.style.display = 'none';
+    }
+
+    function showError(message) { errorMsg.textContent = message; errorMsg.style.display = 'block'; }
+    function saveFlow() { sessionStorage.setItem(FLOW_KEY, JSON.stringify(flow)); }
+
+    // ---------- แสดง/ซ่อนรหัสผ่าน ----------
+    document.querySelectorAll('.toggle-password').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target);
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        btn.querySelector('svg').innerHTML = isHidden
+          ? '<path d="M17.9 17.9A11 11 0 011 12s4-8 11-8a10.8 10.8 0 014.5 1M9.9 4.2A10.7 10.7 0 0112 4c7 0 11 8 11 8a17.9 17.9 0 01-2.2 3.2M6.6 6.6A17.9 17.9 0 011 12s4 8 11 8a10.7 10.7 0 006-1.8M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
+          : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>';
+      });
+    });
+
+    // ---------- ตัววัดความแข็งแรงรหัสผ่าน (ต้องตรงกับฝั่ง server) ----------
+    function passwordStrength(pw) {
+      let score = 0;
+      if (pw.length >= 8) score++;
+      if (pw.length >= 12) score++;
+      if (/[A-Z]/.test(pw)) score++;
+      if (/[a-z]/.test(pw)) score++;
+      if (/\d/.test(pw)) score++;
+      if (/[^A-Za-z0-9]/.test(pw)) score++;
+      return score;
+    }
+    const STRENGTH_TEXT = [
+      { min: 0, label: 'อ่อนเกินไป', color: '#ef4444' },
+      { min: 2, label: 'ยังไม่พอ ต้องผ่านอย่างน้อย 3 เกณฑ์', color: '#f59e0b' },
+      { min: 3, label: 'พอใช้', color: '#f59e0b' },
+      { min: 4, label: 'ดี', color: '#10b981' },
+      { min: 5, label: 'แข็งแรง', color: '#059669' },
+    ];
+    document.getElementById('newPassword').addEventListener('input', () => {
+      const score = passwordStrength(document.getElementById('newPassword').value);
+      document.querySelectorAll('#step3 .strength-bar span').forEach((el) => {
+        el.style.background = Number(el.dataset.strength) < score ? 'var(--accent)' : 'var(--border)';
+      });
+      const info = STRENGTH_TEXT[0];
+      for (const item of STRENGTH_TEXT) if (score >= item.min) info.label = item.label, info.color = item.color;
+      const label = document.getElementById('strengthLabel');
+      label.textContent = info.label;
+      label.style.color = info.color;
+    });
+
+    // ---------- ช่องกรอก OTP 6 หลัก ----------
+    const otpInputs = Array.from(document.querySelectorAll('#otpInputs input'));
+    function currentCode() { return otpInputs.map((i) => i.value).join(''); }
+    function moveTo(index) { if (index >= 0 && index < otpInputs.length) otpInputs[index].focus(); }
+    otpInputs.forEach((input, index) => {
+      input.addEventListener('input', () => {
+        input.value = input.value.replace(/[^0-9]/g, '').slice(0, 1);
+        if (input.value && index < otpInputs.length - 1) moveTo(index + 1);
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !input.value && index > 0) moveTo(index - 1);
+        if (e.key === 'ArrowLeft' && index > 0) moveTo(index - 1);
+        if (e.key === 'ArrowRight' && index < otpInputs.length - 1) moveTo(index + 1);
+      });
+      input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const text = (e.clipboardData.getData('text') || '').replace(/[^0-9]/g, '').slice(0, 6);
+        text.split('').forEach((ch, i) => { if (otpInputs[i]) otpInputs[i].value = ch; });
+        moveTo(Math.min(text.length, otpInputs.length - 1));
+      });
+    });
+
+    // ---------- ขั้นที่ 1: ส่ง OTP ทางอีเมล ----------
+    document.getElementById('sendOtpBtn').addEventListener('click', async () => {
+      const emailInput = document.getElementById('email');
+      const email = emailInput.value.trim();
+      const emailError = document.getElementById('emailError');
+      emailError.style.display = 'none';
+      emailInput.classList.remove('invalid');
+
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        emailError.textContent = 'กรุณากรอกอีเมลให้ถูกต้อง';
+        emailError.style.display = 'block';
+        emailInput.classList.add('invalid');
+        return;
+      }
+
+      const btn = document.getElementById('sendOtpBtn');
+      btn.disabled = true;
+      btn.classList.add('loading');
+      try {
+        const res = await fetch('/api/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (!data.ok) { showError(data.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่'); return; }
+
+        flow.email = email.toLowerCase();
+        flow.devOtp = data.dev ? data.dev.devOtp : null;
+        flow.userExists = data.dev ? data.dev.userExists : null;
+        flow.resetToken = null;
+        delete flow.devUserExistsMsg;
+        saveFlow();
+
+        // เตรียมขั้นที่ 2
+        document.getElementById('otpEmailLabel').textContent = flow.email;
+        const devBanner = document.getElementById('devBanner');
+        if (flow.devOtp) {
+          document.getElementById('devOtpText').textContent = flow.devOtp;
+          devBanner.style.display = 'block';
+        } else {
+          devBanner.style.display = 'none';
+        }
+        otpInputs.forEach((i) => { i.value = ''; });
+        showStep(2);
+        otpInputs[0].focus();
+        startResendTimer();
+      } catch {
+        showError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    });
+
+    // ---------- ขั้นที่ 2: ตรวจ OTP ----------
+    document.getElementById('verifyOtpBtn').addEventListener('click', async () => {
+      const code = currentCode();
+      if (code.length !== 6) {
+        showError('กรุณากรอกรหัส OTP ให้ครบ 6 หลัก');
+        otpInputs.forEach((i) => i.classList.add('invalid'));
+        return;
+      }
+      otpInputs.forEach((i) => i.classList.remove('invalid'));
+
+      const btn = document.getElementById('verifyOtpBtn');
+      btn.disabled = true;
+      btn.classList.add('loading');
+      try {
+        const res = await fetch('/api/forgot-verify-otp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: flow.email, code }),
+        });
+        const data = await res.json();
+        if (!data.ok) { showError(data.message || 'รหัสไม่ถูกต้อง กรุณาลองใหม่'); return; }
+
+        flow.resetToken = data.resetToken;
+        saveFlow();
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        showStep(3);
+      } catch {
+        showError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    });
+
+    // ---------- ขั้นที่ 3: ตั้งรหัสผ่านใหม่ ----------
+    document.getElementById('resetBtn').addEventListener('click', async () => {
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+      const newPwErr = document.getElementById('newPasswordError');
+      const confirmErr = document.getElementById('confirmError');
+      newPwErr.style.display = 'none';
+      confirmErr.style.display = 'none';
+
+      let ok = true;
+      if (passwordStrength(newPassword) < 3) {
+        newPwErr.textContent = 'รหัสผ่านอ่อนเกินไป ต้องมีอย่างน้อย 8 ตัว และผ่านอย่างน้อย 3 เกณฑ์';
+        newPwErr.style.display = 'block';
+        ok = false;
+      }
+      if (confirmPassword !== newPassword) {
+        confirmErr.textContent = 'รหัสผ่านไม่ตรงกัน';
+        confirmErr.style.display = 'block';
+        ok = false;
+      }
+      if (!ok) return;
+
+      const btn = document.getElementById('resetBtn');
+      btn.disabled = true;
+      btn.classList.add('loading');
+      try {
+        const res = await fetch('/api/forgot-reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resetToken: flow.resetToken, newPassword }),
+        });
+        const data = await res.json();
+        if (!data.ok) { showError(data.message || 'ตั้งรหัสผ่านไม่สำเร็จ กรุณาลองใหม่'); return; }
+
+        sessionStorage.removeItem(FLOW_KEY);
+        document.getElementById('done').style.display = '';
+        document.querySelectorAll('#step1, #step2, #step3').forEach((el) => { el.style.display = 'none'; });
+        document.querySelector('.stepper').style.display = 'none';
+        document.getElementById('stepTitle').textContent = 'เสร็จสิ้น';
+        document.getElementById('stepSubtitle').textContent = '';
+      } catch {
+        showError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    });
+
+    // ---------- ส่งรหัสใหม่ (จำกัด 60 วินาที) ----------
+    const resendBtn = document.getElementById('resendBtn');
+    const resendTimer = document.getElementById('resendTimer');
+    let remaining = 0;
+
+    function tickTimer() {
+      if (remaining <= 0) { resendBtn.disabled = false; resendTimer.textContent = ''; return; }
+      resendBtn.disabled = true;
+      resendTimer.textContent = ' (' + remaining + ' วินาที)';
+      remaining--;
+      setTimeout(tickTimer, 1000);
+    }
+    function startResendTimer() { remaining = 60; tickTimer(); }
+
+    resendBtn.addEventListener('click', async () => {
+      resendBtn.disabled = true;
+      try {
+        const res = await fetch('/api/forgot-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: flow.email }),
+        });
+        const data = await res.json();
+        if (data.ok) {
+          if (data.dev && data.dev.devOtp) {
+            flow.devOtp = data.dev.devOtp;
+            document.getElementById('devOtpText').textContent = flow.devOtp;
+          }
+          errorMsg.style.display = 'none';
+          otpInputs.forEach((i) => { i.value = ''; });
+          startResendTimer();
+          otpInputs[0].focus();
+        } else {
+          showError(data.message || 'ขอรหัสใหม่ไม่สำเร็จ');
+          const wait = (data.message || '').match(/(\d+)\s*วินาที/);
+          if (wait) { remaining = Number(wait[1]); tickTimer(); }
+          else resendBtn.disabled = false;
+        }
+      } catch {
+        showError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+        resendBtn.disabled = false;
+      }
+    });
+
+    // ---------- ลิงก์ย้อนกลับ ----------
+    document.getElementById('backToStep1').addEventListener('click', (e) => {
+      e.preventDefault();
+      flow.devOtp = null;
+      flow.resetToken = null;
+      saveFlow();
+      document.getElementById('email').value = flow.email || '';
+      showStep(1);
+    });
+    document.getElementById('backToStep2').addEventListener('click', (e) => {
+      e.preventDefault();
+      showStep(2);
+      otpInputs[0].focus();
+    });
+
+    // ---------- เริ่มต้น: ถ้ามีอีเมลค้าง ให้ข้ามไปขั้น OTP ----------
+    if (flow.email) {
+      document.getElementById('otpEmailLabel').textContent = flow.email;
+      if (flow.devOtp) {
+        document.getElementById('devOtpText').textContent = flow.devOtp;
+        document.getElementById('devBanner').style.display = 'block';
+      }
+      showStep(2);
+      startResendTimer();
+    } else {
+      showStep(1);
+    }
+  </script>
+</body>
+</html>

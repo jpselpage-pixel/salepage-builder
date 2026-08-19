@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการ SMS-OTP | ระบบหลังบ้าน</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="brand-name">หลังบ้าน</span>
+      </div>
+
+      <div class="side-label">เมนู</div>
+      <a class="side-link" href="/admin/">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        ภาพรวม
+      </a>
+      <a class="side-link active" href="/admin/otp.html">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M6 9h4M6 13h8M15 9l2 2m0 0l2-2m-2 2v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        จัดการ SMS-OTP
+      </a>
+      <a class="side-link" href="/admin/users.html">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ผู้ใช้งาน
+      </a>
+      <div class="sidebar-footer">
+        <a class="sidebar-user" href="/admin/profile.html" title="ข้อมูลส่วนตัว">
+          <div class="avatar" id="adminAvatar">A</div>
+          <div>
+            <div class="u-email" id="adminEmail">—</div>
+            <div class="u-role">แอดมิน</div>
+          </div>
+        </a>
+        <a class="side-link" href="#" id="logoutBtn">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ออกจากระบบ
+        </a>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <div class="topbar">
+        <div>
+          <h1>จัดการ SMS-OTP</h1>
+          <p>สถานะระบบส่ง SMS-OTP, ตั้งค่า และติดตามรหัสยืนยันทั้งหมด</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="icon-btn" id="toggleOtpSettingsBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5h.1a1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9v.1a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg> ตั้งค่าระบบ OTP
+          </button>
+          <button class="icon-btn" id="toggleTwilioBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="7" y="2" width="10" height="20" rx="2.5" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> ตั้งค่า SMS จริง
+          </button>
+          <button class="icon-btn" id="toggleSmtpBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M22 7l-10 6L2 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ตั้งค่า SMTP (อีเมล)
+          </button>
+          <button class="icon-btn" id="refreshBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            รีเฟรช
+          </button>
+        </div>
+      </div>
+
+      <!-- สถานะระบบ SMS -->
+      <div class="stat-grid" id="statusGrid">
+        <div class="stat-card"><div class="stat-value" style="font-size:20px;" id="statusMode">–</div><div class="stat-label">โหมดการทำงาน</div></div>
+        <div class="stat-card"><div class="stat-value" style="font-size:20px;" id="statusSmsProvider">–</div><div class="stat-label">ผู้ให้บริการ SMS</div></div>
+        <div class="stat-card"><div class="stat-value" style="font-size:20px;" id="statusSmtp">–</div><div class="stat-label">SMTP (อีเมลจริง)</div></div>
+        <div class="stat-card"><div class="stat-value" id="statusTtl">–</div><div class="stat-label">OTP หมดอายุ (นาที)</div></div>
+        <div class="stat-card"><div class="stat-value" id="statusAttempts">–</div><div class="stat-label">ลองผิดได้สูงสุด</div></div>
+      </div>
+
+      <!-- ตั้งค่า OTP (ซ่อนไว้ — กดปุ่ม "ตั้งค่าระบบ OTP" ที่ topbar เพื่อเปิด) -->
+      <div class="admin-card" id="otpSettingsCard" style="display:none;">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5h.1a1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9v.1a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+          ตั้งค่าระบบ OTP
+        </h2>
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label for="otpTtl">อายุรหัส OTP (นาที)</label>
+            <input type="number" id="otpTtl" min="1" max="60" value="5">
+          </div>
+          <div class="settings-field">
+            <label for="otpAttempts">จำนวนลองผิดสูงสุด</label>
+            <input type="number" id="otpAttempts" min="1" max="20" value="5">
+          </div>
+          <div class="settings-field">
+            <label>โหมดทดสอบ (dev)</label>
+            <div class="switch-row">
+              <div style="flex:1;">
+                <div class="switch-desc">เปิด = แสดงรหัส OTP ที่ console/หน้าเว็บ (ไม่ส่งจริง)</div>
+                <div class="switch-desc">ปิด = ต้องมี SMS/อีเมลจริง ไม่งั้น OTP จะส่งไม่ออก</div>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="devModeSwitch">
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="icon-btn primary" id="saveSettingsBtn"><svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> บันทึกการตั้งค่า</button>
+          <span style="font-size:12.5px;color:var(--muted);" id="settingsHint">สวิตช์โหมด dev บันทึกทันทีเมื่อสลับ · ตัวเลข (นาที/ครั้ง) ต้องกด "บันทึกการตั้งค่า"</span>
+        </div>
+      </div>
+
+      <!-- ตั้งค่า SMS จริง — ซ่อนไว้ — กดปุ่ม "ตั้งค่า SMS จริง" เพื่อเปิด -->
+      <div class="admin-card" id="twilioCard" style="display:none;">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" stroke="currentColor" stroke-width="1.8"/><path d="M7 2v20M17 2v20M2 7h20M2 17h20" stroke="currentColor" stroke-width="1.8"/></svg>
+          ตั้งค่า SMS จริง
+        </h2>
+        <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px;">
+          เลือกผู้ให้บริการแล้วกรอกค่าตามฟอร์ม — เมื่อครบและปิดโหมด dev ระบบจะส่ง OTP ผ่าน SMS จริง
+          (ค่าเก็บในฐานข้อมูลของเรา ไม่มีการแสดง API Key/Token กลับมา)
+        </p>
+
+        <div class="settings-grid" style="margin-bottom:14px;">
+          <div class="settings-field">
+            <label for="smsProvider">ผู้ให้บริการ SMS</label>
+            <select id="smsProvider">
+              <option value="twilio">Twilio (ต่างประเทศ)</option>
+              <option value="thaibulksms">ThaiBulkSMS (ไทย 🇹🇭)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;font-size:13px;">
+          <span>สถานะ:</span>
+          <span class="pill" id="smsBadge">กำลังตรวจ...</span>
+          <span id="smsDetail" style="color:var(--muted);"></span>
+        </div>
+
+        <!-- ฟอร์ม Twilio -->
+        <div class="settings-grid" id="twilioFields" style="margin-bottom:4px;">
+          <div class="settings-field">
+            <label for="twSid">Account SID</label>
+            <input type="text" id="twSid" placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" autocomplete="off" style="font-family:monospace;font-size:13px;">
+          </div>
+          <div class="settings-field">
+            <label for="twToken">Auth Token</label>
+            <input type="password" id="twToken" placeholder="••••••••••••••••••••••••" autocomplete="new-password" style="font-family:monospace;font-size:13px;">
+          </div>
+          <div class="settings-field">
+            <label for="twPhone">เบอร์ผู้ส่ง (Twilio Phone)</label>
+            <input type="text" id="twPhone" placeholder="เช่น +12025550123" autocomplete="off">
+          </div>
+        </div>
+
+        <!-- ฟอร์ม ThaiBulkSMS -->
+        <div class="settings-grid" id="tbsFields" style="display:none;margin-bottom:4px;">
+          <div class="settings-field">
+            <label for="tbsKey">API Key</label>
+            <input type="password" id="tbsKey" placeholder="สร้างในแดชบอร์ด ThaiBulkSMS (Developer)" autocomplete="new-password" style="font-family:monospace;font-size:13px;">
+          </div>
+          <div class="settings-field">
+            <label for="tbsSecret">API Secret</label>
+            <input type="password" id="tbsSecret" placeholder="คู่กับ API Key" autocomplete="new-password" style="font-family:monospace;font-size:13px;">
+          </div>
+          <div class="settings-field">
+            <label for="tbsSender">Sender (ชื่อผู้ส่ง)</label>
+            <input type="text" id="tbsSender" placeholder="เช่น Demo (บัญชีทดลองใช้ Demo)" autocomplete="off">
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="icon-btn primary" id="saveSmsBtn"><svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> บันทึกค่า SMS</button>
+          <button class="icon-btn" id="testSmsBtn"><svg viewBox="0 0 24 24" fill="none"><rect x="7" y="2" width="10" height="20" rx="2.5" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> ทดสอบส่ง SMS</button>
+          <input type="tel" class="test-to-input" id="testTo" placeholder="เบอร์ทดสอบ เช่น 0812345678" autocomplete="off">
+          <span style="font-size:12.5px;color:var(--muted);" id="smsHint"></span>
+        </div>
+      </div>
+
+      <!-- ตั้งค่า SMTP (อีเมลจริง) — ซ่อนไว้ — กดปุ่ม "ตั้งค่า SMTP (อีเมล)" เพื่อเปิด -->
+      <div class="admin-card" id="smtpCard" style="display:none;">
+        <h2 style="display:flex;align-items:center;gap:8px;">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M22 7l-10 6L2 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ตั้งค่า SMTP (อีเมลจริง)
+          <button class="icon-btn" id="smtpHelpBtn" type="button" style="margin-left:auto;padding:6px 12px;font-size:12px;"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:6px;"><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3M12 17h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> วิธีตั้งค่า</button>
+        </h2>
+        <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px;">
+          ใช้สำหรับส่ง<b>ลิงก์ยืนยันอีเมล</b> และ <b>OTP กู้รหัสผ่านทางอีเมล</b> —
+          ตั้งค่า SMTP ของผู้ให้บริการอีเมล (เช่น Gmail, Zoho, Hosting ฯลฯ) เมื่อครบและปิดโหมด dev ระบบจะส่งอีเมลจริง
+        </p>
+
+        <!-- วิธีตั้งค่า (ซ่อนไว้ — กดปุ่ม "<svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:6px;"><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3M12 17h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> วิธีตั้งค่า") -->
+        <div class="help-box" id="smtpHelpBox" style="display:none;">
+          <strong><svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="vertical-align:-2px;margin-right:6px;"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M22 7l-10 6L2 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>วิธีตั้งค่า SMTP ด้วย Gmail (ฟรี):</strong>
+          <ol>
+            <li>ใช้บัญชี Gmail ของคุณ (แนะนำสร้างเมล์ใหม่ของร้านค้า)</li>
+            <li>เปิด <span class="hl">การยืนยัน 2 ขั้นตอน</span> ที่ myaccount.google.com/security</li>
+            <li>สร้าง <span class="hl">รหัสผ่านแอป (App Password)</span> 16 ตัว แล้วคัดลอกไว้</li>
+            <li>กรอก: Host <span class="hl">smtp.gmail.com</span> · Port <span class="hl">587</span> · User = อีเมล Gmail · Password = รหัสผ่านแอป 16 ตัว</li>
+            <li>กดบันทึก แล้วกด <span class="hl">ทดสอบส่งอีเมล</span> เพื่อตรวจ</li>
+          </ol>
+          <button class="icon-btn link-btn" type="button" onclick="window.open('https://myaccount.google.com/apppasswords','_blank')"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:6px;"><path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>ไปสร้าง App Password (Google)</button>
+          <button class="icon-btn link-btn" type="button" onclick="window.open('https://support.google.com/accounts/answer/185833','_blank')"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:6px;"><path d="M4 19.5A2.5 2.5 0 016.5 17H20M4 19.5A2.5 2.5 0 006.5 22H20V2H6.5A2.5 2.5 0 004 4.5v15z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>ดูวิธีเปิด 2 ขั้นตอน</button>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;font-size:13px;">
+          <span>สถานะ:</span>
+          <span class="pill" id="smtpBadge">กำลังตรวจ...</span>
+          <span id="smtpDetail" style="color:var(--muted);"></span>
+        </div>
+
+        <div class="settings-grid" style="margin-bottom:4px;">
+          <div class="settings-field">
+            <label for="smtpHost">SMTP Host</label>
+            <input type="text" id="smtpHost" placeholder="เช่น smtp.gmail.com">
+          </div>
+          <div class="settings-field">
+            <label for="smtpPort">SMTP Port</label>
+            <input type="number" id="smtpPort" placeholder="587" min="1" max="65535">
+          </div>
+          <div class="settings-field">
+            <label for="smtpUser">User (อีเมล/ชื่อผู้ใช้)</label>
+            <input type="text" id="smtpUser" placeholder="คุณ@gmail.com">
+          </div>
+          <div class="settings-field">
+            <label for="smtpPass">Password / App Password</label>
+            <input type="password" id="smtpPass" placeholder="รหัสผ่านแอป (App Password)" autocomplete="new-password">
+          </div>
+          <div class="settings-field">
+            <label for="smtpFrom">From (อีเมลผู้ส่ง)</label>
+            <input type="email" id="smtpFrom" placeholder="ว่าง = ใช้ User">
+          </div>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="icon-btn primary" id="saveSmtpBtn"><svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> บันทึกค่า SMTP</button>
+          <button class="icon-btn" id="testSmtpBtn"><svg viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ทดสอบส่งอีเมล</button>
+          <input type="email" class="test-to-input" id="smtpTestTo" placeholder="อีเมลปลายทางทดสอบ" autocomplete="off">
+          <span style="font-size:12.5px;color:var(--muted);" id="smtpHint"></span>
+        </div>
+      </div>
+
+      <!-- รายการ OTP -->
+      <div class="admin-card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M6 9h4M6 13h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          รายการ OTP ทั้งหมด
+          <select id="purposeFilter" title="กรองตามประเภท" style="margin-left:auto;padding:9px 13px;font-size:13px;font-family:var(--font);color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;cursor:pointer;">
+            <option value="">ประเภท: ทั้งหมด</option>
+            <option value="signup">สมัครสมาชิก</option>
+            <option value="password_reset">กู้รหัสผ่าน</option>
+          </select>
+          <select id="channelFilter" title="กรองตามปลายทาง" style="padding:9px 13px;font-size:13px;font-family:var(--font);color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;cursor:pointer;">
+            <option value="">ปลายทาง: ทั้งหมด</option>
+            <option value="sms">เบอร์โทร (SMS)</option>
+            <option value="email">อีเมล</option>
+          </select>
+          <input type="search" id="searchInput" placeholder="ค้นหาอีเมล..." style="max-width:180px;padding:9px 13px;font-size:13px;font-family:var(--font);color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;">
+        </h2>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>อีเมล</th>
+                <th>ปลายทาง</th>
+                <th>ประเภท</th>
+                <th>สถานะ</th>
+                <th>ลองผิด</th>
+                <th>สร้างเมื่อ</th>
+                <th>หมดอายุ</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="logsBody">
+              <tr><td colspan="9" class="empty-state">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const toast = document.getElementById('toast');
+    const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const ICON_ALERT = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    let toastTimer = null;
+    function showToast(msg) {
+      toast.innerHTML = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 5000);
+    }
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message || 'เกิดข้อผิดพลาด');
+      return data;
+    }
+
+    const PURPOSE_LABEL = { signup: 'สมัครสมาชิก', password_reset: 'กู้รหัสผ่าน' };
+    const STATUS_LABEL = { valid: 'ยังใช้ได้', used: 'ใช้แล้ว', expired: 'หมดอายุ' };
+    const STATUS_CLASS = { valid: 'pill-valid', used: 'pill-used', expired: 'pill-expired' };
+
+    function mask(v) {
+      const d = String(v).replace(/[^0-9]/g, '');
+      return d.length >= 7 ? d.slice(0, 3) + '-***-' + d.slice(-4) : v;
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    let allLogs = [];
+
+    async function loadStatus() {
+      const { status } = await api('/api/admin/sms-status');
+      document.getElementById('statusMode').innerHTML = status.devMode ? '<span class="pill pill-dev">DEV MODE</span>' : '<span class="pill pill-valid">PRODUCTION</span>';
+      document.getElementById('statusSmsProvider').innerHTML =
+        (status.sms && status.sms.configured ? ICON_CHECK : ICON_ALERT) +
+        (status.provider === 'thaibulksms' ? 'ThaiBulkSMS' : 'Twilio');
+      document.getElementById('statusSmtp').innerHTML = status.smtpConfigured ? ICON_CHECK + 'ตั้งค่าแล้ว' : ICON_ALERT + 'ยังไม่ตั้ง';
+      document.getElementById('statusTtl').textContent = status.otpTtlMinutes + ' นาที';
+      document.getElementById('statusAttempts').textContent = status.otpMaxAttempts + ' ครั้ง';
+
+      document.getElementById('otpTtl').value = status.otpTtlMinutes;
+      document.getElementById('otpAttempts').value = status.otpMaxAttempts;
+      document.getElementById('devModeSwitch').checked = status.devMode;
+
+      // สถานะ SMS provider
+      const provider = status.provider || 'twilio';
+      document.getElementById('smsProvider').value = provider;
+      toggleProviderFields(provider);
+
+      const badge = document.getElementById('smsBadge');
+      const detail = document.getElementById('smsDetail');
+      const hint = document.getElementById('smsHint');
+      const sms = status.sms || {};
+      if (sms.configured) {
+        badge.innerHTML = ICON_CHECK + 'ตั้งค่าแล้ว';
+        badge.className = 'pill pill-valid';
+        detail.innerHTML = provider === 'thaibulksms'
+          ? `API Key: <span class="mono">${escapeHtml(sms.keyMasked)}</span> · Sender: <span class="mono">${escapeHtml(sms.sender)}</span> · แหล่ง: ${sms.source === 'admin' ? 'หน้าแอดมิน' : '.env'}`
+          : `SID: <span class="mono">${escapeHtml(sms.sidMasked)}</span> · เบอร์ผู้ส่ง: <span class="mono">${escapeHtml(sms.from)}</span> · แหล่ง: ${sms.source === 'admin' ? 'หน้าแอดมิน' : '.env'}`;
+        hint.textContent = 'พร้อมส่ง SMS จริงเมื่อปิดโหมด dev';
+        hint.style.color = 'var(--success)';
+      } else {
+        badge.innerHTML = ICON_ALERT + 'ยังไม่ได้ตั้งค่า';
+        badge.className = 'pill pill-expired';
+        detail.textContent = 'กรอกค่าให้ครบตามฟอร์ม แล้วกดบันทึก';
+        hint.textContent = '';
+      }
+      // เติมค่าที่ไม่ใช่ secret กลับคืนในช่องกรอก / ล้างเฉพาะช่อง Secret (กันเห็น key/token)
+      if (provider === 'thaibulksms') {
+        document.getElementById('tbsSender').value = sms.senderFull || '';
+        document.getElementById('tbsKey').value = '';
+        document.getElementById('tbsSecret').value = '';
+      } else {
+        document.getElementById('twSid').value = sms.sidFull || '';
+        document.getElementById('twPhone').value = sms.fromFull || '';
+        document.getElementById('twToken').value = '';
+      }
+    }
+
+    // สลับฟอร์มตาม provider ที่เลือก
+    function toggleProviderFields(provider) {
+      const isTbs = provider === 'thaibulksms';
+      document.getElementById('twilioFields').style.display = isTbs ? 'none' : '';
+      document.getElementById('tbsFields').style.display = isTbs ? '' : 'none';
+    }
+    document.getElementById('smsProvider').addEventListener('change', function () {
+      toggleProviderFields(this.value);
+    });
+
+    async function loadLogs() {
+      const { logs } = await api('/api/admin/otp-logs?limit=200');
+      allLogs = logs;
+      renderLogs(getFiltered());
+    }
+
+    // กรองรายการตาม: ประเภท (purpose) + ปลายทาง (sms/email) + ค้นหาอีเมล
+    function getFiltered() {
+      const purpose = document.getElementById('purposeFilter').value;
+      const channel = document.getElementById('channelFilter').value;
+      const q = document.getElementById('searchInput').value.trim().toLowerCase();
+      return allLogs.filter((l) => {
+        if (purpose && l.purpose !== purpose) return false;
+        const ch = l.purpose === 'password_reset' ? 'email' : 'sms'; // กู้รหัส = อีเมล, สมัคร = SMS
+        if (channel && ch !== channel) return false;
+        if (q && !l.email.toLowerCase().includes(q)) return false;
+        return true;
+      });
+    }
+
+    function renderLogs(logs) {
+      const tbody = document.getElementById('logsBody');
+      if (!logs.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">ยังไม่มีรายการ OTP</td></tr>';
+        return;
+      }
+      tbody.innerHTML = logs.map((l) => `
+        <tr>
+          <td class="mono">${l.id}</td>
+          <td class="email-cell">${escapeHtml(l.email)}</td>
+          <td class="mono">${l.purpose === 'password_reset' ? escapeHtml(l.contact) : mask(l.contact)}</td>
+          <td>${PURPOSE_LABEL[l.purpose] || l.purpose}</td>
+          <td><span class="pill ${STATUS_CLASS[l.status]}">${STATUS_LABEL[l.status]}</span></td>
+          <td class="mono">${l.attempts}</td>
+          <td class="mono">${l.created_at}</td>
+          <td class="mono">${l.expires_at}</td>
+          <td>
+            <button class="icon-btn" data-resend="${l.user_id}" data-purpose="${l.purpose}" data-email="${escapeHtml(l.email)}" style="padding:6px 11px;font-size:12px;"><svg viewBox="0 0 24 24" fill="none"><path d="M23 4v6h-6M1 20v-6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ส่งใหม่</button>
+          </td>
+        </tr>`).join('');
+
+      tbody.querySelectorAll('[data-resend]').forEach((btn) => {
+        btn.addEventListener('click', () => resendOtp(btn));
+      });
+    }
+
+    async function resendOtp(btn) {
+      btn.disabled = true;
+      const original = btn.textContent;
+      btn.classList.add('spinning');
+      try {
+        const data = await api('/api/admin/otp/resend', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: Number(btn.dataset.resend), purpose: btn.dataset.purpose }),
+        });
+        const codeHtml = data.dev && data.dev.devOtp
+          ? `<br>รหัสทดสอบ (dev): <span class="code">${data.dev.devOtp}</span>`
+          : '';
+        showToast(ICON_CHECK + `ส่ง OTP ใหม่ให้ <strong>${btn.dataset.email}</strong> แล้ว${codeHtml}`);
+        await loadLogs();
+      } catch (err) {
+        showToast(ICON_ALERT + escapeHtml(err.message));
+      } finally {
+        btn.classList.remove('spinning');
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    }
+
+    document.getElementById('searchInput').addEventListener('input', () => renderLogs(getFiltered()));
+    document.getElementById('purposeFilter').addEventListener('change', () => renderLogs(getFiltered()));
+    document.getElementById('channelFilter').addEventListener('change', () => renderLogs(getFiltered()));
+
+    document.getElementById('saveSettingsBtn').addEventListener('click', async (e) => {
+      const btn = e.target;
+      btn.disabled = true;
+      btn.classList.add('spinning');
+      try {
+        const payload = {
+          otpTtlMinutes: Number(document.getElementById('otpTtl').value),
+          otpMaxAttempts: Number(document.getElementById('otpAttempts').value),
+          devMode: document.getElementById('devModeSwitch').checked,
+        };
+        const data = await api('/api/admin/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        showToast(ICON_CHECK + data.message);
+        await loadStatus();
+      } catch (err) {
+        showToast(ICON_ALERT + escapeHtml(err.message));
+      } finally {
+        btn.classList.remove('spinning');
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> บันทึกการตั้งค่า';
+      }
+    });
+
+    // ---------- โหมด dev: สลับแล้วบันทึกทันที (ไม่ต้องกดปุ่มบันทึก) ----------
+    document.getElementById('devModeSwitch').addEventListener('change', async function () {
+      const sw = this;
+      sw.disabled = true;
+      try {
+        const data = await api('/api/admin/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ devMode: sw.checked }),
+        });
+        // อัปเดตการ์ดสถานะให้ตรงกันทันที (ไม่ต้องรีเฟรชหน้า)
+        document.getElementById('statusMode').innerHTML = sw.checked ? '<span class="pill pill-dev">DEV MODE</span>' : '<span class="pill pill-valid">PRODUCTION</span>';
+        showToast(sw.checked
+          ? 'เปิดโหมดทดสอบ (dev) แล้ว — OTP จะแสดงที่ console/หน้าเว็บ (ไม่ส่งจริง)'
+          : 'ปิดโหมดทดสอบแล้ว — ระบบจะส่ง SMS/อีเมลจริง (ต้องตั้งค่า SMS/อีเมลให้ครบก่อน)');
+      } catch (err) {
+        sw.checked = !sw.checked; // คืนค่าเดิมถ้าบันทึกไม่สำเร็จ
+        showToast(ICON_ALERT + escapeHtml(err.message));
+      } finally {
+        sw.disabled = false;
+      }
+    });
+
+    // ---------- บันทึกค่า SMS (ตาม provider ที่เลือก) ----------
+    document.getElementById('saveSmsBtn').addEventListener('click', async (e) => {
+      const btn = e.target;
+      const provider = document.getElementById('smsProvider').value;
+      const payload = { provider };
+
+      if (provider === 'thaibulksms') {
+        const k = document.getElementById('tbsKey').value;
+        const s = document.getElementById('tbsSecret').value;
+        const sender = document.getElementById('tbsSender').value.trim();
+        if (k) payload.apiKey = k;
+        if (s) payload.apiSecret = s;
+        if (sender) payload.sender = sender;
+      } else {
+        const sid = document.getElementById('twSid').value.trim();
+        const token = document.getElementById('twToken').value;
+        const phone = document.getElementById('twPhone').value.trim();
+        if (sid) payload.accountSid = sid;
+        if (token) payload.authToken = token;
+        if (phone) payload.phone = phone;
+      }
+
+      if (Object.keys(payload).length <= 1) {
+        showToast(ICON_ALERT + 'กรุณากรอกค่าอย่างน้อย 1 รายการก่อนบันทึก');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.classList.add('spinning');
+      try {
+        const data = await api('/api/admin/sms-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        showToast(ICON_CHECK + data.message + ' — ล้างช่อง API Key/Secret เพื่อความปลอดภัย (ค่าเดิมยังถูกเก็บไว้ ดูสถานะด้านบน)');
+        await loadStatus();
+      } catch (err) {
+        showToast(ICON_ALERT + escapeHtml(err.message));
+      } finally {
+        btn.classList.remove('spinning');
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> บันทึกค่า SMS';
+      }
+    });
+
+    // ---------- แสดง/ซ่อนบล็อกตั้งค่า (ปุ่มที่ topbar) ----------
+    function toggleSection(btn, cardId) {
+      const card = document.getElementById(cardId);
+      const open = card.style.display !== 'none';
+      card.style.display = open ? 'none' : '';
+      btn.classList.toggle('primary', !open);
+    }
+    document.getElementById('toggleOtpSettingsBtn').addEventListener('click', function () {
+      toggleSection(this, 'otpSettingsCard');
+    });
+    document.getElementById('toggleTwilioBtn').addEventListener('click', function () {
+      toggleSection(this, 'twilioCard');
+    });
+    document.getElementById('toggleSmtpBtn').addEventListener('click', function () {
+      toggleSection(this, 'smtpCard');
+    });
+
+    // ---------- สถานะ + บันทึก + ทดสอบ SMTP ----------
+    document.getElementById('smtpHelpBtn').addEventListener('click', function () {
+      const box = document.getElementById('smtpHelpBox');
+      box.style.display = box.style.display === 'none' ? '' : 'none';
+    });
+
+    async function loadSmtpStatus() {
+      const { status } = await api('/api/admin/smtp-status');
+      const badge = document.getElementById('smtpBadge');
+      const detail = document.getElementById('smtpDetail');
+      const hint = document.getElementById('smtpHint');
+      if (status.configured) {
+        badge.innerHTML = ICON_CHECK + 'ตั้งค่าแล้ว';
+        badge.className = 'pill pill-valid';
+        detail.innerHTML = `Host: <span class="mono">${escapeHtml(status.host)}</span> · Port: ${status.port} · User: <span class="mono">${escapeHtml(status.userMasked)}</span> · From: <span class="mono">${escapeHtml(status.from)}</span> · แหล่ง: ${status.source === 'admin' ? 'หน้าแอดมิน' : '.env'}`;
+        hint.textContent = status.devMode ? 'พร้อมส่งจริงเมื่อปิดโหมด dev' : 'พร้อมส่งอีเมลจริงแล้ว';
+        hint.style.color = 'var(--success)';
+      } else {
+        badge.innerHTML = ICON_ALERT + 'ยังไม่ได้ตั้งค่า';
+        badge.className = 'pill pill-expired';
+        detail.textContent = 'กรอก Host / Port / User / Password แล้วกดบันทึก';
+        hint.textContent = '';
+      }
+      // เติมค่าที่ไม่ใช่ secret กลับ / ล้างเฉพาะ password
+      document.getElementById('smtpHost').value = status.host || '';
+      document.getElementById('smtpPort').value = status.port || 587;
+      document.getElementById('smtpUser').value = '';
+      document.getElementById('smtpPass').value = '';
+      document.getElementById('smtpFrom').value = '';
+    }
+
+    document.getElementById('saveSmtpBtn').addEventListener('click', async (e) => {
+      const btn = e.target;
+      const payload = {};
+      const host = document.getElementById('smtpHost').value.trim();
+      const port = document.getElementById('smtpPort').value.trim();
+      const user = document.getElementById('smtpUser').value.trim();
+      const pass = document.getElementById('smtpPass').value;
+      const from = document.getElementById('smtpFrom').value.trim();
+      if (host) payload.host = host;
+      if (port) payload.port = port;
+      if (user) payload.user = user;
+      if (pass) payload.pass = pass;
+      if (from) payload.from = from;
+
+      if (!Object.keys(payload).length) {
+        showToast(ICON_ALERT + 'กรุณากรอกค่าอย่างน้อย 1 รายการก่อนบันทึก');
+        return;
+      }
+      btn.disabled = true;
+      btn.classList.add('spinning');
+      try {
+        const data = await api('/api/admin/smtp-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        showToast(ICON_CHECK + data.message);
+        await loadSmtpStatus();
+      } catch (err) {
+        showToast(ICON_ALERT + escapeHtml(err.message));
+      } finally {
+        btn.classList.remove('spinning');
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> บันทึกค่า SMTP';
+      }
+    });
+
+    document.getElementById('testSmtpBtn').addEventListener('click', async (e) => {
+      const btn = e.target;
+      const to = document.getElementById('smtpTestTo').value.trim();
+      if (!to) { showToast(ICON_ALERT + 'กรุณากรอกอีเมลปลายทางสำหรับทดสอบ'); return; }
+      btn.disabled = true;
+      btn.classList.add('spinning');
+      try {
+        const data = await api('/api/admin/smtp-test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to }),
+        });
+        showToast(ICON_CHECK + data.message);
+      } catch (err) {
+        showToast(ICON_ALERT + escapeHtml(err.message));
+      } finally {
+        btn.classList.remove('spinning');
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ทดสอบส่งอีเมล';
+      }
+    });
+
+    // ---------- ทดสอบส่ง SMS ----------
+    document.getElementById('testSmsBtn').addEventListener('click', async (e) => {
+      const btn = e.target;
+      const to = document.getElementById('testTo').value.trim();
+      if (!to) {
+        showToast(ICON_ALERT + 'กรุณากรอกเบอร์ปลายทางสำหรับทดสอบ');
+        return;
+      }
+      btn.disabled = true;
+      btn.classList.add('spinning');
+      try {
+        const data = await api('/api/admin/sms-test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to }),
+        });
+        showToast(ICON_CHECK + data.message);
+      } catch (err) {
+        showToast(ICON_ALERT + escapeHtml(err.message));
+      } finally {
+        btn.classList.remove('spinning');
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><rect x="7" y="2" width="10" height="20" rx="2.5" stroke="currentColor" stroke-width="2"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> ทดสอบส่ง SMS';
+      }
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+      const rb = document.getElementById('refreshBtn');
+      rb.classList.add('spinning'); rb.disabled = true;
+      try {
+        await Promise.all([loadStatus(), loadLogs(), loadSmtpStatus()]);
+        showToast(ICON_CHECK + 'อัปเดตข้อมูลแล้ว');
+      } catch (err) {
+        showToast(ICON_ALERT + escapeHtml(err.message));
+      } finally {
+        rb.classList.remove('spinning'); rb.disabled = false;
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    async function init() {
+      try {
+        const me = await api('/api/me');
+        if (me.user.role !== 'admin') { window.location.href = '/login.html'; return; }
+        document.getElementById('adminEmail').textContent = me.user.email;
+        document.getElementById('adminAvatar').textContent = me.user.email.charAt(0).toUpperCase();
+        await Promise.all([loadStatus(), loadLogs(), loadSmtpStatus()]);
+      } catch (err) {
+        window.location.href = '/login.html';
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

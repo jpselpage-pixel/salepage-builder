@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | SalePage Builder</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="../css/settings.css">
+  <script src="../js/theme.js"></script>
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="brand" href="/">
+      <div class="brand-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="4" width="18" height="16" rx="3" stroke="#fff" stroke-width="1.8"/>
+          <path d="M3 9h18" stroke="#fff" stroke-width="1.8"/>
+          <path d="M9 14h6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="brand-name">SalePage</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="theme-toggle" type="button" aria-label="สลับธีม" style="position:static;">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" style="display:none">
+          <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none">
+          <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+      <a class="btn btn-small" href="/" style="padding:8px 14px;">กลับหน้าแรก</a>
+    </div>
+  </nav>
+
+  <div class="settings-layout">
+    <!-- เมนูหมวดหมู่ -->
+    <aside class="settings-menu">
+      <div class="menu-title">Dashboard</div>
+      <a class="menu-item" href="/dashboard/pages">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        เพจ
+      </a>
+      <div class="menu-title">ตั้งค่า</div>
+      <a class="menu-item" href="/settings/profile">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/></svg>
+        โปรไฟล์
+      </a>
+      <a class="menu-item" href="/settings/security">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="11" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        ความปลอดภัย
+      </a>
+      <div class="menu-divider"></div>
+      <button class="menu-item" type="button" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ออกจากระบบ
+      </button>
+    </aside>
+
+    <!-- แผงเนื้อหา -->
+    <main class="settings-panel">
+      <!-- ===== เพจ ===== -->
+      <section id="panel-pages">
+        <div class="pages-head">
+          <div class="pages-head-left">
+            <div class="panel-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="pages-head-text">
+              <h1>เพจของฉัน</h1>
+              <p>จัดการเซลเพจขายของออนไลน์ของคุณ</p>
+            </div>
+          </div>
+          <div class="pages-head-right">
+            <span class="plan-badge" id="planBadge">แพ็กเกจฟรี</span>
+            <button class="plan-upgrade-btn" type="button" id="upgradeBtn">
+              อัปเกรดแพ็กเกจ
+              <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- แท่งลิมิตแพ็กเกจ -->
+        <div class="pages-usage">
+          <div class="pages-usage-top">
+            <span>ใช้ไปแล้ว <b id="planUsed">0</b> จาก <b id="planLimit">1</b> เพจ</span>
+            <span id="planPct">0%</span>
+          </div>
+          <div class="plan-bar">
+            <div class="plan-bar-fill" id="planBar"></div>
+          </div>
+        </div>
+
+        <!-- ข้อความแจ้งสร้างสำเร็จ -->
+        <div class="success-box" id="createdMsg" style="display:none;margin-bottom:20px;"></div>
+
+        <!-- รายการเพจ -->
+        <div id="pagesList" style="display:none;"></div>
+
+        <div class="pages-empty" id="pagesEmpty">
+          <div class="pages-empty-icon">
+            <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.6"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </div>
+          <h3>ยังไม่มีเซลเพจ</h3>
+          <p>สร้างเซลเพจแรกของคุณเพื่อเริ่มขายของออนไลน์<br>ไม่ต้องเขียนโค้ด ทำเสร็จในไม่กี่นาที</p>
+          <button class="btn btn-primary" id="createPageBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+            สร้างเพจใหม่
+          </button>
+        </div>
+      </section>
+
+      <!-- ===== โปรไฟล์ ===== -->
+      <section id="panel-profile" style="display:none;">
+        <div class="panel-head">
+          <div class="panel-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/></svg></div>
+          <h1>โปรไฟล์</h1>
+          <p>ข้อมูลส่วนตัวและสถานะการยืนยันบัญชีของคุณ</p>
+        </div>
+
+        <div class="settings-profile-head">
+          <div class="avatar" id="avatar">?</div>
+          <div>
+            <div class="user-email" id="userEmail">—</div>
+            <div class="user-meta">
+              <span class="badge badge-success">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                ยืนยันเบอร์แล้ว
+              </span>
+              <span class="badge badge-info" id="emailVerifiedBadge" style="display:none;">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                อีเมลยืนยันแล้ว
+              </span>
+              <span class="badge badge-warning" id="emailUnverifiedBadge" style="display:none;">ยังไม่ได้ยืนยันอีเมล</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-list">
+          <div class="info-row"><span class="label">อีเมล</span><span class="value" id="infoEmail">—</span></div>
+          <div class="info-row"><span class="label">เบอร์โทรศัพท์</span><span class="value" id="infoPhone">—</span></div>
+          <div class="info-row"><span class="label">สถานะ</span><span class="value" id="infoStatus">—</span></div>
+        </div>
+
+        <div class="verify-banner" id="verifyBanner">
+          <strong><svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="vertical-align:-2px;margin-right:6px;"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M22 7l-10 6L2 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> ยังไม่ได้ยืนยันอีเมล</strong><br>
+          กรุณายืนยันอีเมลเพื่อรับสิทธิประโยชน์และความปลอดภัยของบัญชี
+          <br>
+          <button class="btn-small" id="sendVerifyBtn">ส่งลิงก์ยืนยันอีเมล</button>
+          <div class="dev-link" id="devVerifyLink"></div>
+        </div>
+
+        <div class="actions">
+          <a class="btn btn-outline" href="/admin/" id="adminLink" style="display:none;"><svg viewBox="0 0 24 24" fill="none" width="15" height="15" style="vertical-align:-2px;margin-right:6px;"><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.6-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3h.1a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5h.1a1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9v.1a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg> จัดการระบบ</a>
+        </div>
+      </section>
+
+      <!-- ===== ความปลอดภัย ===== -->
+      <section id="panel-security" style="display:none;">
+        <div class="panel-head">
+          <div class="panel-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="4" y="11" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <h1>ความปลอดภัย</h1>
+          <p>จัดการรหัสผ่านและอุปกรณ์ที่เข้าสู่ระบบของคุณ</p>
+        </div>
+
+        <!-- เปลี่ยนรหัสผ่าน -->
+        <div class="security-card">
+          <div class="sec-info">
+            <h3>
+              <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="11" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              เปลี่ยนรหัสผ่าน
+            </h3>
+            <p>ตั้งรหัสผ่านใหม่เพื่อความปลอดภัยของบัญชี (ต้องมีอย่างน้อย 8 ตัว และผ่านอย่างน้อย 3 เกณฑ์)</p>
+          </div>
+          <form class="settings-form" id="passwordForm" novalidate style="width:100%;">
+            <div class="field">
+              <label for="currentPassword">รหัสผ่านปัจจุบัน</label>
+              <div class="input-wrap">
+                <input type="password" id="currentPassword" autocomplete="current-password" required>
+                <button type="button" class="toggle-password" data-target="currentPassword" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                  <svg viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>
+                </button>
+              </div>
+              <div class="field-error" id="errCurrent"></div>
+            </div>
+            <div class="field">
+              <label for="newPassword">รหัสผ่านใหม่</label>
+              <div class="input-wrap">
+                <input type="password" id="newPassword" autocomplete="new-password" required>
+                <button type="button" class="toggle-password" data-target="newPassword" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                  <svg viewBox="0 0 24 24" fill="none"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/></svg>
+                </button>
+              </div>
+              <div class="strength-wrap">
+                <div class="strength-bar" id="strengthBar"><span></span><span></span><span></span><span></span></div>
+                <div class="strength-label" id="strengthLabel">ความแข็งแรงของรหัสผ่าน</div>
+              </div>
+              <div class="field-error" id="errNew"></div>
+            </div>
+            <div class="field">
+              <label for="confirmPassword">ยืนยันรหัสผ่านใหม่</label>
+              <input type="password" id="confirmPassword" autocomplete="new-password" required>
+              <div class="field-error" id="errConfirm"></div>
+            </div>
+            <div class="form-actions">
+              <button type="submit" class="btn btn-primary" id="changePwBtn">เปลี่ยนรหัสผ่าน</button>
+            </div>
+            <div class="success-box" id="pwSuccess" style="margin-top:16px;margin-bottom:0;"></div>
+          </form>
+        </div>
+
+        <!-- ออกจากระบบทุกเครื่อง -->
+        <div class="security-card">
+          <div class="sec-info">
+            <h3>
+              <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              ออกจากระบบทุกเครื่อง
+            </h3>
+            <p>ยกเลิกการเข้าสู่ระบบทั้งหมดบนอุปกรณ์อื่น (มือถือ คอมพิวเตอร์ เครื่องอื่น) — เครื่องนี้ยังคงเข้าสู่ระบบอยู่</p>
+          </div>
+          <button class="btn btn-outline danger" id="logoutAllBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" width="15" height="15" style="vertical-align:-2px;margin-right:6px;"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            ออกจากระบบทุกเครื่อง
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:4px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    // ---------- เลือก panel ตาม URL (pages / profile / security) ----------
+    const section = (window.location.pathname.split('/').filter(Boolean).pop() || 'pages');
+    const activePanel = ['pages', 'profile', 'security'].includes(section) ? section : 'pages';
+    document.getElementById('panel-pages').style.display = activePanel === 'pages' ? '' : 'none';
+    document.getElementById('panel-profile').style.display = activePanel === 'profile' ? '' : 'none';
+    document.getElementById('panel-security').style.display = activePanel === 'security' ? '' : 'none';
+    document.querySelectorAll('.settings-menu .menu-item').forEach((el) => {
+      if (el.getAttribute('href') && el.getAttribute('href').endsWith('/' + activePanel)) {
+        el.classList.add('active');
+      }
+    });
+
+    // ---------- แสดง/ซ่อนรหัสผ่าน ----------
+    document.querySelectorAll('.toggle-password').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target);
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        btn.querySelector('svg').innerHTML = isHidden
+          ? '<path d="M17.9 17.9A11 11 0 011 12s4-8 11-8a10.8 10.8 0 014.5 1M9.9 4.2A10.7 10.7 0 0112 4c7 0 11 8 11 8a17.9 17.9 0 01-2.2 3.2M6.6 6.6A17.9 17.9 0 011 12s4 8 11 8a10.7 10.7 0 006-1.8M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
+          : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>';
+      });
+    });
+
+    // ---------- โหลดข้อมูลผู้ใช้ ----------
+    async function loadMe() {
+      try {
+        const res = await fetch('/api/me');
+        const data = await res.json();
+        if (!data.ok) { window.location.href = '/login.html?next=/dashboard/' + activePanel; return; }
+
+        const user = data.user;
+        document.getElementById('userEmail').textContent = user.email;
+        document.getElementById('avatar').textContent = user.email.charAt(0).toUpperCase();
+        document.getElementById('infoEmail').textContent = user.email;
+        document.getElementById('infoPhone').textContent = user.phone;
+
+        const statusEl = document.getElementById('infoStatus');
+        if (user.status !== 'active') {
+          statusEl.innerHTML = 'รอการยืนยันเบอร์โทร (OTP) — การสมัครยังไม่เสร็จสมบูรณ์';
+        } else if (user.is_email_verified) {
+          statusEl.innerHTML = 'ยืนยันเบอร์โทรแล้ว ' + ICON_CHECK + ' + ยืนยันอีเมลแล้ว ' + ICON_CHECK + ' — บัญชีสมบูรณ์';
+        } else {
+          statusEl.innerHTML = 'ยืนยันเบอร์โทรแล้ว ' + ICON_CHECK + ' · ยังไม่ได้ยืนยันอีเมล (ดูแบนเนอร์ด้านล่าง)';
+        }
+
+        const verifiedBadge = document.getElementById('emailVerifiedBadge');
+        const unverifiedBadge = document.getElementById('emailUnverifiedBadge');
+        if (user.role === 'admin') {
+          document.getElementById('adminLink').style.display = '';
+        }
+        if (user.is_email_verified) {
+          verifiedBadge.style.display = '';
+          unverifiedBadge.style.display = 'none';
+        } else {
+          verifiedBadge.style.display = 'none';
+          unverifiedBadge.style.display = '';
+          document.getElementById('verifyBanner').style.display = 'block';
+        }
+      } catch {
+        window.location.href = '/login.html?next=/dashboard/' + activePanel;
+      }
+    }
+
+    // ---------- ส่งลิงก์ยืนยันอีเมลใหม่ ----------
+    document.getElementById('sendVerifyBtn').addEventListener('click', async (e) => {
+      const btn = e.target;
+      btn.disabled = true;
+      btn.textContent = 'กำลังส่ง...';
+      try {
+        const res = await fetch('/api/send-verify-email', { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          btn.textContent = 'ส่งลิงก์อีกครั้ง';
+          if (data.dev && data.dev.devVerifyLink) {
+            const box = document.getElementById('devVerifyLink');
+            box.style.display = 'block';
+            box.innerHTML = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> <strong>ลิงก์ทดสอบ (โหมด dev):</strong> <a href="' + data.dev.devVerifyLink + '" target="_blank">' + data.dev.devVerifyLink + '</a>';
+          }
+        } else {
+          btn.textContent = 'ส่งลิงก์ยืนยันอีเมล';
+          btn.disabled = false;
+          alert(data.message || 'ส่งไม่สำเร็จ');
+        }
+      } catch {
+        btn.textContent = 'ส่งลิงก์ยืนยันอีเมล';
+        btn.disabled = false;
+        alert('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้');
+      }
+    });
+
+    // ---------- ความแข็งแรงรหัสผ่าน ----------
+    const strengthBars = [...document.querySelectorAll('#strengthBar span')];
+    const strengthLabel = document.getElementById('strengthLabel');
+    function updateStrength(pw) {
+      let score = 0;
+      if (pw.length >= 8) score++;
+      if (pw.length >= 12) score++;
+      if (/[A-Z]/.test(pw)) score++;
+      if (/[a-z]/.test(pw)) score++;
+      if (/\d/.test(pw)) score++;
+      if (/[^A-Za-z0-9]/.test(pw)) score++;
+      strengthBars.forEach((bar, i) => {
+        bar.style.background = i < score ? 'var(--accent)' : 'var(--border)';
+      });
+      const labels = ['อ่อนเกินไป', 'อ่อน', 'ปานกลาง', 'ดี', 'แข็งแรง', 'แข็งแรงมาก'];
+      strengthLabel.textContent = 'ความแข็งแรง: ' + (pw ? labels[score] : 'กรอกรหัสผ่าน');
+    }
+    document.getElementById('newPassword').addEventListener('input', (e) => updateStrength(e.target.value));
+
+    function showFieldErr(id, msg) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.style.display = msg ? 'block' : 'none';
+    }
+    function clearErrs() {
+      ['errCurrent', 'errNew', 'errConfirm'].forEach((id) => showFieldErr(id, ''));
+      document.getElementById('pwSuccess').style.display = 'none';
+    }
+
+    // ---------- เปลี่ยนรหัสผ่าน ----------
+    document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearErrs();
+
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (!currentPassword) return showFieldErr('errCurrent', 'กรุณากรอกรหัสผ่านปัจจุบัน');
+      if (passwordStrength(newPassword) < 3) return showFieldErr('errNew', 'รหัสผ่านอ่อนเกินไป ต้องมีอย่างน้อย 8 ตัว และผ่านอย่างน้อย 3 เกณฑ์');
+      if (newPassword !== confirmPassword) return showFieldErr('errConfirm', 'รหัสผ่านใหม่ไม่ตรงกัน');
+
+      const btn = document.getElementById('changePwBtn');
+      btn.disabled = true;
+      btn.classList.add('loading');
+      try {
+        const res = await fetch('/api/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword, newPassword }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          if (data.field === 'currentPassword') showFieldErr('errCurrent', data.message);
+          else if (data.field === 'newPassword') showFieldErr('errNew', data.message);
+          else alert(data.message || 'เปลี่ยนรหัสผ่านไม่สำเร็จ');
+          return;
+        }
+        const box = document.getElementById('pwSuccess');
+        box.innerHTML = ICON_CHECK + ' <strong>เปลี่ยนรหัสผ่านสำเร็จ!</strong> รหัสผ่านใหม่มีผลแล้ว';
+        box.style.display = 'block';
+        document.getElementById('passwordForm').reset();
+        strengthBars.forEach((bar) => { bar.style.background = 'var(--border)'; });
+        strengthLabel.textContent = 'ความแข็งแรงของรหัสผ่าน';
+      } catch {
+        alert('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    });
+
+    function passwordStrength(pw) {
+      let score = 0;
+      if (pw.length >= 8) score++;
+      if (pw.length >= 12) score++;
+      if (/[A-Z]/.test(pw)) score++;
+      if (/[a-z]/.test(pw)) score++;
+      if (/\d/.test(pw)) score++;
+      if (/[^A-Za-z0-9]/.test(pw)) score++;
+      return score;
+    }
+
+    // ---------- ออกจากระบบทุกเครื่อง ----------
+    document.getElementById('logoutAllBtn').addEventListener('click', async (e) => {
+      const btn = e.target.closest('button');
+      btn.disabled = true;
+      btn.classList.add('loading');
+      try {
+        const res = await fetch('/api/logout-all', { method: 'POST' });
+        const data = await res.json();
+        if (!data.ok) { alert(data.message || 'ทำไม่สำเร็จ'); return; }
+        alert('ออกจากระบบทุกเครื่องแล้ว (ยกเว้นเครื่องนี้)');
+      } catch {
+        alert('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    });
+
+    // ---------- ปุ่มสร้างเพจใหม่ → หน้าตั้งชื่อเพจ ----------
+    document.getElementById('createPageBtn').addEventListener('click', () => {
+      window.location.href = '/dashboard/pages/new';
+    });
+
+    // ---------- โหลดรายการเพจ + อัปเดตแท่งลิมิต ----------
+    async function loadPages() {
+      try {
+        const res = await fetch('/api/pages');
+        const data = await res.json();
+        if (!data.ok) return;
+
+        const pages = data.pages || [];
+        const limit = data.limit || 1;
+
+        // แท่งลิมิต
+        document.getElementById('planUsed').textContent = pages.length;
+        document.getElementById('planLimit').textContent = limit;
+        updatePlanBar();
+
+        // ข้อความสร้างสำเร็จ (?created=slug)
+        const created = new URLSearchParams(window.location.search).get('created');
+        if (created) {
+          const msg = document.getElementById('createdMsg');
+          msg.innerHTML = ICON_CHECK + ' <strong>สร้างเพจ "' + escapeHtml(created) + '" สำเร็จแล้ว!</strong>';
+          msg.style.display = 'block';
+          history.replaceState(null, '', '/dashboard/pages');
+        }
+
+        // แสดงรายการหรือ empty state
+        const listEl = document.getElementById('pagesList');
+        const emptyEl = document.getElementById('pagesEmpty');
+        if (pages.length === 0) {
+          emptyEl.style.display = '';
+          return;
+        }
+        emptyEl.style.display = 'none';
+        listEl.style.display = '';
+    listEl.innerHTML = pages.map((p) => `
+      <a class="page-item" href="/dashboard/pages/${encodeURIComponent(p.slug)}/editor">
+        <div class="page-item-icon">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </div>
+        <div class="page-item-info">
+          <div class="page-item-title">${escapeHtml(p.title || p.slug)}</div>
+          <div class="page-item-slug">${escapeHtml(window.location.origin)}/p/${escapeHtml(p.slug)}</div>
+        </div>
+        <span class="page-item-status ${p.status === 'published' ? 'published' : ''}">${p.status === 'published' ? 'เผยแพร่แล้ว' : 'ฉบับร่าง'}</span>
+        <svg class="page-item-chev" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    `).join('');
+      } catch (e) { /* ข้าม */ }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // ---------- ปุ่มอัปเกรดแพ็กเกจ → หน้าเลือกแพ็กเกจ ----------
+    document.getElementById('upgradeBtn').addEventListener('click', () => {
+      window.location.href = '/dashboard/upgrade';
+    });
+
+    // ---------- อัปเดตแท่งลิมิตแพ็กเกจ ----------
+    function updatePlanBar() {
+      const used = Number(document.getElementById('planUsed').textContent) || 0;
+      const limit = Number(document.getElementById('planLimit').textContent) || 1;
+      const pct = Math.min(100, Math.round((used / limit) * 100));
+      const bar = document.getElementById('planBar');
+      bar.style.width = pct + '%';
+      bar.classList.toggle('full', used >= limit);
+      bar.classList.toggle('warn', used >= limit * 0.8 && used < limit);
+      const pctEl = document.getElementById('planPct');
+      if (pctEl) pctEl.textContent = pct + '%';
+    }
+    updatePlanBar();
+
+    // ---------- ออกจากระบบ ----------
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/';
+    });
+
+    loadMe();
+    loadPages();
+  </script>
+</body>
+</html>

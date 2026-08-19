@@ -1,0 +1,23 @@
+{
+  "name": "online-shop",
+  "version": "1.0.0",
+  "description": "ระบบสมาชิกสำหรับเว็บขายของออนไลน์ (สมัครสมาชิก + เข้าสู่ระบบ)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.js",
+    "dev": "node --watch --env-file-if-exists=.env server.js"
+  },
+  "keywords": [
+    "shop",
+    "ecommerce",
+    "auth",
+    "thai"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.2",
+    "nodemailer": "^9.0.5",
+    "twilio": "^6.0.2"
+  }
+}

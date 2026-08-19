@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ผู้ใช้งาน | ระบบหลังบ้าน</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="brand-name">หลังบ้าน</span>
+      </div>
+
+      <div class="side-label">เมนู</div>
+      <a class="side-link" href="/admin/">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        ภาพรวม
+      </a>
+      <a class="side-link" href="/admin/otp.html">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M6 9h4M6 13h8M15 9l2 2m0 0l2-2m-2 2v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        จัดการ SMS-OTP
+      </a>
+      <a class="side-link active" href="/admin/users.html">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ผู้ใช้งาน
+      </a>
+      <div class="sidebar-footer">
+        <a class="sidebar-user" href="/admin/profile.html" title="ข้อมูลส่วนตัว">
+          <div class="avatar" id="adminAvatar">A</div>
+          <div>
+            <div class="u-email" id="adminEmail">—</div>
+            <div class="u-role">แอดมิน</div>
+          </div>
+        </a>
+        <a class="side-link" href="#" id="logoutBtn">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ออกจากระบบ
+        </a>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <div class="topbar">
+        <div>
+          <h1>ผู้ใช้งาน</h1>
+          <p>ผู้ที่สมัครเข้ามาทั้งหมด สถานะการยืนยัน และข้อมูลบัญชี</p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <input type="search" id="searchInput" placeholder="ค้นหาอีเมล / เบอร์..." style="padding:9px 13px;font-size:13px;font-family:var(--font);color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;min-width:200px;">
+          <button class="icon-btn" id="refreshBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            รีเฟรช
+          </button>
+        </div>
+      </div>
+
+      <div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr));">
+        <div class="stat-card"><div class="stat-value" id="statTotal">–</div><div class="stat-label">ผู้ใช้ทั้งหมด (ที่ค้น)</div></div>
+        <div class="stat-card"><div class="stat-value" id="statGoogle">–</div><div class="stat-label">สมัครผ่าน Google</div></div>
+        <div class="stat-card"><div class="stat-value" id="statPending">–</div><div class="stat-label">ยังค้าง (pending)</div></div>
+      </div>
+
+      <div class="admin-card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          รายชื่อผู้ใช้
+        </h2>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>อีเมล</th>
+                <th>เบอร์โทร</th>
+                <th>สมัครผ่าน / อีเมล</th>
+                <th>สถานะเบอร์</th>
+                <th>บทบาท</th>
+                <th>สร้างเมื่อ</th>
+                <th>จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="usersBody">
+              <tr><td colspan="8" class="empty-state">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal แก้ไขผู้ใช้ -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal">
+      <h3>แก้ไขผู้ใช้งาน</h3>
+      <p class="sub" id="modalSub">#—</p>
+      <div class="error-msg" id="modalError"></div>
+
+      <div class="field">
+        <label for="mEmail">อีเมล</label>
+        <input type="email" id="mEmail" autocomplete="off">
+        <span class="field-error" id="mEmailErr"></span>
+      </div>
+      <div class="field">
+        <label for="mPhone">เบอร์โทรศัพท์</label>
+        <input type="tel" id="mPhone" autocomplete="off">
+        <span class="field-error" id="mPhoneErr"></span>
+      </div>
+      <div class="field">
+        <label for="mPassword">ตั้งรหัสผ่านใหม่ (เว้นว่าง = ไม่เปลี่ยน)</label>
+        <input type="password" id="mPassword" placeholder="อย่างน้อย 8 ตัวอักษร" autocomplete="new-password">
+        <span class="field-error" id="mPasswordErr"></span>
+      </div>
+      <div class="field">
+        <label for="mStatus">สถานะ</label>
+        <select id="mStatus">
+          <option value="pending">pending — รอการยืนยัน (สมัครไม่เสร็จ)</option>
+          <option value="active">active — ยืนยันแล้ว (ใช้งานได้)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="mRole">บทบาท</label>
+        <select id="mRole">
+          <option value="user">ผู้ใช้ทั่วไป</option>
+          <option value="admin">แอดมิน</option>
+        </select>
+      </div>
+      <label class="check-row">
+        <input type="checkbox" id="mEmailVerified">
+        <span>ยืนยันอีเมลแล้ว</span>
+      </label>
+
+      <div class="modal-actions">
+        <button class="icon-btn" id="cancelEditBtn" type="button">ยกเลิก</button>
+        <button class="icon-btn primary" id="saveEditBtn" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const toast = document.getElementById('toast');
+    const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const ICON_ALERT = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    let toastTimer = null;
+    function showToast(msg) {
+      toast.innerHTML = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 4500);
+    }
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.message || 'เกิดข้อผิดพลาด');
+      return data;
+    }
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    let allUsers = [];
+
+    function providerCell(u) {
+      const p = u.provider === 'google'
+        ? '<span class="badge badge-success">Google</span>'
+        : '<span class="badge badge-info">อีเมล</span>';
+      const v = u.is_email_verified
+        ? '<span class="badge badge-success" title="อีเมลยืนยันแล้ว"><svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:4px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
+        : '<span class="badge badge-warning" title="ยังไม่ได้ยืนยันอีเมล"><svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:4px;"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+      return '<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;">' + p + v + '</span>';
+    }
+    function statusBadge(status) {
+      return status === 'active'
+        ? '<span class="pill pill-valid" title="ยืนยันเบอร์แล้ว — ใช้งานได้">ยืนยันแล้ว</span>'
+        : '<span class="pill pill-expired" title="สมัครค้างกลางคัน — ยังล็อกอิน/ใช้บริการไม่ได้">ยังไม่สมัครเสร็จ</span>';
+    }
+
+    async function loadUsers() {
+      const search = document.getElementById('searchInput').value.trim();
+      const qs = search ? '?search=' + encodeURIComponent(search) : '';
+      const { users, total } = await api('/api/admin/users' + qs);
+      allUsers = users;
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statGoogle').textContent = users.filter((u) => u.provider === 'google').length;
+      document.getElementById('statPending').textContent = users.filter((u) => u.status === 'pending').length;
+
+      const tbody = document.getElementById('usersBody');
+      if (!users.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">ไม่พบผู้ใช้</td></tr>';
+        return;
+      }
+      tbody.innerHTML = users.map((u) => `
+        <tr>
+          <td class="mono">${u.id}</td>
+          <td class="email-cell">${escapeHtml(u.email)}</td>
+          <td class="mono">${escapeHtml(u.phone)}</td>
+          <td>${providerCell(u)}</td>
+          <td>${statusBadge(u.status)}</td>
+          <td>${u.role === 'admin' ? '<span class="badge badge-warning">แอดมิน</span>' : 'ผู้ใช้'}</td>
+          <td class="mono">${u.created_at}</td>
+          <td>
+            <button class="icon-btn" data-edit="${u.id}" style="padding:6px 11px;font-size:12px;"><svg viewBox="0 0 24 24" fill="none"><path d="M17 3a2.8 2.8 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> แก้ไข</button>
+            <button class="icon-btn danger" data-del="${u.id}" style="padding:6px 11px;font-size:12px;"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ลบ</button>
+          </td>
+        </tr>`).join('');
+
+      tbody.querySelectorAll('[data-edit]').forEach((btn) => btn.addEventListener('click', () => openEdit(Number(btn.dataset.edit))));
+      tbody.querySelectorAll('[data-del]').forEach((btn) => btn.addEventListener('click', () => deleteUser(btn)));
+    }
+
+    // ---------- แก้ไข ----------
+    const editModal = document.getElementById('editModal');
+    let editingId = null;
+
+    function openEdit(id) {
+      const u = allUsers.find((x) => x.id === id);
+      if (!u) return;
+      editingId = id;
+      document.getElementById('modalSub').textContent = '#' + u.id + ' · ' + u.email + ' · สมัครผ่าน ' + (u.provider === 'google' ? 'Google' : 'อีเมล');
+      document.getElementById('mEmail').value = u.email;
+      document.getElementById('mPhone').value = u.phone.replace(/[-\s]/g, '');
+      document.getElementById('mPassword').value = '';
+      document.getElementById('mStatus').value = u.status;
+      document.getElementById('mRole').value = u.role;
+      document.getElementById('mEmailVerified').checked = u.is_email_verified;
+      document.getElementById('modalError').style.display = 'none';
+      ['mEmailErr', 'mPhoneErr', 'mPasswordErr'].forEach((id) => document.getElementById(id).style.display = 'none');
+      editModal.classList.add('show');
+    }
+
+    function closeEdit() { editModal.classList.remove('show'); editingId = null; }
+    document.getElementById('cancelEditBtn').addEventListener('click', closeEdit);
+    editModal.addEventListener('click', (e) => { if (e.target === editModal) closeEdit(); });
+
+    document.getElementById('saveEditBtn').addEventListener('click', async (e) => {
+      const btn = e.target;
+      const payload = {
+        email: document.getElementById('mEmail').value.trim(),
+        phone: document.getElementById('mPhone').value.trim(),
+        status: document.getElementById('mStatus').value,
+        role: document.getElementById('mRole').value,
+        isEmailVerified: document.getElementById('mEmailVerified').checked,
+      };
+      const np = document.getElementById('mPassword').value;
+      if (np) payload.newPassword = np;
+
+      btn.disabled = true;
+      btn.classList.add('spinning');
+      try {
+        const data = await api('/api/admin/users/' + editingId, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        showToast(ICON_CHECK + data.message);
+        closeEdit();
+        await loadUsers();
+      } catch (err) {
+        showToast(ICON_ALERT + escapeHtml(err.message));
+        document.getElementById('modalError').textContent = err.message;
+        document.getElementById('modalError').style.display = 'block';
+      } finally {
+        btn.classList.remove('spinning');
+        btn.disabled = false;
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> บันทึก';
+      }
+    });
+
+    // ---------- ลบ (กด 2 ครั้งเพื่อยืนยัน) ----------
+    async function deleteUser(btn) {
+      if (btn.dataset.confirm !== 'yes') {
+        btn.dataset.confirm = 'yes';
+        btn.classList.add('confirming');
+        btn.textContent = 'แน่ใจ? กดอีกครั้ง';
+        setTimeout(() => {
+          btn.dataset.confirm = '';
+          btn.classList.remove('confirming');
+          btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ลบ';
+        }, 3000);
+        return;
+      }
+      const id = Number(btn.dataset.del);
+      btn.disabled = true;
+      try {
+        const data = await api('/api/admin/users/' + id, { method: 'DELETE' });
+        showToast(ICON_CHECK + data.message);
+        await loadUsers();
+      } catch (err) {
+        showToast(ICON_ALERT + escapeHtml(err.message));
+      } finally {
+        btn.classList.remove('spinning');
+        btn.disabled = false;
+        btn.dataset.confirm = '';
+        btn.classList.remove('confirming');
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ลบ';
+      }
+    }
+
+    // ---------- เหตุการณ์ ----------
+    document.getElementById('searchInput').addEventListener('input', () => {
+      clearTimeout(window.__searchT);
+      window.__searchT = setTimeout(loadUsers, 300);
+    });
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+      const rb = document.getElementById('refreshBtn');
+      rb.classList.add('spinning'); rb.disabled = true;
+      try { await loadUsers(); showToast(ICON_CHECK + 'อัปเดตข้อมูลแล้ว'); }
+      catch (err) { showToast(ICON_ALERT + escapeHtml(err.message)); }
+      finally { rb.classList.remove('spinning'); rb.disabled = false; }
+    });
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    async function init() {
+      try {
+        const me = await api('/api/me');
+        if (me.user.role !== 'admin') { window.location.href = '/login.html'; return; }
+        document.getElementById('adminEmail').textContent = me.user.email;
+        document.getElementById('adminAvatar').textContent = me.user.email.charAt(0).toUpperCase();
+        await loadUsers();
+      } catch { window.location.href = '/login.html'; }
+    }
+    init();
+  </script>
+</body>
+</html>

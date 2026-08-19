@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สมัครสมาชิก | ร้านค้าออนไลน์</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/theme.js"></script>
+</head>
+<body>
+  <div class="auth-layout">
+    <!-- พาเนลแบรนด์ (ซ้าย) -->
+    <aside class="brand-panel">
+      <div class="blob blob-1"></div>
+      <div class="blob blob-2"></div>
+      <div class="blob blob-3"></div>
+      <div class="grid-overlay"></div>
+
+      <div class="brand-header">
+        <div class="brand-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="brand-name">ร้านค้าออนไลน์</span>
+      </div>
+
+      <div class="brand-content">
+        <h1>เริ่มต้นช้อปปิ้ง<br>กับเราเลยวันนี้</h1>
+        <p>สมัครสมาชิกฟรี ไม่มีค่าใช้จ่าย ใช้เวลาเพียงไม่กี่นาที พร้อมสิทธิประโยชน์เพียบ</p>
+        <div class="brand-features">
+          <div class="brand-feature">
+            <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            ยืนยันตัวตนด้วย OTP ทาง SMS กันบัญชีปลอม
+          </div>
+          <div class="brand-feature">
+            <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            จัดการคำสั่งซื้อและติดตามสถานะส่งของได้
+          </div>
+          <div class="brand-feature">
+            <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            ข้อมูลปลอดภัย เก็บเท่าที่จำเป็นตาม PDPA
+          </div>
+        </div>
+      </div>
+
+      <div class="brand-footer">© 2026 ร้านค้าออนไลน์ — สงวนลิขสิทธิ์</div>
+    </aside>
+
+    <!-- พาเนลฟอร์ม (ขวา) -->
+    <main class="form-panel">
+      <button class="theme-toggle" type="button" aria-label="สลับธีม">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" style="display:none">
+          <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
+          <path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none">
+          <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <div class="auth-card">
+        <div class="auth-head">
+          <div class="mobile-brand">
+            <div class="brand-logo">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <span class="brand-name">ร้านค้าออนไลน์</span>
+          </div>
+          <h1>สร้างบัญชีใหม่</h1>
+          <p>สมัครสมาชิกฟรี เริ่มช้อปปิ้งได้ทันที</p>
+        </div>
+
+        <div class="error-msg" id="errorMsg"></div>
+
+        <form id="registerForm" novalidate>
+          <!-- honeypot: ช่องนี้ต้องเว้นว่างไว้ หากบอทกรอกจะถูกปฏิเสธฝั่งเซิร์ฟเวอร์ -->
+          <input type="text" class="hp-field" name="website" id="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+          <div class="field">
+            <label for="email">อีเมล</label>
+            <div class="check-email-row">
+              <input type="email" id="email" name="email" placeholder="คุณ@example.com" autocomplete="email">
+              <button type="button" class="check-email-btn" id="checkEmailBtn">ตรวจสอบ</button>
+            </div>
+            <span class="check-result" id="emailCheckResult"></span>
+            <span class="field-error" id="emailError"></span>
+          </div>
+
+          <div class="field">
+            <label for="password">รหัสผ่าน</label>
+            <div class="input-wrap">
+              <input type="password" id="password" name="password" placeholder="อย่างน้อย 8 ตัวอักษร" autocomplete="new-password" style="padding-right:46px;">
+              <button type="button" class="toggle-password" data-target="password" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+              </button>
+            </div>
+            <div class="strength-wrap">
+              <div class="strength-bar">
+                <span data-strength="0"></span><span data-strength="1"></span><span data-strength="2"></span>
+                <span data-strength="3"></span><span data-strength="4"></span><span data-strength="5"></span>
+              </div>
+              <div class="strength-label" id="strengthLabel"></div>
+            </div>
+            <span class="field-error" id="passwordError"></span>
+          </div>
+
+          <div class="field">
+            <label for="confirmPassword">ยืนยันรหัสผ่านอีกครั้ง</label>
+            <div class="input-wrap">
+              <input type="password" id="confirmPassword" name="confirmPassword" placeholder="กรอกรหัสผ่านอีกครั้ง" autocomplete="new-password" style="padding-right:46px;">
+              <button type="button" class="toggle-password" data-target="confirmPassword" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>
+                </svg>
+              </button>
+            </div>
+            <span class="field-error" id="confirmError"></span>
+          </div>
+
+          <div class="field">
+            <label for="phone">เบอร์โทรศัพท์</label>
+            <div class="phone-group">
+              <span class="phone-prefix">+66</span>
+              <input type="tel" id="phone" name="phone" placeholder="เช่น 812345678 หรือ 0812345678" autocomplete="tel" inputmode="tel">
+            </div>
+            <span class="field-hint">🇹🇭 เบอร์โทรศัพท์ในประเทศไทย (มีหรือไม่มี 0 นำหน้าก็ได้) — ใช้ยืนยันตัวตนด้วยรหัส OTP ทาง SMS</span>
+            <span class="field-error" id="phoneError"></span>
+          </div>
+
+          <label class="checkbox-row" for="terms">
+            <input type="checkbox" id="terms" name="terms">
+            <span>ฉันยอมรับ<a href="privacy.html" target="_blank">ข้อกำหนดและนโยบายความเป็นส่วนตัว</a> (PDPA)</span>
+          </label>
+          <div class="terms-error" id="termsError">กรุณายอมรับข้อกำหนดและนโยบายความเป็นส่วนตัว</div>
+
+          <button type="submit" class="btn btn-primary" id="submitBtn">สมัครสมาชิก</button>
+
+          <!-- reCAPTCHA v2 จะถูกโหลดตรงนี้เมื่อตั้ง RECAPTCHA_SITE_KEY ใน .env -->
+          <div class="recaptcha-wrap" id="recaptchaBox" style="margin-top:14px;display:flex;justify-content:center;"></div>
+        </form>
+
+        <p class="auth-switch">
+          มีบัญชีอยู่แล้ว? <a href="login.html">เข้าสู่ระบบ</a>
+        </p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // เวลาที่มนุษย์เริ่มกรอกฟอร์ม (บอทที่กรอกไวเกินไปจะถูกปฏิเสธฝั่งเซิร์ฟเวอร์)
+    window.__formStart = Date.now();
+
+    const form = document.getElementById('registerForm');
+    const errorMsg = document.getElementById('errorMsg');
+    const submitBtn = document.getElementById('submitBtn');
+
+    const fields = {
+      email: document.getElementById('email'),
+      password: document.getElementById('password'),
+      confirmPassword: document.getElementById('confirmPassword'),
+      phone: document.getElementById('phone')
+    };
+    const fieldErrors = {
+      email: document.getElementById('emailError'),
+      password: document.getElementById('passwordError'),
+      confirmPassword: document.getElementById('confirmError'),
+      phone: document.getElementById('phoneError')
+    };
+
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    // เบอร์โทรไทย — ยอมรับทั้งแบบมี/ไม่มี 0 นำหน้า และแบบมี 66/+66
+    function isValidThaiPhone(value) {
+      const d = String(value || '').replace(/[^0-9]/g, '');
+      return /^0\d{9}$/.test(d) || /^8\d{8}$/.test(d) || /^668\d{8}$/.test(d);
+    }
+    // แปลงให้เป็นรูปแบบมาตรฐาน 08XXXXXXXX (มี 0 นำหน้า 10 หลัก)
+    function normalizeThaiPhone(value) {
+      let d = String(value || '').replace(/[^0-9]/g, '');
+      if (d.startsWith('668')) d = d.slice(2);  // 66812345678 → 812345678
+      if (/^8\d{8}$/.test(d)) d = '0' + d;      // 812345678 → 0812345678
+      return d;
+    }
+
+    // ---------- แสดง/ซ่อนรหัสผ่าน ----------
+    document.querySelectorAll('.toggle-password').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById(btn.dataset.target);
+        const isHidden = input.type === 'password';
+        input.type = isHidden ? 'text' : 'password';
+        btn.querySelector('svg').innerHTML = isHidden
+          ? '<path d="M17.9 17.9A11 11 0 011 12s4-8 11-8a10.8 10.8 0 014.5 1M9.9 4.2A10.7 10.7 0 0112 4c7 0 11 8 11 8a17.9 17.9 0 01-2.2 3.2M6.6 6.6A17.9 17.9 0 011 12s4 8 11 8a10.7 10.7 0 006-1.8M3 3l18 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>'
+          : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8"/>';
+      });
+    });
+
+    // ---------- ตัววัดความแข็งแรงรหัสผ่าน (ต้องตรงกับฝั่ง server) ----------
+    function passwordStrength(pw) {
+      let score = 0;
+      if (pw.length >= 8) score++;
+      if (pw.length >= 12) score++;
+      if (/[A-Z]/.test(pw)) score++;
+      if (/[a-z]/.test(pw)) score++;
+      if (/\d/.test(pw)) score++;
+      if (/[^A-Za-z0-9]/.test(pw)) score++;
+      return score;
+    }
+
+    const STRENGTH_TEXT = [
+      { min: 0, label: 'อ่อนเกินไป', color: '#ef4444' },
+      { min: 2, label: 'ยังไม่พอ ต้องผ่านอย่างน้อย 3 เกณฑ์', color: '#f59e0b' },
+      { min: 3, label: 'พอใช้', color: '#f59e0b' },
+      { min: 4, label: 'ดี', color: '#10b981' },
+      { min: 5, label: 'แข็งแรง', color: '#059669' },
+    ];
+    function labelFor(score) {
+      let out = STRENGTH_TEXT[0];
+      for (const item of STRENGTH_TEXT) if (score >= item.min) out = item;
+      return out;
+    }
+
+    fields.password.addEventListener('input', () => {
+      const score = passwordStrength(fields.password.value);
+      document.querySelectorAll('.strength-bar span').forEach((el) => {
+        const idx = Number(el.dataset.strength);
+        el.style.background = idx < score ? 'var(--accent)' : 'var(--border)';
+      });
+      const info = labelFor(score);
+      const label = document.getElementById('strengthLabel');
+      label.textContent = info.label;
+      label.style.color = info.color;
+      if (fields.password.value) {
+        fields.password.classList.toggle('invalid', score < 3);
+      }
+    });
+
+    // ---------- ตรวจสอบอีเมลซ้ำ (เรียกรายงานสดจากเซิร์ฟเวอร์) ----------
+    // emailAvailable: null = ยังไม่ได้ตรวจ | 'ok' = ใช้ได้ | 'pending' = สมัครค้าง ต่อได้ | 'used' = ใช้ไปแล้ว
+    let emailAvailable = null;
+    const checkEmailBtn = document.getElementById('checkEmailBtn');
+    const emailCheckResult = document.getElementById('emailCheckResult');
+
+    async function checkEmail() {
+      const email = fields.email.value.trim();
+      if (!EMAIL_RE.test(email)) {
+        showFieldError('email', 'รูปแบบอีเมลไม่ถูกต้อง');
+        return;
+      }
+      clearFieldError('email');
+      checkEmailBtn.disabled = true;
+      checkEmailBtn.textContent = 'กำลังตรวจ...';
+      try {
+        const res = await fetch('/api/check-email?email=' + encodeURIComponent(email));
+        const data = await res.json();
+        if (data.ok) {
+          emailCheckResult.style.display = 'block';
+          fields.email.classList.remove('valid', 'invalid');
+          if (data.pending) {
+            // สมัครค้างไว้ → สมัครต่อได้ ระบบจะส่ง OTP ใหม่ให้
+            emailAvailable = 'pending';
+            emailCheckResult.className = 'check-result warn';
+            emailCheckResult.innerHTML = '<svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:5px;"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> มีการสมัครค้างจากอีเมลนี้ กด "สมัครสมาชิก" เพื่อส่งรหัส OTP ใหม่';
+          } else if (data.available) {
+            emailAvailable = 'ok';
+            emailCheckResult.className = 'check-result ok';
+            emailCheckResult.innerHTML = '<svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:4px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>อีเมลนี้ใช้ได้';
+            fields.email.classList.add('valid');
+          } else {
+            emailAvailable = 'used';
+            emailCheckResult.className = 'check-result no';
+            emailCheckResult.innerHTML = '<svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:4px;"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>อีเมลนี้ถูกใช้ไปแล้ว';
+            fields.email.classList.add('invalid');
+          }
+        }
+      } catch {
+        emailCheckResult.style.display = 'none';
+      } finally {
+        checkEmailBtn.disabled = false;
+        checkEmailBtn.textContent = 'ตรวจสอบ';
+      }
+    }
+    checkEmailBtn.addEventListener('click', checkEmail);
+
+    fields.email.addEventListener('input', () => {
+      emailAvailable = null;
+      emailCheckResult.style.display = 'none';
+      clearFieldError('email');
+      fields.email.classList.remove('valid', 'invalid');
+    });
+
+    // ---------- ข้อความผิดพลาด ----------
+    function showFieldError(name, message) {
+      fields[name].classList.add('invalid');
+      fieldErrors[name].textContent = message;
+      fieldErrors[name].style.display = 'block';
+    }
+    function clearFieldError(name) {
+      fields[name].classList.remove('invalid');
+      fieldErrors[name].style.display = 'none';
+    }
+    function showFormError(message) {
+      errorMsg.textContent = message;
+      errorMsg.style.display = 'block';
+    }
+
+    // ---------- reCAPTCHA v2 (โหลดเมื่อตั้ง site key ใน .env เท่านั้น) ----------
+    let recaptchaWidgetId = null;
+    (async () => {
+      try {
+        const res = await fetch('/api/config');
+        const cfg = await res.json();
+        if (cfg.recaptchaSiteKey) {
+          const box = document.getElementById('recaptchaBox');
+          const div = document.createElement('div');
+          div.className = 'g-recaptcha';
+          div.dataset.sitekey = cfg.recaptchaSiteKey;
+          box.appendChild(div);
+          await new Promise((resolve) => {
+            const s = document.createElement('script');
+            s.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+            s.onload = resolve;
+            document.head.appendChild(s);
+          });
+          recaptchaWidgetId = grecaptcha.render(div);
+        }
+      } catch { /* ไม่มี reCAPTCHA — ใช้ honeypot + rate limit แทน */ }
+    })();
+
+    // ---------- ส่งฟอร์ม ----------
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.style.display = 'none';
+
+      const validators = {
+        email() {
+          const v = fields.email.value.trim();
+          if (!v) return 'กรุณากรอกอีเมล';
+          if (!EMAIL_RE.test(v)) return 'รูปแบบอีเมลไม่ถูกต้อง';
+          return null;
+        },
+        password() {
+          const v = fields.password.value;
+          if (!v) return 'กรุณากรอกรหัสผ่าน';
+          if (passwordStrength(v) < 3) return 'รหัสผ่านอ่อนเกินไป ต้องมีอย่างน้อย 8 ตัว และผ่านอย่างน้อย 3 เกณฑ์';
+          return null;
+        },
+        confirmPassword() {
+          const v = fields.confirmPassword.value;
+          if (!v) return 'กรุณากรอกยืนยันรหัสผ่าน';
+          if (v !== fields.password.value) return 'รหัสผ่านไม่ตรงกัน';
+          return null;
+        },
+        phone() {
+          const v = fields.phone.value.trim();
+          if (!v) return 'กรุณากรอกเบอร์โทรศัพท์';
+          if (!isValidThaiPhone(v)) return 'เบอร์โทรศัพท์ไม่ถูกต้อง (เช่น 0812345678 หรือ 812345678)';
+          return null;
+        }
+      };
+
+      let firstError = null;
+      Object.keys(validators).forEach((name) => {
+        const message = validators[name]();
+        if (message) {
+          showFieldError(name, message);
+          if (!firstError) firstError = name;
+        } else {
+          clearFieldError(name);
+        }
+      });
+
+      // ข้อกำหนด
+      const terms = document.getElementById('terms');
+      const termsError = document.getElementById('termsError');
+      if (!terms.checked) {
+        termsError.style.display = 'block';
+        if (!firstError) firstError = 'terms';
+      } else {
+        termsError.style.display = 'none';
+      }
+
+      if (firstError) {
+        if (firstError === 'terms') terms.focus();
+        else fields[firstError].focus();
+        return;
+      }
+
+      // ถ้ายังไม่เคยตรวจอีเมลซ้ำ ตรวจทันที (กัน submit ไปแล้วโดน reject)
+      if (emailAvailable === null) {
+        await checkEmail();
+        if (emailAvailable === 'used') return;
+      }
+
+      const payload = {
+        email: fields.email.value.trim(),
+        password: fields.password.value,
+        phone: normalizeThaiPhone(fields.phone.value),
+        terms: true,
+        website: document.getElementById('website').value, // honeypot (ว่างไว้)
+        formStart: window.__formStart,
+      };
+
+      // reCAPTCHA token (ถ้ามี)
+      if (recaptchaWidgetId !== null && typeof grecaptcha !== 'undefined') {
+        payload.gRecaptchaResponse = grecaptcha.getResponse(recaptchaWidgetId);
+        if (!payload.gRecaptchaResponse) {
+          showFormError('กรุณายืนยันว่าไม่ใช่บอท (reCAPTCHA)');
+          return;
+        }
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.classList.add('loading');
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+
+        if (!data.ok) {
+          if (data.field && fieldErrors[data.field]) {
+            showFieldError(data.field, data.message);
+            fields[data.field].focus();
+          } else {
+            showFormError(data.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+          }
+          return;
+        }
+
+        // เก็บข้อมูลชั่วคราวเพื่อให้หน้า otp.html ใช้ยืนยันเบอร์โทร
+        sessionStorage.setItem('pendingSignup', JSON.stringify({
+          userId: data.userId,
+          phoneMasked: data.phoneMasked,
+          devOtp: data.dev ? data.dev.devOtp : null,
+          email: payload.email,
+        }));
+        window.location.href = data.redirect || '/dashboard/pages';
+      } catch {
+        showFormError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('loading');
+      }
+    });
+  </script>
+</body>
+</html>

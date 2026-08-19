@@ -1,0 +1,567 @@
+/* ============================================================
+   ร้านค้าออนไลน์ — Design System
+   Split-screen auth + ธีมสว่าง/มืด (data-theme on <html>)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap');
+
+/* ---------- Theme tokens ---------- */
+:root {
+  --font: 'Inter', 'Noto Sans Thai', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  --bg: #f4f5fb;
+  --surface: #ffffff;
+  --surface-2: #f7f8fd;
+  --surface-hover: #eef0fa;
+  --text: #101828;
+  --muted: #667085;
+  --border: #e4e7ec;
+  --border-strong: #d0d5dd;
+
+  --accent: #6366f1;
+  --accent-2: #8b5cf6;
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --ring: rgba(99, 102, 241, 0.18);
+
+  --success: #059669;
+  --success-bg: #ecfdf5;
+  --success-border: #a7f3d0;
+  --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecaca;
+  --warning: #b45309;
+  --warning-bg: #fffbeb;
+  --warning-border: #fde68a;
+  --info: #1d4ed8;
+  --info-bg: #eff6ff;
+  --info-border: #bfdbfe;
+
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
+  --shadow-lg: 0 16px 40px rgba(16, 24, 40, 0.12);
+
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+}
+
+[data-theme="dark"] {
+  --bg: #0c0f1d;
+  --surface: #141830;
+  --surface-2: #1a1f38;
+  --surface-hover: #222848;
+  --text: #eef1f9;
+  --muted: #98a2b8;
+  --border: #242b49;
+  --border-strong: #323b60;
+
+  --accent: #7c8cff;
+  --accent-2: #a78bfa;
+  --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --ring: rgba(124, 140, 255, 0.25);
+
+  --success: #34d399;
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --success-border: rgba(16, 185, 129, 0.35);
+  --danger: #f87171;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-border: rgba(239, 68, 68, 0.35);
+  --warning: #fbbf24;
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --warning-border: rgba(245, 158, 11, 0.35);
+  --info: #93c5fd;
+  --info-bg: rgba(59, 130, 246, 0.12);
+  --info-border: rgba(59, 130, 246, 0.35);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+/* ---------- Base ---------- */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+::selection { background: var(--ring); }
+
+/* เปลี่ยนธีมแบบนุ่มนวล (เฉพาะพื้นหลัง/เส้นขอบ/สีข้อความ) */
+body, .form-panel, .auth-card, input, .btn, .card, .otp-inputs input,
+.badge, .verify-banner, .success-box, .error-msg, .field-error,
+.privacy-page, .info-row {
+  transition: background-color 0.25s ease, border-color 0.25s ease,
+              color 0.25s ease, box-shadow 0.25s ease;
+}
+
+/* ---------- Split-screen layout ---------- */
+.auth-layout {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  min-height: 100vh;
+}
+
+/* พาเนลแบรนด์ (ซ้าย) */
+.brand-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 56px 56px 44px;
+  overflow: hidden;
+  color: #fff;
+  background: linear-gradient(150deg, #4f46e5 0%, #7c3aed 48%, #c026d3 100%);
+}
+
+/* ลวดลายตกแต่ง: วงกลมเบลอ */
+.brand-panel .blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+.brand-panel .blob-1 { width: 380px; height: 380px; background: #22d3ee; top: -140px; right: -100px; }
+.brand-panel .blob-2 { width: 320px; height: 320px; background: #f472b6; bottom: -120px; left: -80px; }
+.brand-panel .blob-3 { width: 200px; height: 200px; background: #fbbf24; top: 40%; left: 55%; opacity: 0.25; }
+
+/* ลวดลายตารางบาง ๆ */
+.brand-panel .grid-overlay {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse at 30% 40%, black 30%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at 30% 40%, black 30%, transparent 75%);
+}
+
+.brand-panel > * { position: relative; z-index: 1; }
+
+.brand-header { display: flex; align-items: center; gap: 12px; }
+.brand-logo {
+  width: 44px; height: 44px; border-radius: 13px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-md);
+}
+.brand-name { font-size: 19px; font-weight: 800; letter-spacing: 0.2px; }
+
+.brand-content { max-width: 420px; }
+.brand-content h1 {
+  font-size: 38px;
+  line-height: 1.35;
+  font-weight: 800;
+  margin-bottom: 18px;
+  letter-spacing: -0.3px;
+}
+.brand-content p { font-size: 16px; line-height: 1.8; opacity: 0.92; }
+
+.brand-features { margin-top: 36px; display: grid; gap: 16px; }
+.brand-feature { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 500; }
+.brand-feature .check {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-footer { font-size: 13px; opacity: 0.7; }
+
+/* พาเนลฟอร์ม (ขวา) */
+.form-panel {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  background:
+    radial-gradient(circle at 15% 10%, var(--ring), transparent 45%),
+    var(--bg);
+}
+
+.theme-toggle {
+  position: absolute;
+  top: 22px; right: 24px;
+  width: 42px; height: 42px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease, background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+.theme-toggle:hover { transform: translateY(-2px); color: var(--text); border-color: var(--border-strong); }
+.theme-toggle:active { transform: translateY(0); }
+.theme-toggle svg { width: 20px; height: 20px; }
+
+.auth-card { width: 100%; max-width: 404px; animation: fadeUp 0.45s ease both; }
+
+.auth-head { text-align: center; margin-bottom: 28px; }
+.auth-head .mobile-brand { display: none; }
+.auth-head h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.3px; }
+.auth-head p { color: var(--muted); font-size: 14px; margin-top: 8px; line-height: 1.6; }
+
+/* ---------- Form controls ---------- */
+.field { margin-bottom: 18px; }
+.field > label { display: block; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 7px; }
+.field .hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+.input-wrap { position: relative; }
+.input-wrap input,
+input[type="email"], input[type="password"], input[type="tel"], input[type="text"] {
+  width: 100%;
+  padding: 12px 15px;
+  font-size: 15px;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  outline: none;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.25s ease;
+}
+.input-wrap input:focus,
+input[type="email"]:focus, input[type="password"]:focus,
+input[type="tel"]:focus, input[type="text"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+.input-wrap input.invalid,
+input.invalid { border-color: var(--danger); box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12); }
+.input-wrap input.valid,
+input.valid { border-color: var(--success); box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.12); }
+.input-wrap input::placeholder { color: var(--muted); opacity: 0.75; }
+
+.toggle-password {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  background: none; border: none; border-radius: var(--radius-sm);
+  cursor: pointer; color: var(--muted);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.toggle-password:hover { background: var(--surface-hover); color: var(--text); }
+.toggle-password svg { width: 19px; height: 19px; }
+
+/* ช่องเบอร์โทร +66 (พรีฟิกซ์คงที่ ประเทศไทย) */
+.phone-group { display: flex; }
+.phone-group .phone-prefix {
+  display: flex; align-items: center; justify-content: center;
+  min-width: 58px; padding: 0 12px;
+  font-size: 15px; font-weight: 700;
+  color: var(--text); background: var(--surface-2);
+  border: 1px solid var(--border); border-right: none;
+  border-radius: var(--radius) 0 0 var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease;
+}
+.phone-group input {
+  flex: 1; min-width: 0;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  border-left: none;
+}
+.phone-group input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+.phone-group:focus-within .phone-prefix { border-color: var(--accent); }
+.phone-group input.invalid { border-color: var(--danger); box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12); }
+
+.field-error { display: none; color: var(--danger); font-size: 12.5px; margin-top: 6px; }
+.field-hint { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+.row-inline { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 18px; }
+.link-muted { color: var(--muted); font-size: 13px; font-weight: 500; }
+.link-muted:hover { color: var(--accent); text-decoration: none; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 13px 18px;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, opacity 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  text-decoration: none;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-primary {
+  background: var(--accent-gradient);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+}
+.btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(99, 102, 241, 0.42); }
+.btn-primary:active { transform: translateY(0) scale(0.98); }
+
+.btn-google {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+.btn-google:hover:not(:disabled) { background: var(--surface-hover); border-color: var(--border-strong); }
+.btn-google svg { width: 19px; height: 19px; }
+
+.btn-outline {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border-strong);
+}
+.btn-outline:hover:not(:disabled) { background: var(--ring); }
+
+.btn-small {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 18px; font-size: 13px; font-weight: 700; font-family: var(--font);
+  border-radius: var(--radius-sm); border: none; cursor: pointer;
+  background: var(--accent-gradient); color: #fff;
+  transition: transform 0.12s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+.btn-small:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(99,102,241,.35); }
+.btn-small:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-small.danger { background: transparent; border: 1px solid var(--danger-border); color: var(--danger); }
+.btn-small.danger:hover { background: var(--danger-bg); box-shadow: none; }
+
+/* spinner ในปุ่ม */
+.btn.loading::after {
+  content: '';
+  width: 15px; height: 15px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+.btn.loading.btn-google::after,
+.btn.loading.btn-outline::after { border-color: var(--border); border-top-color: var(--accent); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- Messages ---------- */
+.error-msg, .success-box {
+  display: none;
+  border-radius: var(--radius);
+  padding: 11px 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 18px;
+  border: 1px solid;
+}
+.error-msg { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
+.success-box { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
+.success-box a { color: inherit; font-weight: 700; text-decoration: underline; }
+
+/* ---------- Divider ---------- */
+.divider {
+  display: flex; align-items: center; text-align: center;
+  margin: 22px 0; color: var(--muted); font-size: 13px; gap: 12px;
+}
+.divider::before, .divider::after { content: ''; flex: 1; border-bottom: 1px solid var(--border); }
+
+/* ---------- Checkbox ข้อกำหนด ---------- */
+.checkbox-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13.5px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; cursor: pointer;
+}
+.checkbox-row input {
+  width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0;
+  accent-color: var(--accent); cursor: pointer;
+}
+.checkbox-row a { font-weight: 600; }
+.terms-error { display: none; color: var(--danger); font-size: 12.5px; margin: -10px 0 14px; }
+
+/* ---------- ปุ่มตรวจอีเมล ---------- */
+.check-email-row { display: flex; gap: 8px; }
+.check-email-row input { flex: 1; min-width: 0; }
+.check-email-btn {
+  padding: 0 16px; font-size: 13px; font-weight: 700; font-family: var(--font);
+  background: var(--surface-2); color: var(--accent);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  cursor: pointer; white-space: nowrap;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.check-email-btn:hover:not(:disabled) { background: var(--surface-hover); }
+.check-email-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+.check-result { display: none; font-size: 13px; margin-top: 6px; font-weight: 500; }
+.check-result.ok { color: var(--success); }
+.check-result.no { color: var(--danger); }
+.check-result.warn { color: var(--warning); }
+
+/* ---------- Strength bar ---------- */
+.strength-wrap { margin-top: 8px; }
+.strength-bar { display: flex; gap: 5px; height: 5px; }
+.strength-bar span { flex: 1; background: var(--border); border-radius: 999px; transition: background 0.25s ease; }
+.strength-label { font-size: 12px; margin-top: 6px; color: var(--muted); transition: color 0.2s ease; }
+
+/* ---------- honeypot ---------- */
+.hp-field {
+  position: absolute !important; left: -9999px !important; width: 1px; height: 1px;
+  overflow: hidden; opacity: 0; pointer-events: none;
+}
+
+/* ---------- OTP ---------- */
+.otp-box { text-align: center; }
+.otp-box .auth-head { margin-bottom: 24px; }
+.dev-banner {
+  display: none;
+  background: var(--success-bg); color: var(--success);
+  border: 1px dashed var(--success-border);
+  border-radius: var(--radius);
+  font-size: 13.5px; padding: 12px 14px; margin-bottom: 20px; line-height: 1.7;
+}
+.dev-banner .code { font-size: 22px; font-weight: 800; letter-spacing: 5px; }
+.otp-inputs { display: flex; justify-content: center; gap: 10px; margin-bottom: 24px; }
+.otp-inputs input {
+  width: 50px; height: 58px;
+  text-align: center; font-size: 24px; font-weight: 700; font-family: var(--font);
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  outline: none; box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.12s ease;
+}
+.otp-inputs input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); transform: translateY(-2px); }
+.otp-inputs input.invalid { border-color: var(--danger); box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12); animation: shake 0.3s ease; }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+.resend-row { margin-top: 20px; font-size: 14px; color: var(--muted); }
+.resend-row button {
+  background: none; border: none; color: var(--accent); font-weight: 700;
+  font-size: 14px; font-family: var(--font); cursor: pointer; padding: 0;
+}
+.resend-row button:disabled { color: var(--muted); opacity: 0.6; cursor: not-allowed; }
+.back-row { margin-top: 18px; font-size: 13px; }
+.back-row a { color: var(--muted); text-decoration: none; }
+.back-row a:hover { color: var(--accent); text-decoration: none; }
+
+/* ---------- Footer row (ลิงก์สลับหน้า) ---------- */
+.auth-switch { text-align: center; margin-top: 24px; font-size: 14px; color: var(--muted); }
+.auth-switch a { font-weight: 700; }
+.auth-switch a:hover { text-decoration: none; }
+
+/* ---------- หน้าแรก (index) ---------- */
+.site-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 32px; border-bottom: 1px solid var(--border);
+  background: var(--surface); position: sticky; top: 0; z-index: 10;
+}
+.site-nav .brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 800; }
+.site-nav .brand-logo { width: 36px; height: 36px; border-radius: 10px; }
+.site-nav .brand-name { color: var(--text); }
+.site-nav .nav-links a { margin-left: 18px; color: var(--muted); font-size: 14px; font-weight: 600; }
+.site-nav .nav-links a:hover { color: var(--accent); text-decoration: none; }
+
+.home-container { max-width: 760px; margin: 56px auto; padding: 0 20px; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 32px;
+}
+.card.guest {
+  text-align: center; padding: 56px 24px;
+  animation: fadeUp 0.45s ease both;
+}
+.card .guest-icon { font-size: 52px; margin-bottom: 14px; }
+.card h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.2px; }
+.card .subtitle { color: var(--muted); font-size: 14px; margin: 8px 0 26px; line-height: 1.6; }
+
+.user-head { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+.avatar {
+  width: 54px; height: 54px; border-radius: 50%;
+  background: var(--accent-gradient); color: #fff; font-size: 22px; font-weight: 800;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+}
+.user-email { font-size: 17px; font-weight: 700; }
+.user-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 999px;
+  font-size: 12px; font-weight: 700;
+}
+.badge svg { width: 13px; height: 13px; }
+.badge-success { background: var(--success-bg); color: var(--success); }
+.badge-info { background: var(--info-bg); color: var(--info); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+
+.info-list { margin: 20px 0; }
+.info-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 13px 0; border-bottom: 1px solid var(--border); font-size: 14px; gap: 16px;
+}
+.info-row:last-child { border-bottom: none; }
+.info-row .label { color: var(--muted); font-size: 13px; }
+.info-row .value { font-weight: 600; word-break: break-all; text-align: right; }
+
+.verify-banner {
+  display: none;
+  background: var(--warning-bg); color: var(--warning);
+  border: 1px solid var(--warning-border);
+  border-radius: var(--radius);
+  padding: 14px 16px; margin-top: 4px;
+  font-size: 14px; line-height: 1.7;
+}
+.verify-banner .btn-small { margin-top: 10px; }
+.verify-banner .dev-link { display: none; margin-top: 10px; font-size: 12px; color: var(--muted); word-break: break-all; }
+.verify-banner .dev-link a { color: var(--warning); text-decoration: underline; }
+
+.actions { margin-top: 26px; display: flex; gap: 12px; flex-wrap: wrap; }
+.actions .btn { width: auto; }
+
+/* ---------- หน้า privacy ---------- */
+.privacy-page { max-width: 720px; margin: 48px auto; padding: 0 20px; }
+.privacy-page .card h1 { font-size: 26px; }
+.privacy-page .updated { color: var(--muted); font-size: 13px; margin: 6px 0 20px; }
+.privacy-page h2 { font-size: 17px; margin: 24px 0 8px; color: var(--text); }
+.privacy-page p, .privacy-page li { font-size: 14px; line-height: 1.9; color: var(--muted); }
+.privacy-page ul { padding-left: 22px; margin: 8px 0; }
+.privacy-page .back { display: inline-block; margin-top: 28px; font-weight: 700; }
+
+/* ---------- Animation ---------- */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .auth-layout { grid-template-columns: 1fr; }
+  .brand-panel { display: none; }
+  .form-panel { padding: 40px 20px; min-height: 100vh; }
+  .auth-head .mobile-brand {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin-bottom: 26px;
+  }
+  .auth-head .mobile-brand .brand-logo { width: 40px; height: 40px; border-radius: 12px; background: var(--accent-gradient); }
+  .auth-head .mobile-brand .brand-name { font-size: 18px; font-weight: 800; }
+}
