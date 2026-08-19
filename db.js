@@ -338,13 +338,14 @@ async function createAdminUser({ email, passwordHash }) {
 // Admin — รายงาน OTP
 // ---------------------------------------------------------------------------
 async function listOtpLogs(limit = 50) {
+  // MySQL ไม่รองรับ placeholder ใน LIMIT — ต้อง interpolate (limit เป็นตัวเลขแล้ว)
+  const safeLimit = Math.max(1, Math.min(500, Number(limit) || 50));
   const [rows] = await pool.execute(
     `SELECT o.id, o.user_id, o.phone AS contact, o.purpose,
             o.attempts, o.used, o.expires_at, o.created_at, u.email
        FROM otp_codes o
        JOIN users u ON u.id = o.user_id
-      ORDER BY o.id DESC LIMIT ?`,
-    [limit]
+      ORDER BY o.id DESC LIMIT ${safeLimit}`
   );
   return rows;
 }
@@ -375,12 +376,13 @@ async function countStats() {
 // ---------------------------------------------------------------------------
 async function listUsers({ search = '', limit = 100 } = {}) {
   const like = `%${search}%`;
+  const safeLimit = Math.max(1, Math.min(500, Number(limit) || 100));
   const [rows] = await pool.execute(
     `SELECT id, email, phone, status, role, provider, is_email_verified, google_id, created_at
        FROM users
       WHERE email LIKE ? OR phone LIKE ?
-      ORDER BY id DESC LIMIT ?`,
-    [like, like, limit]
+      ORDER BY id DESC LIMIT ${safeLimit}`,
+    [like, like]
   );
   return rows;
 }
