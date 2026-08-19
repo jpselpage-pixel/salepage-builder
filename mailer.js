@@ -50,6 +50,12 @@ function getGmailApiConfig() {
   };
 }
 
+// ช่องทางส่งอีเมล: 'auto' (Gmail API ก่อน → SMTP), 'gmail' (บังคับ Gmail API), 'smtp' (บังคับ SMTP)
+function getEmailChannel() {
+  const c = db.getSetting('email_channel');
+  return c === 'gmail' || c === 'smtp' ? c : 'auto';
+}
+
 let transporter = null;
 function _resetTransporter() { transporter = null; }
 
@@ -113,20 +119,33 @@ async function sendEmail({ to, subject, htmlBody }) {
   const gmailCfg = getGmailApiConfig();
   const smtpCfg = getSmtpConfig();
   const dev = devModeEnabled();
+  const channel = getEmailChannel(); // auto | gmail | smtp
 
-  // 1) Gmail API — ใช้ได้ทุกที่ (รวม Railway)
-  if (gmailCfg.configured && !dev) {
+  // dev เปิด → จำลองเสมอ
+  if (dev) {
+    return simulateEmail({ to, subject, htmlBody, warn: !gmailCfg.configured && !smtpCfg.configured });
+  }
+
+  // ลำดับช่องทางตาม email_channel
+  const wantGmail = channel === 'gmail' || (channel === 'auto' && gmailCfg.configured);
+  const wantSmtp = channel === 'smtp' || (channel === 'auto' && smtpCfg.configured);
+
+  // 1) Gmail API (ถ้าต้องการ + ตั้งค่าแล้ว)
+  if (wantGmail && gmailCfg.configured) {
     try {
       const r = await sendViaGmailApi({ to, subject, htmlBody, cfg: gmailCfg });
       return { ...r, channel: 'gmail-api' };
     } catch (err) {
       console.error('❌ Gmail API ส่งไม่สำเร็จ:', err.message);
-      return { ok: false, channel: 'gmail-api', error: err.message || 'ส่งอีเมลไม่สำเร็จ' };
+      if (channel === 'gmail') {
+        return { ok: false, channel: 'gmail-api', error: err.message || 'ส่งอีเมลไม่สำเร็จ' };
+      }
+      // auto → ลอง SMTP ต่อ
     }
   }
 
-  // 2) SMTP (nodemailer) — ใช้ได้บนเครื่อง (Railway block port)
-  if (smtpCfg.configured && !dev) {
+  // 2) SMTP (ถ้าต้องการ + ตั้งค่าแล้ว)
+  if (wantSmtp && smtpCfg.configured) {
     try {
       if (!transporter) {
         const nodemailer = require('nodemailer');
@@ -157,14 +176,18 @@ async function sendEmail({ to, subject, htmlBody }) {
     }
   }
 
-  // 3) โหมดจำลอง (dev เปิด หรือยังไม่ได้ตั้งค่าอะไร)
+  // 3) ไม่มีช่องทางที่พร้อม → จำลอง
+  return simulateEmail({ to, subject, htmlBody, warn: true });
+}
+
+function simulateEmail({ to, subject, htmlBody, warn }) {
   console.log('📧 [อีเมล — โหมดจำลอง]');
   console.log('   ถึง: ' + to);
   console.log('   หัวข้อ: ' + subject);
   console.log('   เนื้อหา:');
   console.log('   ' + htmlBody.replace(/<[^>]+>/g, '').replace(/\n+/g, '\n   ').trim());
-  if (!dev) {
-    console.log('   ⚠️ เตือน: ปิดโหมด dev แล้วแต่ยังไม่ได้ตั้งค่า Gmail API/SMTP → กรุณากรอกค่าที่หน้าแอดมิน');
+  if (warn) {
+    console.log('   ⚠️ เตือน: ยังไม่ได้ตั้งค่าช่องทางส่งอีเมลที่เลือก (Gmail API / SMTP) → กรุณากรอกค่าที่หน้าแอดมิน');
   }
   return { ok: true, simulated: true };
 }
@@ -210,6 +233,7 @@ module.exports = {
   sendEmail,
   getSmtpConfig,
   getGmailApiConfig,
+  getEmailChannel,
   devModeEnabled,
   _resetTransporter,
   DEV_MODE,

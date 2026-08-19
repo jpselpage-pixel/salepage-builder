@@ -1384,6 +1384,7 @@ app.get('/api/admin/smtp-status', requireAdmin, (req, res) => {
   res.json({
     ok: true,
     status: {
+      emailChannel: mailer.getEmailChannel(),
       configured: cfg.configured,
       host: cfg.host || null,
       port: cfg.port,
@@ -1511,6 +1512,18 @@ app.post('/api/admin/gmail-settings', requireAdmin, (req, res) => {
     ok: true,
     message: changed > 0 ? `บันทึกการตั้งค่า Gmail API แล้ว (${changed} รายการ)` : 'ไม่มีรายการที่เปลี่ยนแปลง',
   });
+});
+
+// ตั้งค่าช่องทางส่งอีเมล (auto/gmail/smtp)
+app.post('/api/admin/email-channel', requireAdmin, (req, res) => {
+  const { channel } = req.body || {};
+  if (!['auto', 'gmail', 'smtp'].includes(channel)) {
+    return res.status(400).json({ ok: false, message: 'ช่องทางไม่ถูกต้อง (auto/gmail/smtp)' });
+  }
+  db.setSetting('email_channel', channel);
+  require('./mailer')._resetTransporter();
+  console.log(`👑 [แอดมิน] ตั้งช่องทางส่งอีเมล: ${channel}`);
+  res.json({ ok: true, message: 'ตั้งช่องทางส่งอีเมลแล้ว' });
 });
 
 // ทดสอบส่งอีเมลผ่าน Gmail API (ต้องตั้งค่า Gmail API ครบ + ปิด dev ถึงจะส่งจริง)

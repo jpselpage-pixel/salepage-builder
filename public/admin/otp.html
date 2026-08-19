@@ -73,6 +73,11 @@
           <button class="icon-btn" id="toggleGmailBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M22 7l-10 6L2 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> ตั้งค่า Gmail API
           </button>
+          <select id="emailChannelSelect" title="ช่องทางส่งอีเมล" style="padding:9px 13px;font-size:13px;font-family:var(--font);color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;cursor:pointer;">
+            <option value="auto">ช่องทางส่งอีเมล: อัตโนมัติ (Gmail API → SMTP)</option>
+            <option value="gmail">บังคับใช้ Gmail API</option>
+            <option value="smtp">บังคับใช้ SMTP</option>
+          </select>
           <button class="icon-btn" id="refreshBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             รีเฟรช
@@ -738,6 +743,9 @@
         const detail = document.getElementById('gmailDetail');
         const hint = document.getElementById('gmailHint');
         const cfg = status.gmail || {};
+        // ช่องทางส่งอีเมล
+        const channelSel = document.getElementById('emailChannelSelect');
+        if (status.emailChannel && channelSel) channelSel.value = status.emailChannel;
         if (cfg.configured) {
           badge.innerHTML = ICON_CHECK + 'ตั้งค่าแล้ว';
           badge.className = 'pill pill-valid';
@@ -812,6 +820,23 @@
         btn.classList.remove('spinning');
         btn.disabled = false;
         btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ทดสอบส่งอีเมล';
+      }
+    });
+
+    // ---------- ช่องทางส่งอีเมล ----------
+    document.getElementById('emailChannelSelect').addEventListener('change', async (e) => {
+      const sel = e.target;
+      const prev = sel.value;
+      try {
+        await api('/api/admin/email-channel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ channel: sel.value }),
+        });
+        showToast(ICON_CHECK + 'ตั้งช่องทางส่งอีเมลแล้ว');
+      } catch (err) {
+        sel.value = prev;
+        showToast(ICON_ALERT + escapeHtml(err.message));
       }
     });
 
