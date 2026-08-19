@@ -38,14 +38,14 @@ async function initSchema() {
       role              VARCHAR(10)  NOT NULL DEFAULT 'user',
       provider          VARCHAR(10)  NOT NULL DEFAULT 'email',
       google_id         VARCHAR(255) NULL,
-      created_at        DATETIME     NOT NULL DEFAULT UTC_TIMESTAMP()
+      created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS sessions (
       token      CHAR(64) PRIMARY KEY,
       user_id    BIGINT NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       expires_at DATETIME NOT NULL,
       CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
@@ -60,7 +60,7 @@ async function initSchema() {
       used       TINYINT(1) NOT NULL DEFAULT 0,
       purpose    VARCHAR(20) NOT NULL DEFAULT 'signup',
       expires_at DATETIME NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT fk_otp_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
@@ -71,7 +71,7 @@ async function initSchema() {
       token_hash CHAR(64) NOT NULL,
       used       TINYINT(1) NOT NULL DEFAULT 0,
       expires_at DATETIME NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT fk_emailtoken_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
@@ -82,7 +82,7 @@ async function initSchema() {
       token_hash CHAR(64) NOT NULL,
       used       TINYINT(1) NOT NULL DEFAULT 0,
       expires_at DATETIME NOT NULL,
-      created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT fk_pwreset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
@@ -101,8 +101,8 @@ async function initSchema() {
       status     VARCHAR(10) NOT NULL DEFAULT 'draft',
       theme      VARCHAR(30) NOT NULL DEFAULT 'minimal',
       content    TEXT,
-      created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
-      updated_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT fk_pages_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
@@ -212,7 +212,7 @@ async function deleteSession(token) {
 }
 
 async function deleteExpiredSessions() {
-  await pool.execute('DELETE FROM sessions WHERE expires_at <= UTC_TIMESTAMP()');
+  await pool.execute('DELETE FROM sessions WHERE expires_at <= CURRENT_TIMESTAMP');
 }
 
 // ---------------------------------------------------------------------------
@@ -354,11 +354,11 @@ async function countStats() {
   const [activeUsers] = await pool.execute("SELECT COUNT(*) AS c FROM users WHERE status = 'active'");
   const [otpTotal] = await pool.execute('SELECT COUNT(*) AS c FROM otp_codes');
   const [otpValid] = await pool.execute(
-    "SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND expires_at > UTC_TIMESTAMP()"
+    "SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND expires_at > CURRENT_TIMESTAMP"
   );
   const [otpUsed] = await pool.execute('SELECT COUNT(*) AS c FROM otp_codes WHERE used = 1');
   const [otpExpired] = await pool.execute(
-    "SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND expires_at <= UTC_TIMESTAMP()"
+    "SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND expires_at <= CURRENT_TIMESTAMP"
   );
   return {
     users: users[0].c,
@@ -462,7 +462,7 @@ async function updatePage(id, fields) {
       values.push(fields[key]);
     }
   }
-  sets.push('updated_at = UTC_TIMESTAMP()');
+  sets.push('updated_at = CURRENT_TIMESTAMP');
   values.push(id);
   await pool.execute(`UPDATE pages SET ${sets.join(', ')} WHERE id = ?`, values);
 }
