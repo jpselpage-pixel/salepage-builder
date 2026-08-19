@@ -44,15 +44,12 @@ function hashOtp(code) {
   return crypto.createHash('sha256').update(code).digest('hex');
 }
 
-// เวลาท้องถิ่นรูปแบบ YYYY-MM-DD HH:MM:SS (ให้ตรงกับ datetime('now','localtime') ใน DB)
-function pad(n) { return String(n).padStart(2, '0'); }
-function localNowSql() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+// เวลา UTC รูปแบบ YYYY-MM-DD HH:MM:SS (ให้ตรงกับ UTC_TIMESTAMP() ใน MySQL)
+function utcNowSql() {
+  return new Date().toISOString().slice(0, 19).replace('T', ' ');
 }
-function localFutureSql(ms) {
-  const d = new Date(Date.now() + ms);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+function utcFutureSql(ms) {
+  return new Date(Date.now() + ms).toISOString().slice(0, 19).replace('T', ' ');
 }
 
 /**
@@ -62,12 +59,12 @@ function localFutureSql(ms) {
  * @param {string} purpose  'signup' | 'password_reset'
  * @returns {{ code: string, expiresAt: string, otpId: number }}
  */
-function issueOtp(userId, contact, purpose = 'signup') {
+async function issueOtp(userId, contact, purpose = 'signup') {
   const code = generateOtp();
   const ttl = getOtpTtlMinutes();
-  const expiresAt = localFutureSql(ttl * 60 * 1000);
+  const expiresAt = utcFutureSql(ttl * 60 * 1000);
 
-  const otpId = db.createOtp({
+  const otpId = await db.createOtp({
     userId,
     codeHash: hashOtp(code),
     contact,
@@ -92,20 +89,20 @@ function issueOtp(userId, contact, purpose = 'signup') {
  * ตรวจสอบรหัสที่ผู้ใช้กรอก (ตาม purpose)
  * @returns {{ ok: boolean, message?: string }}
  */
-function verifyOtp(userId, inputCode, purpose = 'signup') {
-  const record = db.findLatestOtp(userId, purpose);
+async function verifyOtp(userId, inputCode, purpose = 'signup') {
+  const record = await db.findLatestOtp(userId, purpose);
 
   if (!record || record.used === 1) {
     return { ok: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว' };
   }
-  if (record.expires_at <= localNowSql()) {
+  if (record.expires_at <= utcNowSql()) {
     return { ok: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาขอรหัสใหม่' };
   }
   if (record.attempts >= getOtpMaxAttempts()) {
     return { ok: false, message: 'ลองผิดเกินจำนวนครั้งที่กำหนด กรุณาขอรหัสใหม่' };
   }
   if (hashOtp(inputCode.trim()) !== record.code_hash) {
-    db.incrementOtpAttempts(record.id);
+    await db.incrementOtpAttempts(record.id);
     const left = getOtpMaxAttempts() - (record.attempts + 1);
     return {
       ok: false,
@@ -115,7 +112,7 @@ function verifyOtp(userId, inputCode, purpose = 'signup') {
     };
   }
 
-  db.markOtpUsed(record.id);
+  await db.markOtpUsed(record.id);
   return { ok: true };
 }
 

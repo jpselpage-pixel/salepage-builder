@@ -17,6 +17,7 @@
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "express": "^4.21.2",
+    "mysql2": "^3.23.3",
     "nodemailer": "^9.0.5",
     "twilio": "^6.0.2"
   }

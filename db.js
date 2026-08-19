@@ -1,373 +1,409 @@
 /**
- * db.js — ฐานข้อมูล SQLite (ใช้โมดูล node:sqlite ในตัว Node.js)
- * ไม่ต้องติดตั้ง MySQL / Python / node-gyp ใด ๆ
+ * db.js — ฐานข้อมูล MySQL (ใช้ mysql2)
+ *
+ * API เดียวกับเวอร์ชัน SQLite เดิม — แต่ฟังก์ชันทั้งหมดเป็น async (คืน Promise)
+ * caller ต้อง await ทุกครั้ง
  */
 'use strict';
 
-const path = require('node:path');
-const { DatabaseSync } = require('node:sqlite');
+const mysql = require('mysql2/promise');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'shop.db');
-const db = new DatabaseSync(DB_PATH);
+const DATABASE_URL = process.env.DATABASE_URL || process.env.MYSQL_URL || '';
 
-// โหมด WAL ช่วยให้อ่าน/เขียนพร้อมกันได้ดีขึ้น
-db.exec('PRAGMA journal_mode = WAL;');
-db.exec('PRAGMA foreign_keys = ON;');
-
-// ---------------------------------------------------------------------------
-// สร้างตาราง (รันครั้งแรกเท่านั้น)
-// ---------------------------------------------------------------------------
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id                INTEGER PRIMARY KEY AUTOINCREMENT,
-    email             TEXT    NOT NULL UNIQUE,
-    password_hash     TEXT    NOT NULL,
-    phone             TEXT    NOT NULL,
-    status            TEXT    NOT NULL DEFAULT 'pending',   -- pending | active
-    is_email_verified INTEGER NOT NULL DEFAULT 0,
-    created_at        TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
-  );
-
-  CREATE TABLE IF NOT EXISTS sessions (
-    token      TEXT PRIMARY KEY,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-    expires_at TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS otp_codes (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    code_hash  TEXT    NOT NULL,
-    phone      TEXT    NOT NULL,
-    attempts   INTEGER NOT NULL DEFAULT 0,
-    used       INTEGER NOT NULL DEFAULT 0,
-    expires_at TEXT    NOT NULL,
-    created_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
-  );
-
-  CREATE TABLE IF NOT EXISTS email_tokens (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash TEXT    NOT NULL,
-    used       INTEGER NOT NULL DEFAULT 0,
-    expires_at TEXT    NOT NULL,
-    created_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
-  );
-
-  CREATE TABLE IF NOT EXISTS password_resets (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    token_hash TEXT    NOT NULL,
-    used       INTEGER NOT NULL DEFAULT 0,
-    expires_at TEXT    NOT NULL,
-    created_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
-  );
-
-  CREATE TABLE IF NOT EXISTS settings (
-    key   TEXT PRIMARY KEY,
-    value TEXT NOT NULL
-  );
-
-  CREATE TABLE IF NOT EXISTS pages (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    slug       TEXT    NOT NULL UNIQUE,                -- ชื่อเพจ (เช่น my-shop) → /p/my-shop
-    title      TEXT    NOT NULL,
-    status     TEXT    NOT NULL DEFAULT 'draft',       -- draft | published
-    theme      TEXT    NOT NULL DEFAULT 'minimal',
-    content    TEXT    NOT NULL DEFAULT '{}',
-    created_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
-    updated_at TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
-  );
-`);
-
-// migration: เพิ่มคอลัมน์ purpose ใน otp_codes (แยก OTP ลงทะเบียน vs กู้รหัสผ่าน)
-// ถ้ายังไม่มี (ฐานข้อมูลเก่า) ให้เพิ่มเข้าไป — SQLite ALTER TABLE ADD COLUMN รองรับ
-const otpColumns = db.prepare('PRAGMA table_info(otp_codes)').all();
-if (!otpColumns.some((c) => c.name === 'purpose')) {
-  db.exec("ALTER TABLE otp_codes ADD COLUMN purpose TEXT NOT NULL DEFAULT 'signup'");
+if (!DATABASE_URL) {
+  console.error('⚠️ ไม่พบ DATABASE_URL — ตั้งค่า MySQL connection URL ใน environment');
 }
 
-// migration: เพิ่มคอลัมน์ role ใน users (แยกผู้ใช้ทั่วไป vs แอดมิน)
-const userColumns = db.prepare('PRAGMA table_info(users)').all();
-if (!userColumns.some((c) => c.name === 'role')) {
-  db.exec("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'");
-}
+const pool = mysql.createPool({
+  uri: DATABASE_URL,
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  charset: 'utf8mb4',
+  timezone: 'Z', // เก็บ/อ่านเวลาเป็น UTC ให้ตรงกับ nowSql() ใน server.js
+});
 
-// migration: เพิ่มคอลัมน์ provider + google_id ใน users (รองรับเข้าสู่ระบบด้วย Google)
-const userColumns2 = db.prepare('PRAGMA table_info(users)').all();
-if (!userColumns2.some((c) => c.name === 'provider')) {
-  db.exec("ALTER TABLE users ADD COLUMN provider TEXT NOT NULL DEFAULT 'email'");
-}
-if (!userColumns2.some((c) => c.name === 'google_id')) {
-  db.exec('ALTER TABLE users ADD COLUMN google_id TEXT');
+// ---------------------------------------------------------------------------
+// Schema (รันตอน boot — ฝังคอลัมน์จาก migrations เดิมเข้าไปใน DDL แล้ว)
+// ---------------------------------------------------------------------------
+async function initSchema() {
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS users (
+      id                BIGINT AUTO_INCREMENT PRIMARY KEY,
+      email             VARCHAR(255) NOT NULL UNIQUE,
+      password_hash     VARCHAR(255) NOT NULL,
+      phone             VARCHAR(30)  NOT NULL,
+      status            VARCHAR(10)  NOT NULL DEFAULT 'pending',
+      is_email_verified TINYINT(1)   NOT NULL DEFAULT 0,
+      role              VARCHAR(10)  NOT NULL DEFAULT 'user',
+      provider          VARCHAR(10)  NOT NULL DEFAULT 'email',
+      google_id         VARCHAR(255) NULL,
+      created_at        DATETIME     NOT NULL DEFAULT UTC_TIMESTAMP()
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      token      CHAR(64) PRIMARY KEY,
+      user_id    BIGINT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+      expires_at DATETIME NOT NULL,
+      CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS otp_codes (
+      id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+      user_id    BIGINT NOT NULL,
+      code_hash  CHAR(64) NOT NULL,
+      phone      VARCHAR(30) NOT NULL,
+      attempts   INT NOT NULL DEFAULT 0,
+      used       TINYINT(1) NOT NULL DEFAULT 0,
+      purpose    VARCHAR(20) NOT NULL DEFAULT 'signup',
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+      CONSTRAINT fk_otp_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS email_tokens (
+      id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+      user_id    BIGINT NOT NULL,
+      token_hash CHAR(64) NOT NULL,
+      used       TINYINT(1) NOT NULL DEFAULT 0,
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+      CONSTRAINT fk_emailtoken_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+      user_id    BIGINT NOT NULL,
+      token_hash CHAR(64) NOT NULL,
+      used       TINYINT(1) NOT NULL DEFAULT 0,
+      expires_at DATETIME NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+      CONSTRAINT fk_pwreset_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key   VARCHAR(100) PRIMARY KEY,
+      value TEXT NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS pages (
+      id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+      user_id    BIGINT NOT NULL,
+      slug       VARCHAR(60) NOT NULL UNIQUE,
+      title      VARCHAR(100) NOT NULL,
+      status     VARCHAR(10) NOT NULL DEFAULT 'draft',
+      theme      VARCHAR(30) NOT NULL DEFAULT 'minimal',
+      content    TEXT,
+      created_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+      updated_at DATETIME NOT NULL DEFAULT UTC_TIMESTAMP(),
+      CONSTRAINT fk_pages_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
 }
 
 // ---------------------------------------------------------------------------
-// แคช prepared statements (node:sqlite ต้อง prepare ก่อน run)
+// Settings — cache ในหน่วยความจำ (devMode/SMTP/SMS config ยังเป็น sync ได้)
 // ---------------------------------------------------------------------------
-const stmtCache = new Map();
+const settingsCache = new Map();
 
-function q(sql) {
-  if (!stmtCache.has(sql)) stmtCache.set(sql, db.prepare(sql));
-  return stmtCache.get(sql);
+async function loadSettingsCache() {
+  settingsCache.clear();
+  const [rows] = await pool.execute('SELECT key, value FROM settings');
+  for (const r of rows) settingsCache.set(r.key, r.value);
+}
+
+async function initDb() {
+  await initSchema();
+  await loadSettingsCache();
+}
+
+function getSetting(key) {
+  return settingsCache.has(key) ? settingsCache.get(key) : null;
+}
+
+async function setSetting(key, value) {
+  const v = String(value);
+  await pool.execute(
+    'INSERT INTO settings (key, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+    [key, v]
+  );
+  settingsCache.set(key, v);
 }
 
 // ---------------------------------------------------------------------------
 // Users
 // ---------------------------------------------------------------------------
-function findUserByEmail(email) {
-  return q('SELECT * FROM users WHERE email = ?').get(email);
+async function findUserByEmail(email) {
+  const [rows] = await pool.execute('SELECT * FROM users WHERE email = ?', [email]);
+  return rows[0] || null;
 }
 
-function findUserById(id) {
-  return q('SELECT * FROM users WHERE id = ?').get(id);
+async function findUserById(id) {
+  const [rows] = await pool.execute('SELECT * FROM users WHERE id = ?', [id]);
+  return rows[0] || null;
 }
 
-function createUser({ email, passwordHash, phone }) {
-  const result = q(
-    'INSERT INTO users (email, password_hash, phone) VALUES (?, ?, ?)'
-  ).run(email, passwordHash, phone);
-  return findUserById(Number(result.lastInsertRowid));
+async function createUser({ email, passwordHash, phone }) {
+  const [result] = await pool.execute(
+    'INSERT INTO users (email, password_hash, phone) VALUES (?, ?, ?)',
+    [email, passwordHash, phone]
+  );
+  return findUserById(result.insertId);
 }
 
-function setUserStatus(id, status) {
-  q('UPDATE users SET status = ? WHERE id = ?').run(status, id);
+async function setUserStatus(id, status) {
+  await pool.execute('UPDATE users SET status = ? WHERE id = ?', [status, id]);
 }
 
-/**
- * สร้างผู้ใช้ที่เข้าสู่ระบบด้วย Google ครั้งแรก (ยังค้าง: ยังไม่ตั้งรหัส/เบอร์)
- * อีเมลถือว่ายืนยันแล้ว (Google ยืนยันให้) — phone ยังว่างไว้ก่อน
- */
-function createGooglePendingUser({ email, googleId }) {
-  const result = q(
+async function createGooglePendingUser({ email, googleId }) {
+  const [result] = await pool.execute(
     `INSERT INTO users (email, password_hash, phone, status, is_email_verified, provider, google_id)
-     VALUES (?, '', '', 'pending', 1, 'google', ?)`
-  ).run(email, googleId || null);
-  return findUserById(Number(result.lastInsertRowid));
+     VALUES (?, '', '', 'pending', 1, 'google', ?)`,
+    [email, googleId || null]
+  );
+  return findUserById(result.insertId);
 }
 
-/** ผูก google_id เข้ากับบัญชี (ล็อกอิน Google ครั้งแรกด้วยอีเมลที่ตรงกัน) */
-function linkGoogle(id, googleId) {
-  q("UPDATE users SET provider = CASE WHEN provider = 'email' THEN 'google' ELSE provider END, google_id = ? WHERE id = ?").run(googleId || null, id);
-}
-
-/** กรอกข้อมูลให้ครบหลัง Google setup (ตั้งรหัส + เบอร์) */
-function completeGoogleSetup(id, { passwordHash, phone }) {
-  q("UPDATE users SET password_hash = ?, phone = ?, status = 'active', is_email_verified = 1 WHERE id = ?")
-    .run(passwordHash, phone, id);
-  return findUserById(id);
-}
-
-/**
- * อัปเดตข้อมูลผู้ใช้ที่ยัง pending (สมัครค้าง) — ใช้เมื่อผู้ใช้กลับมาสมัครใหม่ด้วยอีเมลเดิม
- */
-function updatePendingUser(id, { phone, passwordHash }) {
-  q('UPDATE users SET phone = ?, password_hash = ? WHERE id = ?').run(phone, passwordHash, id);
-  return findUserById(id);
-}
-
-function setEmailVerified(id, verified = 1) {
-  q('UPDATE users SET is_email_verified = ? WHERE id = ?').run(verified, id);
-}
-
-// ---------------------------------------------------------------------------
-// Sessions (ล็อกอินอัตโนมัติด้วย token + คุกกี้ httpOnly)
-// ---------------------------------------------------------------------------
-function createSession({ token, userId, expiresAt }) {
-  q('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(
-    token, userId, expiresAt
+async function linkGoogle(id, googleId) {
+  await pool.execute(
+    "UPDATE users SET provider = CASE WHEN provider = 'email' THEN 'google' ELSE provider END, google_id = ? WHERE id = ?",
+    [googleId || null, id]
   );
 }
 
-function findSession(token) {
-  return q('SELECT * FROM sessions WHERE token = ?').get(token);
+async function completeGoogleSetup(id, { passwordHash, phone }) {
+  await pool.execute(
+    "UPDATE users SET password_hash = ?, phone = ?, status = 'active', is_email_verified = 1 WHERE id = ?",
+    [passwordHash, phone, id]
+  );
+  return findUserById(id);
 }
 
-function deleteSession(token) {
-  q('DELETE FROM sessions WHERE token = ?').run(token);
+async function updatePendingUser(id, { phone, passwordHash }) {
+  await pool.execute('UPDATE users SET phone = ?, password_hash = ? WHERE id = ?', [phone, passwordHash, id]);
+  return findUserById(id);
 }
 
-function deleteExpiredSessions() {
-  q("DELETE FROM sessions WHERE expires_at <= datetime('now', 'localtime')").run();
+async function setEmailVerified(id, verified = 1) {
+  await pool.execute('UPDATE users SET is_email_verified = ? WHERE id = ?', [verified, id]);
+}
+
+// ---------------------------------------------------------------------------
+// Sessions
+// ---------------------------------------------------------------------------
+async function createSession({ token, userId, expiresAt }) {
+  await pool.execute('INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)', [token, userId, expiresAt]);
+}
+
+async function findSession(token) {
+  const [rows] = await pool.execute('SELECT * FROM sessions WHERE token = ?', [token]);
+  return rows[0] || null;
+}
+
+async function deleteSession(token) {
+  await pool.execute('DELETE FROM sessions WHERE token = ?', [token]);
+}
+
+async function deleteExpiredSessions() {
+  await pool.execute('DELETE FROM sessions WHERE expires_at <= UTC_TIMESTAMP()');
 }
 
 // ---------------------------------------------------------------------------
 // OTP
 // ---------------------------------------------------------------------------
-/**
- * สร้าง OTP ใหม่ (purpose: 'signup' = ยืนยันเบอร์โทร, 'password_reset' = กู้รหัสผ่านทางอีเมล)
- * contact = เบอร์โทร (signup) หรืออีเมล (password_reset) — เก็บในคอลัมน์ phone
- */
-function createOtp({ userId, codeHash, contact, purpose = 'signup', expiresAt }) {
-  // ให้มี OTP ที่ยังใช้ได้แค่ 1 อันต่อผู้ใช้ต่อ purpose
-  q('DELETE FROM otp_codes WHERE user_id = ? AND purpose = ?').run(userId, purpose);
-  const result = q(
-    'INSERT INTO otp_codes (user_id, code_hash, phone, purpose, expires_at) VALUES (?, ?, ?, ?, ?)'
-  ).run(userId, codeHash, contact, purpose, expiresAt);
-  return Number(result.lastInsertRowid);
+async function createOtp({ userId, codeHash, contact, purpose = 'signup', expiresAt }) {
+  await pool.execute('DELETE FROM otp_codes WHERE user_id = ? AND purpose = ?', [userId, purpose]);
+  const [result] = await pool.execute(
+    'INSERT INTO otp_codes (user_id, code_hash, phone, purpose, expires_at) VALUES (?, ?, ?, ?, ?)',
+    [userId, codeHash, contact, purpose, expiresAt]
+  );
+  return Number(result.insertId);
 }
 
-function findLatestOtp(userId, purpose = 'signup') {
-  return q(
-    'SELECT * FROM otp_codes WHERE user_id = ? AND purpose = ? ORDER BY id DESC LIMIT 1'
-  ).get(userId, purpose);
+async function findLatestOtp(userId, purpose = 'signup') {
+  const [rows] = await pool.execute(
+    'SELECT * FROM otp_codes WHERE user_id = ? AND purpose = ? ORDER BY id DESC LIMIT 1',
+    [userId, purpose]
+  );
+  return rows[0] || null;
 }
 
-function markOtpUsed(id) {
-  q('UPDATE otp_codes SET used = 1 WHERE id = ?').run(id);
+async function markOtpUsed(id) {
+  await pool.execute('UPDATE otp_codes SET used = 1 WHERE id = ?', [id]);
 }
 
-function incrementOtpAttempts(id) {
-  q('UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?').run(id);
+async function incrementOtpAttempts(id) {
+  await pool.execute('UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?', [id]);
 }
 
 // ---------------------------------------------------------------------------
 // Email verification tokens
 // ---------------------------------------------------------------------------
-function createEmailToken({ userId, tokenHash, expiresAt }) {
-  const result = q(
-    'INSERT INTO email_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)'
-  ).run(userId, tokenHash, expiresAt);
-  return Number(result.lastInsertRowid);
+async function createEmailToken({ userId, tokenHash, expiresAt }) {
+  const [result] = await pool.execute(
+    'INSERT INTO email_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
+    [userId, tokenHash, expiresAt]
+  );
+  return Number(result.insertId);
 }
 
-function findLatestEmailToken(userId) {
-  return q(
-    'SELECT * FROM email_tokens WHERE user_id = ? ORDER BY id DESC LIMIT 1'
-  ).get(userId);
+async function findLatestEmailToken(userId) {
+  const [rows] = await pool.execute(
+    'SELECT * FROM email_tokens WHERE user_id = ? ORDER BY id DESC LIMIT 1',
+    [userId]
+  );
+  return rows[0] || null;
 }
 
-function findEmailTokenByHash(tokenHash) {
-  return q(
+async function findEmailTokenByHash(tokenHash) {
+  const [rows] = await pool.execute(
     `SELECT et.*, u.email
        FROM email_tokens et
        JOIN users u ON u.id = et.user_id
       WHERE et.token_hash = ?
-      ORDER BY et.id DESC LIMIT 1`
-  ).get(tokenHash);
+      ORDER BY et.id DESC LIMIT 1`,
+    [tokenHash]
+  );
+  return rows[0] || null;
 }
 
-function markEmailTokenUsed(id) {
-  q('UPDATE email_tokens SET used = 1 WHERE id = ?').run(id);
+async function markEmailTokenUsed(id) {
+  await pool.execute('UPDATE email_tokens SET used = 1 WHERE id = ?', [id]);
 }
 
 // ---------------------------------------------------------------------------
-// Password reset (กู้รหัสผ่าน)
+// Password reset
 // ---------------------------------------------------------------------------
-function updateUserPassword(id, passwordHash) {
-  q('UPDATE users SET password_hash = ? WHERE id = ?').run(passwordHash, id);
+async function updateUserPassword(id, passwordHash) {
+  await pool.execute('UPDATE users SET password_hash = ? WHERE id = ?', [passwordHash, id]);
 }
 
-function createPasswordReset({ userId, tokenHash, expiresAt }) {
-  // token ที่ยังใช้ได้มีแค่ 1 อันต่อผู้ใช้
-  q('DELETE FROM password_resets WHERE user_id = ?').run(userId);
-  const result = q(
-    'INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)'
-  ).run(userId, tokenHash, expiresAt);
-  return Number(result.lastInsertRowid);
+async function createPasswordReset({ userId, tokenHash, expiresAt }) {
+  await pool.execute('DELETE FROM password_resets WHERE user_id = ?', [userId]);
+  const [result] = await pool.execute(
+    'INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
+    [userId, tokenHash, expiresAt]
+  );
+  return Number(result.insertId);
 }
 
-function findPasswordResetByHash(tokenHash) {
-  return q(
+async function findPasswordResetByHash(tokenHash) {
+  const [rows] = await pool.execute(
     `SELECT pr.*, u.email
        FROM password_resets pr
        JOIN users u ON u.id = pr.user_id
       WHERE pr.token_hash = ?
-      ORDER BY pr.id DESC LIMIT 1`
-  ).get(tokenHash);
+      ORDER BY pr.id DESC LIMIT 1`,
+    [tokenHash]
+  );
+  return rows[0] || null;
 }
 
-function markPasswordResetUsed(id) {
-  q('UPDATE password_resets SET used = 1 WHERE id = ?').run(id);
+async function markPasswordResetUsed(id) {
+  await pool.execute('UPDATE password_resets SET used = 1 WHERE id = ?', [id]);
 }
 
-function deleteUserSessions(userId) {
-  q('DELETE FROM sessions WHERE user_id = ?').run(userId);
+async function deleteUserSessions(userId) {
+  await pool.execute('DELETE FROM sessions WHERE user_id = ?', [userId]);
 }
 
-function deleteOtherSessions(userId, currentTokenHash) {
-  q('DELETE FROM sessions WHERE user_id = ? AND token != ?').run(userId, currentTokenHash);
-}
-
-// ---------------------------------------------------------------------------
-// Admin (ผู้ดูแลระบบ)
-// ---------------------------------------------------------------------------
-function findAdmin() {
-  return q("SELECT * FROM users WHERE role = 'admin' LIMIT 1").get();
-}
-
-function createAdminUser({ email, passwordHash }) {
-  const result = q(
-    "INSERT INTO users (email, password_hash, phone, status, role) VALUES (?, ?, '0000000000', 'active', 'admin')"
-  ).run(email, passwordHash);
-  return findUserById(Number(result.lastInsertRowid));
+async function deleteOtherSessions(userId, currentTokenHash) {
+  await pool.execute('DELETE FROM sessions WHERE user_id = ? AND token != ?', [userId, currentTokenHash]);
 }
 
 // ---------------------------------------------------------------------------
-// Settings (ตั้งค่าที่แก้ได้ตอนรัน — เก็บในตาราง settings)
+// Admin
 // ---------------------------------------------------------------------------
-function getSetting(key) {
-  const r = q('SELECT value FROM settings WHERE key = ?').get(key);
-  return r ? r.value : null;
+async function findAdmin() {
+  const [rows] = await pool.execute("SELECT * FROM users WHERE role = 'admin' LIMIT 1");
+  return rows[0] || null;
 }
 
-function setSetting(key, value) {
-  q('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, String(value));
+async function createAdminUser({ email, passwordHash }) {
+  const [result] = await pool.execute(
+    "INSERT INTO users (email, password_hash, phone, status, role) VALUES (?, ?, '0000000000', 'active', 'admin')",
+    [email, passwordHash]
+  );
+  return findUserById(result.insertId);
 }
 
 // ---------------------------------------------------------------------------
 // Admin — รายงาน OTP
 // ---------------------------------------------------------------------------
-function listOtpLogs(limit = 50) {
-  return q(
+async function listOtpLogs(limit = 50) {
+  const [rows] = await pool.execute(
     `SELECT o.id, o.user_id, o.phone AS contact, o.purpose,
             o.attempts, o.used, o.expires_at, o.created_at, u.email
        FROM otp_codes o
        JOIN users u ON u.id = o.user_id
-      ORDER BY o.id DESC LIMIT ?`
-  ).all(limit);
+      ORDER BY o.id DESC LIMIT ?`,
+    [limit]
+  );
+  return rows;
 }
 
-function countStats() {
-  const users = q('SELECT COUNT(*) AS c FROM users').get().c;
-  const activeUsers = q("SELECT COUNT(*) AS c FROM users WHERE status = 'active'").get().c;
-  const otpTotal = q('SELECT COUNT(*) AS c FROM otp_codes').get().c;
-  const otpValid = q(
-    "SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND expires_at > datetime('now', 'localtime')"
-  ).get().c;
-  const otpUsed = q('SELECT COUNT(*) AS c FROM otp_codes WHERE used = 1').get().c;
-  const otpExpired = q(
-    "SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND expires_at <= datetime('now', 'localtime')"
-  ).get().c;
-  return { users, activeUsers, otpTotal, otpValid, otpUsed, otpExpired };
+async function countStats() {
+  const [users] = await pool.execute('SELECT COUNT(*) AS c FROM users');
+  const [activeUsers] = await pool.execute("SELECT COUNT(*) AS c FROM users WHERE status = 'active'");
+  const [otpTotal] = await pool.execute('SELECT COUNT(*) AS c FROM otp_codes');
+  const [otpValid] = await pool.execute(
+    "SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND expires_at > UTC_TIMESTAMP()"
+  );
+  const [otpUsed] = await pool.execute('SELECT COUNT(*) AS c FROM otp_codes WHERE used = 1');
+  const [otpExpired] = await pool.execute(
+    "SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND expires_at <= UTC_TIMESTAMP()"
+  );
+  return {
+    users: users[0].c,
+    activeUsers: activeUsers[0].c,
+    otpTotal: otpTotal[0].c,
+    otpValid: otpValid[0].c,
+    otpUsed: otpUsed[0].c,
+    otpExpired: otpExpired[0].c,
+  };
 }
 
 // ---------------------------------------------------------------------------
 // Admin — จัดการผู้ใช้
 // ---------------------------------------------------------------------------
-function listUsers({ search = '', limit = 100 } = {}) {
+async function listUsers({ search = '', limit = 100 } = {}) {
   const like = `%${search}%`;
-  return q(
+  const [rows] = await pool.execute(
     `SELECT id, email, phone, status, role, provider, is_email_verified, google_id, created_at
        FROM users
       WHERE email LIKE ? OR phone LIKE ?
-      ORDER BY id DESC LIMIT ?`
-  ).all(like, like, limit);
+      ORDER BY id DESC LIMIT ?`,
+    [like, like, limit]
+  );
+  return rows;
 }
 
-function countUsers(search = '') {
-  if (!search) return q('SELECT COUNT(*) AS c FROM users').get().c;
+async function countUsers(search = '') {
+  if (!search) {
+    const [rows] = await pool.execute('SELECT COUNT(*) AS c FROM users');
+    return rows[0].c;
+  }
   const like = `%${search}%`;
-  return q('SELECT COUNT(*) AS c FROM users WHERE email LIKE ? OR phone LIKE ?').get(like, like).c;
+  const [rows] = await pool.execute(
+    'SELECT COUNT(*) AS c FROM users WHERE email LIKE ? OR phone LIKE ?',
+    [like, like]
+  );
+  return rows[0].c;
 }
 
-function countAdmins() {
-  return q("SELECT COUNT(*) AS c FROM users WHERE role = 'admin'").get().c;
+async function countAdmins() {
+  const [rows] = await pool.execute("SELECT COUNT(*) AS c FROM users WHERE role = 'admin'");
+  return rows[0].c;
 }
 
-function updateUserByAdmin(id, fields) {
+async function updateUserByAdmin(id, fields) {
   const sets = [];
   const params = [];
   if (fields.email !== undefined) { sets.push('email = ?'); params.push(fields.email); }
@@ -377,42 +413,47 @@ function updateUserByAdmin(id, fields) {
   if (fields.isEmailVerified !== undefined) { sets.push('is_email_verified = ?'); params.push(fields.isEmailVerified ? 1 : 0); }
   if (fields.passwordHash !== undefined) { sets.push('password_hash = ?'); params.push(fields.passwordHash); }
   if (sets.length) {
-    q(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`).run(...params, id);
+    await pool.execute(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`, [...params, id]);
   }
   return findUserById(id);
 }
 
-function deleteUser(id) {
-  q('DELETE FROM users WHERE id = ?').run(id);
+async function deleteUser(id) {
+  await pool.execute('DELETE FROM users WHERE id = ?', [id]);
 }
 
 // ---------------------------------------------------------------------------
-// Pages (เซลเพจของผู้ใช้) — slug ไม่ซ้ำกันทั่วระบบ
+// Pages
 // ---------------------------------------------------------------------------
-function findPageBySlug(slug) {
-  return q('SELECT * FROM pages WHERE slug = ?').get(slug);
+async function findPageBySlug(slug) {
+  const [rows] = await pool.execute('SELECT * FROM pages WHERE slug = ?', [slug]);
+  return rows[0] || null;
 }
 
-function findPagesByUser(userId) {
-  return q('SELECT * FROM pages WHERE user_id = ? ORDER BY created_at DESC').all(userId);
+async function findPagesByUser(userId) {
+  const [rows] = await pool.execute('SELECT * FROM pages WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+  return rows;
 }
 
-function createPage({ userId, slug, title, theme = 'minimal' }) {
-  const result = q(
-    'INSERT INTO pages (user_id, slug, title, theme) VALUES (?, ?, ?, ?)'
-  ).run(userId, slug, title, theme);
-  return Number(result.lastInsertRowid);
+async function createPage({ userId, slug, title, theme = 'minimal' }) {
+  const [result] = await pool.execute(
+    'INSERT INTO pages (user_id, slug, title, theme) VALUES (?, ?, ?, ?)',
+    [userId, slug, title, theme]
+  );
+  return Number(result.insertId);
 }
 
-function countUserPages(userId) {
-  return q('SELECT COUNT(*) AS c FROM pages WHERE user_id = ?').get(userId).c;
+async function countUserPages(userId) {
+  const [rows] = await pool.execute('SELECT COUNT(*) AS c FROM pages WHERE user_id = ?', [userId]);
+  return rows[0].c;
 }
 
-function findPageById(id) {
-  return q('SELECT * FROM pages WHERE id = ?').get(id);
+async function findPageById(id) {
+  const [rows] = await pool.execute('SELECT * FROM pages WHERE id = ?', [id]);
+  return rows[0] || null;
 }
 
-function updatePage(id, fields) {
+async function updatePage(id, fields) {
   const sets = [];
   const values = [];
   for (const key of ['content', 'status', 'theme', 'title']) {
@@ -421,12 +462,15 @@ function updatePage(id, fields) {
       values.push(fields[key]);
     }
   }
-  sets.push("updated_at = datetime('now', 'localtime')");
+  sets.push('updated_at = UTC_TIMESTAMP()');
   values.push(id);
-  q(`UPDATE pages SET ${sets.join(', ')} WHERE id = ?`).run(...values);
+  await pool.execute(`UPDATE pages SET ${sets.join(', ')} WHERE id = ?`, values);
 }
 
 module.exports = {
+  initDb,
+  getSetting,
+  setSetting,
   findUserByEmail,
   findUserById,
   createUser,
@@ -456,8 +500,6 @@ module.exports = {
   deleteOtherSessions,
   findAdmin,
   createAdminUser,
-  getSetting,
-  setSetting,
   listOtpLogs,
   countStats,
   listUsers,

@@ -42,8 +42,8 @@ app.use((req, res, next) => {
 });
 
 // ป้องกันหน้า /admin — เฉพาะแอดมินที่ล็อกอินแล้วเท่านั้น
-app.use('/admin', (req, res, next) => {
-  const user = getCurrentUser(req);
+app.use('/admin', async (req, res, next) => {
+  const user = await getCurrentUser(req);
   if (!user) {
     return res.redirect('/login.html?next=/admin/');
   }
@@ -60,8 +60,8 @@ app.use('/admin', (req, res, next) => {
 });
 
 // ป้องกันหน้า /dashboard และ /settings — ต้องล็อกอินเท่านั้น (อยู่ก่อน routes + static)
-app.use(['/dashboard', '/settings'], (req, res, next) => {
-  const user = getCurrentUser(req);
+app.use(['/dashboard', '/settings'], async (req, res, next) => {
+  const user = await getCurrentUser(req);
   if (!user) {
     return res.redirect('/login.html?next=' + encodeURIComponent(req.originalUrl || '/dashboard/pages'));
   }
@@ -79,12 +79,12 @@ app.get('/dashboard/upgrade', (req, res) => {
 app.get('/dashboard/pages/new', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard', 'new-page.html'));
 });
-app.get('/dashboard/pages/:ref/editor', (req, res) => {
+app.get('/dashboard/pages/:ref/editor', async (req, res) => {
   // รองรับลิงก์เก่าแบบ id (ตัวเลข) → redirect ไปใช้ slug
   const ref = String(req.params.ref || '');
   if (/^\d+$/.test(ref)) {
-    const user = getCurrentUser(req);
-    const page = user ? db.findPageById(Number(ref)) : null;
+    const user = await getCurrentUser(req);
+    const page = user ? await db.findPageById(Number(ref)) : null;
     if (page && page.user_id === user.id) {
       return res.redirect('/dashboard/pages/' + page.slug + '/editor');
     }
@@ -253,8 +253,8 @@ function videoEmbedUrl(url) {
   return null;
 }
 
-app.get('/p/:slug', (req, res) => {
-  const page = db.findPageBySlug(String(req.params.slug || '').toLowerCase());
+app.get('/p/:slug', async (req, res) => {
+  const page = await db.findPageBySlug(String(req.params.slug || '').toLowerCase());
   if (!page) {
     return res.status(404).send('<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>ไม่พบเพจ</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f5fb;color:#667085"><div style="text-align:center"><h1 style="font-size:44px;color:#101828">ไม่พบเพจ</h1><p>ลิงก์นี้อาจไม่ถูกต้องหรือเพจถูกลบแล้ว</p><a href="/" style="color:#6366f1">← กลับหน้าแรก</a></div></body></html>');
   }
@@ -546,23 +546,23 @@ async function isRecaptchaValid(responseToken) {
 // ---------------------------------------------------------------------------
 // Session helpers
 // ---------------------------------------------------------------------------
-function getCurrentUser(req) {
+async function getCurrentUser(req) {
   const token = req.cookies?.session;
   if (!token) return null;
-  const session = db.findSession(sha256(token));
+  const session = await db.findSession(sha256(token));
   if (!session) return null;
   if (session.expires_at <= nowSql()) {
-    db.deleteSession(session.token);
+    await db.deleteSession(session.token);
     return null;
   }
-  const user = db.findUserById(session.user_id);
+  const user = await db.findUserById(session.user_id);
   return user || null;
 }
 
-function startSession(res, userId) {
+async function startSession(res, userId) {
   const token = randomToken();
   const expiresAt = futureSql(SESSION_TTL_MS);
-  db.createSession({ token: sha256(token), userId, expiresAt });
+  await db.createSession({ token: sha256(token), userId, expiresAt });
   res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
@@ -574,12 +574,12 @@ function startSession(res, userId) {
 // ---------------------------------------------------------------------------
 // API: ตรวจสอบอีเมลซ้ำ
 // ---------------------------------------------------------------------------
-app.get('/api/check-email', (req, res) => {
+app.get('/api/check-email', async (req, res) => {
   const email = String(req.query.email || '').trim().toLowerCase();
   if (!isValidEmail(email)) {
     return res.status(400).json({ ok: false, message: 'รูปแบบอีเมลไม่ถูกต้อง' });
   }
-  const user = db.findUserByEmail(email);
+  const user = await db.findUserByEmail(email);
   if (!user) {
     return res.json({ ok: true, available: true });
   }
@@ -622,7 +622,7 @@ app.post('/api/register', async (req, res) => {
 
   // ผู้ใช้ที่ยืนยันแล้ว (active) เท่านั้นที่บล็อกอีเมลซ้ำ —
   // ส่วนผู้ใช้ที่สมัครค้าง (pending) ยังสามารถสมัครต่อได้โดยส่ง OTP ใหม่
-  const existing = db.findUserByEmail(normalizedEmail);
+  const existing = await db.findUserByEmail(normalizedEmail);
   if (existing && existing.status === 'active') {
     return res.status(409).json({ ok: false, field: 'email', message: 'อีเมลนี้ถูกใช้ไปแล้ว' });
   }
@@ -655,16 +655,16 @@ app.post('/api/register', async (req, res) => {
   let continuePending = false;
   if (existing) {
     // ผู้ใช้เคยสมัครค้างไว้ (ยังไม่ยืนยัน OTP) → อัปเดตเบอร์/รหัสผ่านที่กรอกใหม่ แล้วส่ง OTP ใหม่ให้สมัครต่อ
-    user = db.updatePendingUser(existing.id, {
+    user = await db.updatePendingUser(existing.id, {
       phone: normalizedPhone,
       passwordHash,
     });
     continuePending = true;
   } else {
-    user = db.createUser({ email: normalizedEmail, passwordHash, phone: normalizedPhone });
+    user = await db.createUser({ email: normalizedEmail, passwordHash, phone: normalizedPhone });
   }
 
-  const otpResult = otp.issueOtp(user.id, user.phone);
+  const otpResult = await otp.issueOtp(user.id, user.phone);
 
   console.log(
     continuePending
@@ -688,24 +688,24 @@ app.post('/api/register', async (req, res) => {
 // ---------------------------------------------------------------------------
 // API: ยืนยัน OTP → activate + ล็อกอินอัตโนมัติ
 // ---------------------------------------------------------------------------
-app.post('/api/verify-otp', (req, res) => {
+app.post('/api/verify-otp', async (req, res) => {
   const { userId, code } = req.body || {};
-  const user = db.findUserById(Number(userId));
+  const user = await db.findUserById(Number(userId));
   if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้ กรุณาสมัครใหม่' });
 
-  const result = otp.verifyOtp(user.id, String(code || ''));
+  const result = await otp.verifyOtp(user.id, String(code || ''));
   if (!result.ok) return res.status(400).json({ ok: false, message: result.message });
 
-  db.setUserStatus(user.id, 'active');
+  await db.setUserStatus(user.id, 'active');
 
   // ล็อกอินอัตโนมัติ
-  startSession(res, user.id);
+  await startSession(res, user.id);
 
   // ส่งลิงก์ยืนยันอีเมลอัตโนมัติหลังสมัคร (โหมด dev จะ log ลิงก์ที่ console)
   let devVerifyLink = null;
   if (!user.is_email_verified) {
     const token = randomToken();
-    db.createEmailToken({ userId: user.id, tokenHash: sha256(token), expiresAt: futureSql(24 * 60 * 60 * 1000) });
+    await db.createEmailToken({ userId: user.id, tokenHash: sha256(token), expiresAt: futureSql(24 * 60 * 60 * 1000) });
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const sent = mailer.sendVerificationEmail({ email: user.email, token, baseUrl });
     if (devMode()) devVerifyLink = sent.link;
@@ -724,17 +724,17 @@ app.post('/api/verify-otp', (req, res) => {
 // ---------------------------------------------------------------------------
 // API: ขอ OTP ใหม่ (จำกัด 60 วินาที)
 // ---------------------------------------------------------------------------
-app.post('/api/resend-otp', (req, res) => {
+app.post('/api/resend-otp', async (req, res) => {
   const rl = rateLimit(req, { max: 5, windowMs: 60 * 1000 });
   if (rl.limited) {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
   }
 
   const { userId } = req.body || {};
-  const user = db.findUserById(Number(userId));
+  const user = await db.findUserById(Number(userId));
   if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' });
 
-  const last = db.findLatestOtp(user.id);
+  const last = await db.findLatestOtp(user.id);
   if (last) {
     const lastCreated = new Date(last.created_at).getTime();
     const wait = RESEND_COOLDOWN_MS - (Date.now() - lastCreated);
@@ -746,7 +746,7 @@ app.post('/api/resend-otp', (req, res) => {
     }
   }
 
-  const otpResult = otp.issueOtp(user.id, user.phone);
+  const otpResult = await otp.issueOtp(user.id, user.phone);
   res.json({
     ok: true,
     message: 'ส่งรหัส OTP ใหม่แล้ว',
@@ -767,7 +767,7 @@ app.post('/api/login', async (req, res) => {
   const { email, password } = req.body || {};
   const normalizedEmail = String(email || '').trim().toLowerCase();
 
-  const user = db.findUserByEmail(normalizedEmail);
+  const user = await db.findUserByEmail(normalizedEmail);
   if (!user) {
     return res.status(401).json({ ok: false, message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   }
@@ -780,7 +780,7 @@ app.post('/api/login', async (req, res) => {
     return res.status(401).json({ ok: false, message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
   }
 
-  startSession(res, user.id);
+  await startSession(res, user.id);
   console.log(`🔓 เข้าสู่ระบบ: ${user.email}${user.role === 'admin' ? ' (แอดมิน)' : ''}`);
   res.json({
     ok: true,
@@ -792,10 +792,10 @@ app.post('/api/login', async (req, res) => {
 // ---------------------------------------------------------------------------
 // API: ออกจากระบบ
 // ---------------------------------------------------------------------------
-app.post('/api/logout', (req, res) => {
+app.post('/api/logout', async (req, res) => {
   const token = req.cookies?.session;
   if (token) {
-    db.deleteSession(sha256(token));
+    await db.deleteSession(sha256(token));
     res.clearCookie(COOKIE_NAME);
   }
   res.json({ ok: true });
@@ -804,8 +804,8 @@ app.post('/api/logout', (req, res) => {
 // ---------------------------------------------------------------------------
 // API: ข้อมูลผู้ใช้ปัจจุบัน
 // ---------------------------------------------------------------------------
-app.get('/api/me', (req, res) => {
-  const user = getCurrentUser(req);
+app.get('/api/me', async (req, res) => {
+  const user = await getCurrentUser(req);
   if (!user) return res.status(401).json({ ok: false, message: 'ยังไม่ได้เข้าสู่ระบบ' });
 
   res.json({
@@ -826,8 +826,8 @@ app.get('/api/me', (req, res) => {
 // ---------------------------------------------------------------------------
 // API: ส่งลิงก์ยืนยันอีเมลใหม่ (ต้องล็อกอิน)
 // ---------------------------------------------------------------------------
-app.post('/api/send-verify-email', (req, res) => {
-  const user = getCurrentUser(req);
+app.post('/api/send-verify-email', async (req, res) => {
+  const user = await getCurrentUser(req);
   if (!user) return res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
 
   if (user.is_email_verified === 1) {
@@ -835,7 +835,7 @@ app.post('/api/send-verify-email', (req, res) => {
   }
 
   const token = randomToken();
-  db.createEmailToken({
+  await db.createEmailToken({
     userId: user.id,
     tokenHash: sha256(token),
     expiresAt: futureSql(24 * 60 * 60 * 1000),
@@ -860,7 +860,7 @@ app.post('/api/change-password', async (req, res) => {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
   }
 
-  const user = getCurrentUser(req);
+  const user = await getCurrentUser(req);
   if (!user) return res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
 
   const { currentPassword, newPassword } = req.body || {};
@@ -880,10 +880,10 @@ app.post('/api/change-password', async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(String(newPassword), 10);
-  db.updateUserPassword(user.id, passwordHash);
+  await db.updateUserPassword(user.id, passwordHash);
   // ออกจากระบบทุกเครื่อง ยกเว้น session ปัจจุบัน (กัน session เก่าค้าง)
   const token = req.cookies?.session;
-  if (token) db.deleteOtherSessions(user.id, sha256(token));
+  if (token) await db.deleteOtherSessions(user.id, sha256(token));
 
   console.log(`🔑 เปลี่ยนรหัสผ่านแล้ว: ${user.email}`);
   res.json({ ok: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
@@ -892,12 +892,12 @@ app.post('/api/change-password', async (req, res) => {
 // ---------------------------------------------------------------------------
 // API: ออกจากระบบทุกเครื่อง (ต้องล็อกอิน) — ลบ session อื่นทั้งหมด ยกเว้นเครื่องนี้
 // ---------------------------------------------------------------------------
-app.post('/api/logout-all', (req, res) => {
-  const user = getCurrentUser(req);
+app.post('/api/logout-all', async (req, res) => {
+  const user = await getCurrentUser(req);
   if (!user) return res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
 
   const token = req.cookies?.session;
-  if (token) db.deleteOtherSessions(user.id, sha256(token));
+  if (token) await db.deleteOtherSessions(user.id, sha256(token));
 
   console.log(`🔓 ออกจากระบบทุกเครื่องแล้ว: ${user.email}`);
   res.json({ ok: true, message: 'ออกจากระบบทุกเครื่องแล้ว (ยกเว้นเครื่องนี้)' });
@@ -922,8 +922,8 @@ function isValidSlug(slug) {
   return /^[a-z0-9](?:[a-z0-9-]{1,29})$/.test(slug);
 }
 
-app.get('/api/pages/check-slug', (req, res) => {
-  const user = getCurrentUser(req);
+app.get('/api/pages/check-slug', async (req, res) => {
+  const user = await getCurrentUser(req);
   if (!user) return res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
 
   const slug = normalizeSlug(req.query.slug);
@@ -938,7 +938,7 @@ app.get('/api/pages/check-slug', (req, res) => {
       message: 'ชื่อเพจต้องเป็นภาษาอังกฤษ ตัวเลข หรือเครื่องหมายขีด (-) ยาว 2–30 ตัว',
     });
   }
-  const existing = db.findPageBySlug(slug);
+  const existing = await db.findPageBySlug(slug);
   if (existing) {
     return res.json({
       ok: true,
@@ -953,30 +953,30 @@ app.get('/api/pages/check-slug', (req, res) => {
 // ---------------------------------------------------------------------------
 // API: รายการเพจของฉัน + สร้างเพจใหม่ — ต้องล็อกอิน
 // ---------------------------------------------------------------------------
-app.get('/api/pages', (req, res) => {
-  const user = getCurrentUser(req);
+app.get('/api/pages', async (req, res) => {
+  const user = await getCurrentUser(req);
   if (!user) return res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
 
-  const pages = db.findPagesByUser(user.id);
+  const pages = await db.findPagesByUser(user.id);
   res.json({ ok: true, pages, limit: MAX_PAGES_FREE, plan: 'free' });
 });
 
-app.post('/api/pages', (req, res) => {
-  const user = getCurrentUser(req);
+app.post('/api/pages', async (req, res) => {
+  const user = await getCurrentUser(req);
   if (!user) return res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
 
   const slug = normalizeSlug(req.body?.slug);
   if (!isValidSlug(slug)) {
     return res.status(400).json({ ok: false, message: 'ชื่อเพจไม่ถูกต้อง (ภาษาอังกฤษ/ตัวเลข/ขีด ยาว 2–30 ตัว)' });
   }
-  if (db.findPageBySlug(slug)) {
+  if (await db.findPageBySlug(slug)) {
     return res.status(409).json({ ok: false, message: 'ชื่อนี้ถูกใช้แล้ว กรุณาใช้ชื่ออื่น' });
   }
-  if (db.countUserPages(user.id) >= MAX_PAGES_FREE) {
+  if (await db.countUserPages(user.id) >= MAX_PAGES_FREE) {
     return res.status(403).json({ ok: false, code: 'plan_limit', message: 'แพ็กเกจฟรีสร้างได้ 1 เพจ — อัปเกรดเพื่อสร้างเพิ่ม' });
   }
 
-  const id = db.createPage({ userId: user.id, slug, title: slug });
+  const id = await db.createPage({ userId: user.id, slug, title: slug });
   console.log(`📄 สร้างเพจใหม่: ${slug} (user ${user.email})`);
   res.json({ ok: true, message: 'สร้างเพจแล้ว', page: { id, slug, title: slug, status: 'draft' } });
 });
@@ -984,10 +984,10 @@ app.post('/api/pages', (req, res) => {
 // ---------------------------------------------------------------------------
 // API: โหลด/เซฟ/เผยแพร่เพจ — ต้องเป็นเจ้าของเพจเท่านั้น
 // ---------------------------------------------------------------------------
-function requirePageOwner(req, res, next) {
-  const user = getCurrentUser(req);
+async function requirePageOwner(req, res, next) {
+  const user = await getCurrentUser(req);
   if (!user) return res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
-  const page = db.findPageById(Number(req.params.id));
+  const page = await db.findPageById(Number(req.params.id));
   if (!page || page.user_id !== user.id) {
     return res.status(404).json({ ok: false, message: 'ไม่พบเพจนี้' });
   }
@@ -997,10 +997,10 @@ function requirePageOwner(req, res, next) {
 }
 
 // โหลดเพจด้วย slug (ต้องเป็นเจ้าของ) — ใช้ในหน้า editor
-app.get('/api/pages/slug/:slug', (req, res) => {
-  const user = getCurrentUser(req);
+app.get('/api/pages/slug/:slug', async (req, res) => {
+  const user = await getCurrentUser(req);
   if (!user) return res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
-  const page = db.findPageBySlug(String(req.params.slug || '').toLowerCase());
+  const page = await db.findPageBySlug(String(req.params.slug || '').toLowerCase());
   if (!page || page.user_id !== user.id) {
     return res.status(404).json({ ok: false, message: 'ไม่พบเพจนี้' });
   }
@@ -1040,19 +1040,19 @@ app.get('/api/pages/:id', requirePageOwner, (req, res) => {
   });
 });
 
-app.put('/api/pages/:id', requirePageOwner, (req, res) => {
+app.put('/api/pages/:id', requirePageOwner, async (req, res) => {
   const { content, theme, title } = req.body || {};
   const fields = {};
   if (content !== undefined) fields.content = JSON.stringify(content || { elements: [] });
   if (theme !== undefined) fields.theme = String(theme);
   if (title !== undefined) fields.title = String(title).slice(0, 60);
-  if (Object.keys(fields).length) db.updatePage(req.page.id, fields);
+  if (Object.keys(fields).length) await db.updatePage(req.page.id, fields);
   console.log(`💾 เซฟเพจ: ${req.page.slug} (user ${req.user.email})`);
   res.json({ ok: true, message: 'บันทึกแล้ว' });
 });
 
-app.post('/api/pages/:id/publish', requirePageOwner, (req, res) => {
-  db.updatePage(req.page.id, { status: 'published' });
+app.post('/api/pages/:id/publish', requirePageOwner, async (req, res) => {
+  await db.updatePage(req.page.id, { status: 'published' });
   console.log(`🚀 เผยแพร่เพจ: ${req.page.slug}`);
   res.json({ ok: true, message: 'เผยแพร่แล้ว', url: `/p/${req.page.slug}` });
 });
@@ -1071,8 +1071,8 @@ const UPLOAD_TYPES = {
 };
 const MAX_UPLOAD = 5 * 1024 * 1024; // 5MB
 
-app.post('/api/upload', (req, res, next) => {
-  const user = getCurrentUser(req);
+app.post('/api/upload', async (req, res, next) => {
+  const user = await getCurrentUser(req);
   if (!user) return res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
 
   const ctype = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
@@ -1104,7 +1104,7 @@ app.post('/api/upload', (req, res, next) => {
 // ---------------------------------------------------------------------------
 // API: กู้รหัสผ่าน — ขั้นที่ 1 ส่ง OTP ทางอีเมล
 // ---------------------------------------------------------------------------
-app.post('/api/forgot-password', (req, res) => {
+app.post('/api/forgot-password', async (req, res) => {
   const rl = rateLimit(req, { max: 5, windowMs: 60 * 1000 });
   if (rl.limited) {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
@@ -1115,14 +1115,14 @@ app.post('/api/forgot-password', (req, res) => {
     return res.status(400).json({ ok: false, field: 'email', message: 'รูปแบบอีเมลไม่ถูกต้อง' });
   }
 
-  const user = db.findUserByEmail(email);
+  const user = await db.findUserByEmail(email);
   // เฉพาะผู้ใช้ที่สมัครครบ (active) เท่านั้นที่กู้รหัสได้ —
   // ผู้ที่ค้างกลางคัน (pending) ถือว่า "ยังไม่มีผู้ใช้" ตรงตามดีไซน์
   const eligible = Boolean(user && user.status === 'active');
 
   // กัน spam ขอ OTP ซ้ำภายใน 60 วินาที
   if (eligible) {
-    const last = db.findLatestOtp(user.id, 'password_reset');
+    const last = await db.findLatestOtp(user.id, 'password_reset');
     if (last) {
       const wait = 60 * 1000 - (Date.now() - new Date(last.created_at).getTime());
       if (wait > 0) {
@@ -1136,7 +1136,7 @@ app.post('/api/forgot-password', (req, res) => {
 
   let devOtp = null;
   if (eligible) {
-    const otpResult = otp.issueOtp(user.id, user.email, 'password_reset');
+    const otpResult = await otp.issueOtp(user.id, user.email, 'password_reset');
     if (devMode()) devOtp = otpResult.code;
     console.log(`🔐 ขอ OTP กู้รหัสผ่าน: ${user.email}`);
   }
@@ -1152,7 +1152,7 @@ app.post('/api/forgot-password', (req, res) => {
 // ---------------------------------------------------------------------------
 // API: กู้รหัสผ่าน — ขั้นที่ 2 ตรวจ OTP → คืน token สำหรับตั้งรหัสใหม่
 // ---------------------------------------------------------------------------
-app.post('/api/forgot-verify-otp', (req, res) => {
+app.post('/api/forgot-verify-otp', async (req, res) => {
   const rl = rateLimit(req, { max: 10, windowMs: 60 * 1000 });
   if (rl.limited) {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
@@ -1160,17 +1160,17 @@ app.post('/api/forgot-verify-otp', (req, res) => {
 
   const { email, code } = req.body || {};
   const normalizedEmail = String(email || '').trim().toLowerCase();
-  const user = db.findUserByEmail(normalizedEmail);
+  const user = await db.findUserByEmail(normalizedEmail);
   if (!user) {
     return res.status(404).json({ ok: false, message: 'ไม่พบข้อมูล กรุณาเริ่มใหม่' });
   }
 
-  const result = otp.verifyOtp(user.id, String(code || ''), 'password_reset');
+  const result = await otp.verifyOtp(user.id, String(code || ''), 'password_reset');
   if (!result.ok) return res.status(400).json({ ok: false, message: result.message });
 
   // สร้าง token สำหรับตั้งรหัสผ่านใหม่ (อายุ 10 นาที)
   const token = randomToken();
-  db.createPasswordReset({
+  await db.createPasswordReset({
     userId: user.id,
     tokenHash: sha256(token),
     expiresAt: futureSql(10 * 60 * 1000),
@@ -1190,7 +1190,7 @@ app.post('/api/forgot-reset-password', async (req, res) => {
   }
 
   const { resetToken, newPassword } = req.body || {};
-  const record = db.findPasswordResetByHash(sha256(String(resetToken || '')));
+  const record = await db.findPasswordResetByHash(sha256(String(resetToken || '')));
 
   if (!record || record.used === 1) {
     return res.status(400).json({ ok: false, message: 'โทเคนไม่ถูกต้องหรือถูกใช้ไปแล้ว กรุณาเริ่มใหม่' });
@@ -1207,9 +1207,9 @@ app.post('/api/forgot-reset-password', async (req, res) => {
   }
 
   const passwordHash = await bcrypt.hash(String(newPassword), 10);
-  db.updateUserPassword(record.user_id, passwordHash);
-  db.markPasswordResetUsed(record.id);
-  db.deleteUserSessions(record.user_id); // ออกจากระบบทุก session เดิม (กัน session เก่าค้าง)
+  await db.updateUserPassword(record.user_id, passwordHash);
+  await db.markPasswordResetUsed(record.id);
+  await db.deleteUserSessions(record.user_id); // ออกจากระบบทุก session เดิม (กัน session เก่าค้าง)
 
   console.log(`🔑 ตั้งรหัสผ่านใหม่แล้ว: user_id=${record.user_id}`);
   res.json({ ok: true, message: 'ตั้งรหัสผ่านใหม่สำเร็จ กรุณาเข้าสู่ระบบ' });
@@ -1273,7 +1273,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
     const info = await infoRes.json();
     if (!info.email) throw new Error('ไม่มีอีเมลจาก Google');
 
-    handleGoogleUser(req, res, { email: info.email, googleId: info.id || info.email }, 'redirect');
+    await handleGoogleUser(req, res, { email: info.email, googleId: info.id || info.email }, 'redirect');
   } catch (err) {
     console.error('❌ Google OAuth error:', err.message);
     res.redirect('/login.html?error=google');
@@ -1281,12 +1281,12 @@ app.get('/api/auth/google/callback', async (req, res) => {
 });
 
 // โหมดทดสอบ (dev): จำลองบัญชี Google — รับอีเมลที่ผู้ใช้กรอกในหน้า mock
-app.post('/api/auth/google/mock', (req, res) => {
+app.post('/api/auth/google/mock', async (req, res) => {
   const email = String(req.body?.email || '').trim().toLowerCase();
   if (!isValidEmail(email)) {
     return res.status(400).json({ ok: false, message: 'รูปแบบอีเมลไม่ถูกต้อง' });
   }
-  handleGoogleUser(req, res, { email, googleId: 'dev-' + email }, 'json');
+  await handleGoogleUser(req, res, { email, googleId: 'dev-' + email }, 'json');
 });
 
 /**
@@ -1295,17 +1295,17 @@ app.post('/api/auth/google/mock', (req, res) => {
  *  - ผู้ใช้ค้าง (pending) → ไปหน้า google-setup.html เพื่อสมัครต่อ
  *  - ไม่มีบัญชี → สร้างผู้ใช้ค้าง (Google) → หน้า google-setup.html
  */
-function handleGoogleUser(req, res, { email, googleId }, mode) {
-  let user = db.findUserByEmail(email);
+async function handleGoogleUser(req, res, { email, googleId }, mode) {
+  let user = await db.findUserByEmail(email);
   if (!user) {
-    user = db.createGooglePendingUser({ email, googleId });
+    user = await db.createGooglePendingUser({ email, googleId });
     console.log(`🔑 [Google] สร้างผู้ใช้ใหม่ (ค้างกลางคัน): ${email}`);
   } else if (!user.google_id) {
-    db.linkGoogle(user.id, googleId);
+    await db.linkGoogle(user.id, googleId);
   }
 
   // สร้าง session ให้ (ทั้ง active และ pending — pending ใช้หน้า setup ต่อ)
-  startSession(res, user.id);
+  await startSession(res, user.id);
 
   if (user.status !== 'active') {
     console.log(`🔑 [Google] ผู้ใช้ค้าง → ไปตั้งรหัส/เบอร์: ${email}`);
@@ -1321,8 +1321,8 @@ function handleGoogleUser(req, res, { email, googleId }, mode) {
 // Google setup — ผู้ใช้ค้าง (ยังไม่ตั้งรหัส/เบอร์) กรอกให้ครบ
 // ต้องล็อกอิน (session จาก Google) และสถานะ pending เท่านั้น
 // ---------------------------------------------------------------------------
-function requirePendingGoogle(req, res, next) {
-  const user = getCurrentUser(req);
+async function requirePendingGoogle(req, res, next) {
+  const user = await getCurrentUser(req);
   if (!user) {
     return res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
   }
@@ -1334,12 +1334,12 @@ function requirePendingGoogle(req, res, next) {
 }
 
 // ขอ OTP ยืนยันเบอร์ (ขั้นตอน Google setup)
-app.post('/api/google-setup/send-otp', requirePendingGoogle, (req, res) => {
+app.post('/api/google-setup/send-otp', requirePendingGoogle, async (req, res) => {
   const phone = normalizeThaiPhone(req.body?.phone);
   if (!isValidThaiPhone(phone)) {
     return res.status(400).json({ ok: false, field: 'phone', message: 'เบอร์โทรศัพท์ไม่ถูกต้อง (เช่น 0812345678 หรือ 812345678)' });
   }
-  const otpResult = otp.issueOtp(req.user.id, phone, 'signup');
+  const otpResult = await otp.issueOtp(req.user.id, phone, 'signup');
   console.log(`🔑 [Google setup] ส่ง OTP ยืนยันเบอร์ ${phone} ให้ ${req.user.email}`);
   res.json({
     ok: true,
@@ -1360,13 +1360,13 @@ app.post('/api/google-setup/complete', requirePendingGoogle, async (req, res) =>
   if (!isValidThaiPhone(normalizedPhone)) {
     return res.status(400).json({ ok: false, field: 'phone', message: 'เบอร์โทรศัพท์ไม่ถูกต้อง (เช่น 0812345678 หรือ 812345678)' });
   }
-  const otpResult = otp.verifyOtp(req.user.id, String(code || ''), 'signup');
+  const otpResult = await otp.verifyOtp(req.user.id, String(code || ''), 'signup');
   if (!otpResult.ok) {
     return res.status(400).json({ ok: false, field: 'otp', message: otpResult.message });
   }
 
   const passwordHash = await bcrypt.hash(String(password), 10);
-  db.completeGoogleSetup(req.user.id, { passwordHash, phone: normalizedPhone });
+  await db.completeGoogleSetup(req.user.id, { passwordHash, phone: normalizedPhone });
   console.log(`✅ [Google] สมัครสมาชิกเสร็จสมบูรณ์: ${req.user.email} (เบอร์ ${normalizedPhone})`);
 
   res.json({ ok: true, message: 'สมัครสมาชิกเสร็จสมบูรณ์', redirect: '/dashboard/pages' });
@@ -1471,21 +1471,21 @@ app.post('/api/admin/smtp-test', requireAdmin, async (req, res) => {
 // ---------------------------------------------------------------------------
 
 // รายการผู้ใช้ทั้งหมด + ค้นหา
-app.get('/api/admin/users', requireAdmin, (req, res) => {
+app.get('/api/admin/users', requireAdmin, async (req, res) => {
   const search = String(req.query.search || '').trim();
   const limit = Math.min(Number(req.query.limit) || 100, 500);
-  const users = db.listUsers({ search, limit }).map((u) => ({
+  const users = (await db.listUsers({ search, limit })).map((u) => ({
     ...u,
     phone: maskPhone(u.phone || ''),
     is_email_verified: u.is_email_verified === 1,
   }));
-  res.json({ ok: true, users, total: db.countUsers(search) });
+  res.json({ ok: true, users, total: await db.countUsers(search) });
 });
 
 // แก้ไขข้อมูลผู้ใช้
 app.put('/api/admin/users/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
-  const current = db.findUserById(id);
+  const current = await db.findUserById(id);
   if (!current) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' });
 
   const { email, phone, status, role, isEmailVerified, newPassword } = req.body || {};
@@ -1496,7 +1496,7 @@ app.put('/api/admin/users/:id', requireAdmin, async (req, res) => {
     if (!isValidEmail(normalizedEmail)) {
       return res.status(400).json({ ok: false, field: 'email', message: 'รูปแบบอีเมลไม่ถูกต้อง' });
     }
-    const dup = db.findUserByEmail(normalizedEmail);
+    const dup = await db.findUserByEmail(normalizedEmail);
     if (dup && dup.id !== id) {
       return res.status(409).json({ ok: false, field: 'email', message: 'อีเมลนี้ถูกใช้ไปแล้ว' });
     }
@@ -1525,7 +1525,7 @@ app.put('/api/admin/users/:id', requireAdmin, async (req, res) => {
     if (id === req.admin.id && role !== 'admin') {
       return res.status(400).json({ ok: false, message: 'ไม่สามารถถอดสิทธิ์แอดมินของตัวเองได้' });
     }
-    if (current.role === 'admin' && role === 'user' && db.countAdmins() <= 1) {
+    if (current.role === 'admin' && role === 'user' && await db.countAdmins() <= 1) {
       return res.status(400).json({ ok: false, message: 'ต้องมีแอดมินอย่างน้อย 1 คน' });
     }
     fields.role = role;
@@ -1540,7 +1540,7 @@ app.put('/api/admin/users/:id', requireAdmin, async (req, res) => {
     fields.passwordHash = await bcrypt.hash(String(newPassword), 10);
   }
 
-  const updated = db.updateUserByAdmin(id, fields);
+  const updated = await db.updateUserByAdmin(id, fields);
   console.log(`👑 [แอดมิน] แก้ไขผู้ใช้ #${id} (${updated.email})`);
   res.json({
     ok: true,
@@ -1554,18 +1554,18 @@ app.put('/api/admin/users/:id', requireAdmin, async (req, res) => {
 });
 
 // ลบผู้ใช้
-app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
+app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
   const id = Number(req.params.id);
   if (id === req.admin.id) {
     return res.status(400).json({ ok: false, message: 'ไม่สามารถลบบัญชีตัวเองได้' });
   }
-  const current = db.findUserById(id);
+  const current = await db.findUserById(id);
   if (!current) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' });
-  if (current.role === 'admin' && db.countAdmins() <= 1) {
+  if (current.role === 'admin' && await db.countAdmins() <= 1) {
     return res.status(400).json({ ok: false, message: 'ต้องมีแอดมินอย่างน้อย 1 คน' });
   }
-  db.deleteUser(id);
-  db.deleteUserSessions(id);
+  await db.deleteUser(id);
+  await db.deleteUserSessions(id);
   console.log(`👑 [แอดมิน] ลบผู้ใช้ #${id} (${current.email})`);
   res.json({ ok: true, message: 'ลบผู้ใช้แล้ว' });
 });
@@ -1573,9 +1573,9 @@ app.delete('/api/admin/users/:id', requireAdmin, (req, res) => {
 // ---------------------------------------------------------------------------
 // ยืนยันอีเมล (เปิดจากลิงก์ในอีเมล)
 // ---------------------------------------------------------------------------
-app.get('/verify-email', (req, res) => {
+app.get('/verify-email', async (req, res) => {
   const token = String(req.query.token || '');
-  const record = db.findEmailTokenByHash(sha256(token));
+  const record = await db.findEmailTokenByHash(sha256(token));
 
   if (!record || record.used === 1) {
     return res.status(400).send(buildResultPage(false, 'ลิงก์ยืนยันไม่ถูกต้องหรือถูกใช้ไปแล้ว'));
@@ -1584,8 +1584,8 @@ app.get('/verify-email', (req, res) => {
     return res.status(400).send(buildResultPage(false, 'ลิงก์ยืนยันหมดอายุแล้ว กรุณาขอใหม่'));
   }
 
-  db.markEmailTokenUsed(record.id);
-  db.setEmailVerified(record.user_id, 1);
+  await db.markEmailTokenUsed(record.id);
+  await db.setEmailVerified(record.user_id, 1);
   console.log(`📧 ยืนยันอีเมลสำเร็จ: user_id=${record.user_id}`);
 
   res.send(buildResultPage(true, 'ยืนยันอีเมลสำเร็จ! คุณสามารถเข้าสู่ระบบได้เลย'));
@@ -1632,8 +1632,8 @@ app.get('/api/config', (req, res) => {
 // ---------------------------------------------------------------------------
 // ระบบหลังบ้านแอดมิน — ทุก endpoint ต้องเป็นแอดมินที่ล็อกอินเท่านั้น
 // ---------------------------------------------------------------------------
-function requireAdmin(req, res, next) {
-  const user = getCurrentUser(req);
+async function requireAdmin(req, res, next) {
+  const user = await getCurrentUser(req);
   if (!user) {
     return res.status(401).json({ ok: false, message: 'กรุณาเข้าสู่ระบบก่อน' });
   }
@@ -1645,14 +1645,14 @@ function requireAdmin(req, res, next) {
 }
 
 // สถิติภาพรวม
-app.get('/api/admin/stats', requireAdmin, (req, res) => {
-  res.json({ ok: true, stats: db.countStats() });
+app.get('/api/admin/stats', requireAdmin, async (req, res) => {
+  res.json({ ok: true, stats: await db.countStats() });
 });
 
 // รายการ OTP ทั้งหมด (สำหรับหน้าจัดการ SMS-OTP)
-app.get('/api/admin/otp-logs', requireAdmin, (req, res) => {
+app.get('/api/admin/otp-logs', requireAdmin, async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 200);
-  const logs = db.listOtpLogs(limit).map((l) => ({
+  const logs = (await db.listOtpLogs(limit)).map((l) => ({
     ...l,
     status: l.used === 1
       ? 'used'
@@ -1662,14 +1662,14 @@ app.get('/api/admin/otp-logs', requireAdmin, (req, res) => {
 });
 
 // แอดมินสั่งส่ง OTP ใหม่ให้ผู้ใช้ (ข้าม cooldown 60 วิ ใช้ support)
-app.post('/api/admin/otp/resend', requireAdmin, (req, res) => {
+app.post('/api/admin/otp/resend', requireAdmin, async (req, res) => {
   const userId = Number(req.body?.userId);
   const purpose = req.body?.purpose === 'password_reset' ? 'password_reset' : 'signup';
-  const user = db.findUserById(userId);
+  const user = await db.findUserById(userId);
   if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' });
 
   const contact = purpose === 'password_reset' ? user.email : user.phone;
-  const otpResult = otp.issueOtp(user.id, contact, purpose);
+  const otpResult = await otp.issueOtp(user.id, contact, purpose);
   console.log(`👑 [แอดมิน] ส่ง OTP ใหม่ (${purpose}) ให้ ${user.email} → ${contact}`);
 
   res.json({
@@ -1809,28 +1809,34 @@ app.post('/api/admin/settings', requireAdmin, (req, res) => {
 // ---------------------------------------------------------------------------
 // เริ่มเซิร์ฟเวอร์
 // ---------------------------------------------------------------------------
-db.deleteExpiredSessions();
+(async () => {
+  try {
+    await db.initDb();
+    await db.deleteExpiredSessions();
 
-// สร้างบัญชีแอดมินครั้งแรก (ถ้ายังไม่มี) — ตั้งค่าได้ผ่าน ADMIN_EMAIL/ADMIN_PASSWORD ใน .env
-if (!db.findAdmin()) {
-  const adminEmail = String(process.env.ADMIN_EMAIL || 'admin@example.com').trim().toLowerCase();
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123!';
-  bcrypt.hash(adminPassword, 10).then((hash) => {
-    db.createAdminUser({ email: adminEmail, passwordHash: hash });
-    console.log('==============================================');
-    console.log('👑 สร้างบัญชีแอดมินเรียบร้อย:');
-    console.log(`   อีเมล: ${adminEmail}`);
-    console.log(`   รหัสผ่าน: ${process.env.ADMIN_PASSWORD ? '(จาก .env)' : 'Admin@123! (ควรเปลี่ยนทันที)'}`);
-    console.log('   หน้าเข้าสู่ระบบ: http://localhost:' + PORT + '/login.html');
-    console.log('==============================================');
-  });
-}
+    // สร้างบัญชีแอดมินครั้งแรก (ถ้ายังไม่มี) — ตั้งค่าได้ผ่าน ADMIN_EMAIL/ADMIN_PASSWORD ใน .env
+    if (!await db.findAdmin()) {
+      const adminEmail = String(process.env.ADMIN_EMAIL || 'admin@example.com').trim().toLowerCase();
+      const adminPassword = process.env.ADMIN_PASSWORD || 'Admin@123!';
+      const hash = await bcrypt.hash(adminPassword, 10);
+      await db.createAdminUser({ email: adminEmail, passwordHash: hash });
+      console.log('==============================================');
+      console.log('👑 สร้างบัญชีแอดมินเรียบร้อย:');
+      console.log(`   อีเมล: ${adminEmail}`);
+      console.log(`   รหัสผ่าน: ${process.env.ADMIN_PASSWORD ? '(จาก .env)' : 'Admin@123! (ควรเปลี่ยนทันที)'}`);
+      console.log('==============================================');
+    }
 
-app.listen(PORT, () => {
-  console.log('==============================================');
-  console.log(`🛍️  เซิร์ฟเวอร์ร้านค้าออนไลน์รันที่: http://localhost:${PORT}`);
-  console.log(`    โหมด: ${DEV_MODE ? 'DEV (โหมดจำลอง OTP/อีเมล)' : 'PRODUCTION'}`);
-  console.log(`    หน้าแรก: http://localhost:${PORT}/`);
-  console.log(`    สมัครสมาชิก: http://localhost:${PORT}/register.html`);
-  console.log('==============================================');
-});
+    app.listen(PORT, () => {
+      console.log('==============================================');
+      console.log(`🛍️  เซิร์ฟเวอร์ร้านค้าออนไลน์รันที่: http://localhost:${PORT}`);
+      console.log(`    โหมด: ${DEV_MODE ? 'DEV (โหมดจำลอง OTP/อีเมล)' : 'PRODUCTION'}`);
+      console.log(`    หน้าแรก: http://localhost:${PORT}/`);
+      console.log(`    สมัครสมาชิก: http://localhost:${PORT}/register.html`);
+      console.log('==============================================');
+    });
+  } catch (err) {
+    console.error('❌ ไม่สามารถเชื่อมต่อฐานข้อมูล MySQL ได้:', err.message);
+    process.exit(1);
+  }
+})();
