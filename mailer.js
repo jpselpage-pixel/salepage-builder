@@ -56,6 +56,12 @@ async function sendEmail({ to, subject, htmlBody }) {
           port: cfg.port,
           secure: cfg.port === 465, // 465 = SSL, 587 = STARTTLS
           auth: { user: cfg.user, pass: cfg.pass },
+          // Railway ยังไม่มี IPv6 outbound — บังคับ IPv4 กัน ENETUNREACH
+          family: 4,
+          connectionTimeout: 15000,
+          greetingTimeout: 15000,
+          socketTimeout: 15000,
+          tls: { rejectUnauthorized: false },
         });
       }
       const info = await transporter.sendMail({
