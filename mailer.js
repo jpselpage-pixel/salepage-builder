@@ -51,17 +51,20 @@ async function sendEmail({ to, subject, htmlBody }) {
     try {
       if (!transporter) {
         const nodemailer = require('nodemailer');
+        const dns = require('node:dns');
+        // Railway ยังไม่มี IPv6 outbound — resolve hostname → IPv4 แล้วใช้ IP ตรงๆ (กัน ENETUNREACH)
+        const ipv4 = await new Promise((resolve) => {
+          dns.resolve4(cfg.host, (err, addrs) => resolve(err || !addrs || !addrs.length ? null : addrs[0]));
+        });
         transporter = nodemailer.createTransport({
-          host: cfg.host,
+          host: ipv4 || cfg.host,
           port: cfg.port,
           secure: cfg.port === 465, // 465 = SSL, 587 = STARTTLS
           auth: { user: cfg.user, pass: cfg.pass },
-          // Railway ยังไม่มี IPv6 outbound — บังคับ IPv4 กัน ENETUNREACH
-          family: 4,
+          tls: { rejectUnauthorized: false, servername: cfg.host }, // SNI ให้ cert ตรงกับ hostname จริง
           connectionTimeout: 15000,
           greetingTimeout: 15000,
           socketTimeout: 15000,
-          tls: { rejectUnauthorized: false },
         });
       }
       const info = await transporter.sendMail({
