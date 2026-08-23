@@ -70,14 +70,6 @@
           <button class="icon-btn" id="toggleSmtpBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M22 7l-10 6L2 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ตั้งค่า SMTP (อีเมล)
           </button>
-          <button class="icon-btn" id="toggleGmailBtn" type="button">
-            <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M22 7l-10 6L2 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> ตั้งค่า Gmail API
-          </button>
-          <select id="emailChannelSelect" title="ช่องทางส่งอีเมล" style="padding:9px 13px;font-size:13px;font-family:var(--font);color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);outline:none;cursor:pointer;">
-            <option value="auto">ช่องทางส่งอีเมล: อัตโนมัติ (Gmail API → SMTP)</option>
-            <option value="gmail">บังคับใช้ Gmail API</option>
-            <option value="smtp">บังคับใช้ SMTP</option>
-          </select>
           <button class="icon-btn" id="refreshBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             รีเฟรช
@@ -256,62 +248,6 @@
           <button class="icon-btn" id="testSmtpBtn"><svg viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ทดสอบส่งอีเมล</button>
           <input type="email" class="test-to-input" id="smtpTestTo" placeholder="อีเมลปลายทางทดสอบ" autocomplete="off">
           <span style="font-size:12.5px;color:var(--muted);" id="smtpHint"></span>
-        </div>
-      </div>
-
-      <!-- ตั้งค่า Gmail API (HTTPS 443 — ใช้ได้บน Railway) -->
-      <div class="admin-card" id="gmailCard" style="display:none;">
-        <h2 style="display:flex;align-items:center;gap:8px;">
-          <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M22 7l-10 6L2 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          ตั้งค่า Gmail API (HTTPS — ใช้ได้บน Railway)
-          <button class="icon-btn" id="gmailHelpBtn" type="button" style="margin-left:auto;padding:6px 12px;font-size:12px;"><svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:6px;"><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3M12 17h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> วิธีตั้งค่า</button>
-        </h2>
-        <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px;">
-          <strong>Gmail API</strong> ส่งอีเมลผ่าน HTTPS (port 443) — <b>ใช้ได้บน Railway</b> (ต่างจาก SMTP ที่ Railway block port 587/465)
-        </p>
-
-        <div class="help-box" id="gmailHelpBox" style="display:none;">
-          <strong><svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="vertical-align:-2px;margin-right:6px;"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M22 7l-10 6L2 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>วิธีตั้งค่า Gmail API (ครั้งเดียว ~15 นาที):</strong>
-          <ol>
-            <li>ไปที่ <span class="hl">console.cloud.google.com</span> → สร้าง Project ใหม่</li>
-            <li>เมนู <span class="hl">APIs &amp; Services → Library</span> → ค้นหา "Gmail API" → Enable</li>
-            <li>เมนู <span class="hl">OAuth consent screen</span> → External → กรอกชื่อแอป (SalePage) → เพิ่ม <span class="hl">scope: gmail.send</span> → เพิ่มอีเมลคุณเป็น Test user</li>
-            <li>เมนู <span class="hl">Credentials → Create Credentials → OAuth client ID</span> → ชนิด <span class="hl">Desktop app</span> → ได้ Client ID + Secret</li>
-            <li>รันคำสั่งบนเครื่อง: <span class="hl">GMAIL_CLIENT_ID=... GMAIL_CLIENT_SECRET=... node scripts/gmail-oauth.js</span> → เปิดลิงก์ → ยอมรับสิทธิ์ → ได้ Refresh Token</li>
-            <li>กรอกทั้ง 4 ค่าด้านล่าง แล้วกดบันทึก + ทดสอบ</li>
-          </ol>
-        </div>
-
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;font-size:13px;">
-          <span>สถานะ:</span>
-          <span class="pill" id="gmailBadge">กำลังตรวจ...</span>
-          <span id="gmailDetail" style="color:var(--muted);"></span>
-        </div>
-
-        <div class="settings-grid" style="margin-bottom:4px;">
-          <div class="settings-field">
-            <label for="gmailClientId">Client ID</label>
-            <input type="text" id="gmailClientId" placeholder="xxxx.apps.googleusercontent.com" autocomplete="off">
-          </div>
-          <div class="settings-field">
-            <label for="gmailClientSecret">Client Secret</label>
-            <input type="password" id="gmailClientSecret" placeholder="รหัสลับ OAuth" autocomplete="new-password">
-          </div>
-          <div class="settings-field">
-            <label for="gmailRefreshToken">Refresh Token</label>
-            <input type="password" id="gmailRefreshToken" placeholder="ได้จากสคริปต์ gmail-oauth" autocomplete="new-password">
-          </div>
-          <div class="settings-field">
-            <label for="gmailUser">User (อีเมล Gmail ที่ใช้ส่ง)</label>
-            <input type="email" id="gmailUser" placeholder="คุณ@gmail.com">
-          </div>
-        </div>
-
-        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <button class="icon-btn primary" id="saveGmailBtn"><svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> บันทึกค่า Gmail API</button>
-          <button class="icon-btn" id="testGmailBtn"><svg viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ทดสอบส่งอีเมล</button>
-          <input type="email" class="test-to-input" id="gmailTestTo" placeholder="อีเมลปลายทางทดสอบ" autocomplete="off">
-          <span style="font-size:12.5px;color:var(--muted);" id="gmailHint"></span>
         </div>
       </div>
 
@@ -726,120 +662,6 @@
       }
     });
 
-    // ---------- Gmail API ----------
-    document.getElementById('toggleGmailBtn').addEventListener('click', function () {
-      toggleSection(this, 'gmailCard');
-    });
-
-    document.getElementById('gmailHelpBtn').addEventListener('click', function () {
-      const box = document.getElementById('gmailHelpBox');
-      box.style.display = box.style.display === 'none' ? '' : 'none';
-    });
-
-    async function loadGmailStatus() {
-      try {
-        const { status } = await api('/api/admin/smtp-status');
-        const badge = document.getElementById('gmailBadge');
-        const detail = document.getElementById('gmailDetail');
-        const hint = document.getElementById('gmailHint');
-        const cfg = status.gmail || {};
-        // ช่องทางส่งอีเมล
-        const channelSel = document.getElementById('emailChannelSelect');
-        if (status.emailChannel && channelSel) channelSel.value = status.emailChannel;
-        if (cfg.configured) {
-          badge.innerHTML = ICON_CHECK + 'ตั้งค่าแล้ว';
-          badge.className = 'pill pill-valid';
-          detail.innerHTML = `User: <span class="mono">${escapeHtml(cfg.userMasked || '')}</span> · ใช้ได้บน Railway`;
-          hint.textContent = 'Gmail API ส่งผ่าน HTTPS — ใช้ได้บน Railway';
-          hint.style.color = 'var(--success)';
-        } else {
-          badge.innerHTML = ICON_ALERT + 'ยังไม่ได้ตั้งค่า';
-          badge.className = 'pill pill-expired';
-          detail.textContent = 'กรอก Client ID / Secret / Refresh Token / User แล้วกดบันทึก';
-          hint.textContent = '';
-        }
-        // เติมค่าที่ไม่ใช่ secret กลับ / ล้าง secret
-        document.getElementById('gmailClientId').value = cfg.clientId || '';
-        document.getElementById('gmailClientSecret').value = '';
-        document.getElementById('gmailRefreshToken').value = '';
-        document.getElementById('gmailUser').value = cfg.user || '';
-      } catch (e) { /* ข้าม */ }
-    }
-
-    document.getElementById('saveGmailBtn').addEventListener('click', async (e) => {
-      const btn = e.target;
-      const payload = {};
-      const clientId = document.getElementById('gmailClientId').value.trim();
-      const clientSecret = document.getElementById('gmailClientSecret').value;
-      const refreshToken = document.getElementById('gmailRefreshToken').value;
-      const user = document.getElementById('gmailUser').value.trim();
-      if (clientId) payload.clientId = clientId;
-      if (clientSecret) payload.clientSecret = clientSecret;
-      if (refreshToken) payload.refreshToken = refreshToken;
-      if (user) payload.user = user;
-
-      if (!Object.keys(payload).length) {
-        showToast(ICON_ALERT + 'กรุณากรอกค่าอย่างน้อย 1 รายการก่อนบันทึก');
-        return;
-      }
-      btn.disabled = true;
-      btn.classList.add('spinning');
-      try {
-        const data = await api('/api/admin/gmail-settings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        showToast(ICON_CHECK + data.message);
-        await loadGmailStatus();
-      } catch (err) {
-        showToast(ICON_ALERT + escapeHtml(err.message));
-      } finally {
-        btn.classList.remove('spinning');
-        btn.disabled = false;
-        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> บันทึกค่า Gmail API';
-      }
-    });
-
-    document.getElementById('testGmailBtn').addEventListener('click', async (e) => {
-      const btn = e.target;
-      const to = document.getElementById('gmailTestTo').value.trim();
-      if (!to) { showToast(ICON_ALERT + 'กรุณากรอกอีเมลปลายทางสำหรับทดสอบ'); return; }
-      btn.disabled = true;
-      btn.classList.add('spinning');
-      try {
-        const data = await api('/api/admin/gmail-test', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to }),
-        });
-        showToast(ICON_CHECK + data.message);
-      } catch (err) {
-        showToast(ICON_ALERT + escapeHtml(err.message));
-      } finally {
-        btn.classList.remove('spinning');
-        btn.disabled = false;
-        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ทดสอบส่งอีเมล';
-      }
-    });
-
-    // ---------- ช่องทางส่งอีเมล ----------
-    document.getElementById('emailChannelSelect').addEventListener('change', async (e) => {
-      const sel = e.target;
-      const prev = sel.value;
-      try {
-        await api('/api/admin/email-channel', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ channel: sel.value }),
-        });
-        showToast(ICON_CHECK + 'ตั้งช่องทางส่งอีเมลแล้ว');
-      } catch (err) {
-        sel.value = prev;
-        showToast(ICON_ALERT + escapeHtml(err.message));
-      }
-    });
-
     // ---------- ทดสอบส่ง SMS ----------
     document.getElementById('testSmsBtn').addEventListener('click', async (e) => {
       const btn = e.target;
@@ -870,7 +692,7 @@
       const rb = document.getElementById('refreshBtn');
       rb.classList.add('spinning'); rb.disabled = true;
       try {
-        await Promise.all([loadStatus(), loadLogs(), loadSmtpStatus(), loadGmailStatus()]);
+        await Promise.all([loadStatus(), loadLogs(), loadSmtpStatus()()]);
         showToast(ICON_CHECK + 'อัปเดตข้อมูลแล้ว');
       } catch (err) {
         showToast(ICON_ALERT + escapeHtml(err.message));
@@ -891,7 +713,7 @@
         if (me.user.role !== 'admin') { window.location.href = '/login.html'; return; }
         document.getElementById('adminEmail').textContent = me.user.email;
         document.getElementById('adminAvatar').textContent = me.user.email.charAt(0).toUpperCase();
-        await Promise.all([loadStatus(), loadLogs(), loadSmtpStatus(), loadGmailStatus()]);
+        await Promise.all([loadStatus(), loadLogs(), loadSmtpStatus()()]);
       } catch (err) {
         window.location.href = '/login.html';
       }
