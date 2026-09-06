@@ -89,7 +89,7 @@
                 <th>เบอร์โทร</th>
                 <th>สมัครผ่าน</th>
                 <th>ยืนยันอีเมล</th>
-                <th>สถานะเบอร์</th>
+                <th>ยืนยันเบอร์โทร</th>
                 <th>บทบาท</th>
                 <th>สร้างเมื่อ</th>
                 <th>จัดการ</th>
@@ -195,14 +195,16 @@
         : '<span class="badge badge-info">อีเมล</span>';
     }
     function emailVerifiedCell(u) {
+      const icon = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:4px;"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M22 6l-10 7L2 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       return u.is_email_verified
-        ? '<span class="badge badge-success" title="อีเมลยืนยันแล้ว">ยืนยันแล้ว</span>'
-        : '<span class="badge badge-warning" title="ยังไม่ได้ยืนยันอีเมล">ยังไม่ยืนยัน</span>';
+        ? '<span class="badge badge-success" title="อีเมลยืนยันแล้ว">' + icon + 'ยืนยันแล้ว</span>'
+        : '<span class="badge badge-warning" title="ยังไม่ได้ยืนยันอีเมล">' + icon + 'ยังไม่ยืนยัน</span>';
     }
     function statusBadge(status) {
+      const icon = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:4px;"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
       return status === 'active'
-        ? '<span class="pill pill-valid" title="ยืนยันเบอร์แล้ว — ใช้งานได้">ยืนยันแล้ว</span>'
-        : '<span class="pill pill-expired" title="สมัครค้างกลางคัน — ยังล็อกอิน/ใช้บริการไม่ได้">ยังไม่สมัครเสร็จ</span>';
+        ? '<span class="pill pill-valid" title="ยืนยันเบอร์แล้ว — ใช้งานได้">' + icon + 'ยืนยันแล้ว</span>'
+        : '<span class="pill pill-expired" title="สมัครค้างกลางคัน — ยังล็อกอิน/ใช้บริการไม่ได้">' + icon + 'ยังไม่สมัครเสร็จ</span>';
     }
 
     async function loadUsers() {
