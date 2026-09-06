@@ -87,7 +87,8 @@
                 <th>#</th>
                 <th>อีเมล</th>
                 <th>เบอร์โทร</th>
-                <th>สมัครผ่าน / อีเมล</th>
+                <th>สมัครผ่าน</th>
+                <th>ยืนยันอีเมล</th>
                 <th>สถานะเบอร์</th>
                 <th>บทบาท</th>
                 <th>สร้างเมื่อ</th>
@@ -95,7 +96,7 @@
               </tr>
             </thead>
             <tbody id="usersBody">
-              <tr><td colspan="8" class="empty-state">กำลังโหลด...</td></tr>
+              <tr><td colspan="9" class="empty-state">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -189,13 +190,14 @@
     let allUsers = [];
 
     function providerCell(u) {
-      const p = u.provider === 'google'
+      return u.provider === 'google'
         ? '<span class="badge badge-success">Google</span>'
         : '<span class="badge badge-info">อีเมล</span>';
-      const v = u.is_email_verified
-        ? '<span class="badge badge-success" title="อีเมลยืนยันแล้ว"><svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:4px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>'
-        : '<span class="badge badge-warning" title="ยังไม่ได้ยืนยันอีเมล"><svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:4px;"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
-      return '<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;">' + p + v + '</span>';
+    }
+    function emailVerifiedCell(u) {
+      return u.is_email_verified
+        ? '<span class="badge badge-success" title="อีเมลยืนยันแล้ว">ยืนยันแล้ว</span>'
+        : '<span class="badge badge-warning" title="ยังไม่ได้ยืนยันอีเมล">ยังไม่ยืนยัน</span>';
     }
     function statusBadge(status) {
       return status === 'active'
@@ -214,7 +216,7 @@
 
       const tbody = document.getElementById('usersBody');
       if (!users.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="empty-state">ไม่พบผู้ใช้</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">ไม่พบผู้ใช้</td></tr>';
         return;
       }
       tbody.innerHTML = users.map((u) => `
@@ -223,6 +225,7 @@
           <td class="email-cell">${escapeHtml(u.email)}</td>
           <td class="mono">${escapeHtml(u.phone)}</td>
           <td>${providerCell(u)}</td>
+          <td>${emailVerifiedCell(u)}</td>
           <td>${statusBadge(u.status)}</td>
           <td>${u.role === 'admin' ? '<span class="badge badge-warning">แอดมิน</span>' : 'ผู้ใช้'}</td>
           <td class="mono">${u.created_at}</td>
