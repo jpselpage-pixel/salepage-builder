@@ -1477,7 +1477,7 @@ app.get('/api/admin/users', requireAdmin, async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 100, 500);
   const users = (await db.listUsers({ search, limit })).map((u) => ({
     ...u,
-    phone: maskPhone(u.phone || ''),
+    phone: u.phone || '', // แสดงเบอร์เต็มให้แอดมิน (เครื่องมือภายใน — ต้องใช้เบอร์จริงตอนแก้ไข)
     is_email_verified: u.is_email_verified === 1,
   }));
   res.json({ ok: true, users, total: await db.countUsers(search) });
@@ -1548,7 +1548,7 @@ app.put('/api/admin/users/:id', requireAdmin, async (req, res) => {
     message: 'บันทึกข้อมูลผู้ใช้แล้ว',
     user: {
       ...updated,
-      phone: maskPhone(updated.phone || ''),
+      phone: updated.phone || '',
       is_email_verified: updated.is_email_verified === 1,
     },
   });
