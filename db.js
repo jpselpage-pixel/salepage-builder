@@ -21,7 +21,32 @@ const pool = mysql.createPool({
   queueLimit: 0,
   charset: 'utf8mb4',
   timezone: 'Z', // เก็บ/อ่านเวลาเป็น UTC ให้ตรงกับ nowSql() ใน server.js
+  enableKeepAlive: true, // ส่ง TCP keepalive — ป้องกัน Railway proxy ตัด connection ที่ idle ทิ้ง
+  keepAliveInitialDelay: 0,
+  connectTimeout: 10000,
 });
+
+// mysql2 pool ไม่ retry ให้อัตโนมัติ — ถ้า connection ถูกตัดกลางอากาศ (proxy หลุด/restart)
+// คำสั่ง SELECT ที่เพิ่งส่งไปจะ error ทั้งที่ฐานข้อมูลพร้อมแล้ว ขอ retry 1 ครั้งเฉพาะคำสั่งอ่าน
+// (คำสั่งเขียนไม่ retry เพื่อป้องกันการ insert ซ้ำ ถ้าคำสั่งแรกไปถึง DB แล้วแต่ connection หลุดตอนตอบกลับ)
+const TRANSIENT_CODES = new Set([
+  'PROTOCOL_CONNECTION_LOST', 'PROTOCOL_ENQUEUE_AFTER_FATAL_ERROR', 'PROTOCOL_INCORRECT_PACKET_SEQUENCE',
+  'ECONNRESET', 'EPIPE', 'ETIMEDOUT', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN', 'ER_SERVER_SHUTDOWN',
+]);
+const isTransient = (err) => !!(err && (TRANSIENT_CODES.has(err.code) || TRANSIENT_CODES.has(err.errno)));
+const isReadQuery = (sql) => /^\s*(select|show|describe|explain)/i.test(String(sql));
+
+const poolExecute = pool.execute.bind(pool);
+pool.execute = async (sql, params) => {
+  try {
+    return await poolExecute(sql, params);
+  } catch (err) {
+    if (isReadQuery(sql) && isTransient(err)) {
+      return await poolExecute(sql, params); // ลองใหม่ 1 ครั้ง (pool ทิ้ง connection ที่เสียไปแล้ว)
+    }
+    throw err;
+  }
+};
 
 // ---------------------------------------------------------------------------
 // Schema (รันตอน boot — ฝังคอลัมน์จาก migrations เดิมเข้าไปใน DDL แล้ว)

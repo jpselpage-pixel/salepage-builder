@@ -253,12 +253,37 @@
       });
     });
 
+    // ---------- แจ้งเตือนชั่วคราว (ไม่มีกล่อง toast ในหน้านี้) ----------
+    function notify(msg) {
+      let t = document.getElementById('dashToast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = 'dashToast';
+        t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#fee2e2;color:#b91c1c;padding:11px 18px;border-radius:12px;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.15);z-index:9999;max-width:90vw;text-align:center;';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => { if (t.parentNode) t.parentNode.removeChild(t); }, 6000);
+    }
+
     // ---------- โหลดข้อมูลผู้ใช้ ----------
     async function loadMe() {
       try {
         const res = await fetch('/api/me');
-        const data = await res.json();
-        if (!data.ok) { window.location.href = '/login.html?next=/dashboard/' + activePanel; return; }
+        let data;
+        try {
+          data = await res.json();
+        } catch {
+          const err = new Error('เซิร์ฟเวอร์ตอบสนองไม่ถูกต้อง (HTTP ' + res.status + ')');
+          err.status = res.status;
+          throw err;
+        }
+        // เตะไปหน้า login เฉพาะ session หมดอายุจริง (401) — error อื่น (DB/เครือข่าย) แจ้งเตือนไม่เตะออก
+        if (!data.ok) {
+          if (res.status === 401) { window.location.href = '/login.html?next=/dashboard/' + activePanel; return; }
+          throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ');
+        }
 
         const user = data.user;
         document.getElementById('userEmail').textContent = user.email;
@@ -288,8 +313,10 @@
           unverifiedBadge.style.display = '';
           document.getElementById('verifyBanner').style.display = 'block';
         }
-      } catch {
-        window.location.href = '/login.html?next=/dashboard/' + activePanel;
+      } catch (err) {
+        const loginErr = (err && err.status === 401);
+        if (loginErr) { window.location.href = '/login.html?next=/dashboard/' + activePanel; return; }
+        notify(err && err.message ? err.message : 'เชื่อมต่อเซิร์ฟเวอร์ขัดข้อง ลองใหม่อีกครั้ง');
       }
     }
 

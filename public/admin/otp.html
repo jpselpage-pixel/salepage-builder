@@ -308,8 +308,19 @@
 
     async function api(path, opts) {
       const res = await fetch(path, opts);
-      const data = await res.json();
-      if (!data.ok) throw new Error(data.message || 'เกิดข้อผิดพลาด');
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        const err = new Error('เซิร์ฟเวอร์ตอบสนองไม่ถูกต้อง (HTTP ' + res.status + ')');
+        err.status = res.status;
+        throw err;
+      }
+      if (!data.ok) {
+        const err = new Error(data.message || 'เกิดข้อผิดพลาด');
+        err.status = res.status;
+        throw err;
+      }
       return data;
     }
 
@@ -692,7 +703,7 @@
       const rb = document.getElementById('refreshBtn');
       rb.classList.add('spinning'); rb.disabled = true;
       try {
-        await Promise.all([loadStatus(), loadLogs(), loadSmtpStatus()()]);
+        await Promise.all([loadStatus(), loadLogs(), loadSmtpStatus()]);
         showToast(ICON_CHECK + 'อัปเดตข้อมูลแล้ว');
       } catch (err) {
         showToast(ICON_ALERT + escapeHtml(err.message));
@@ -713,9 +724,11 @@
         if (me.user.role !== 'admin') { window.location.href = '/login.html'; return; }
         document.getElementById('adminEmail').textContent = me.user.email;
         document.getElementById('adminAvatar').textContent = me.user.email.charAt(0).toUpperCase();
-        await Promise.all([loadStatus(), loadLogs(), loadSmtpStatus()()]);
+        await Promise.all([loadStatus(), loadLogs(), loadSmtpStatus()]);
       } catch (err) {
-        window.location.href = '/login.html';
+        // เตะไปหน้า login เฉพาะ session หมดอายุจริง (401) — error อื่น (DB/เครือข่าย) แจ้งเตือนไม่เตะออก
+        if (err && err.status === 401) { window.location.href = '/login.html'; return; }
+        showToast(ICON_ALERT + (err && err.message ? escapeHtml(err.message) : 'เชื่อมต่อเซิร์ฟเวอร์ขัดข้อง ลองใหม่อีกครั้ง'));
       }
     }
 

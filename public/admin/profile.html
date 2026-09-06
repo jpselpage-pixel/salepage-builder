@@ -129,8 +129,21 @@
 
     async function loadProfile() {
       const res = await fetch('/api/me');
-      const data = await res.json();
-      if (!data.ok) { window.location.href = '/login.html'; return; }
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        const err = new Error('เซิร์ฟเวอร์ตอบสนองไม่ถูกต้อง (HTTP ' + res.status + ')');
+        err.status = res.status;
+        throw err;
+      }
+      if (!data.ok) {
+        // เตะไปหน้า login เฉพาะ session หมดอายุจริง (401) — error อื่น throw ไปให้ caller จัดการ
+        if (res.status === 401) { window.location.href = '/login.html'; return; }
+        const err = new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ');
+        err.status = res.status;
+        throw err;
+      }
       const u = data.user;
 
       document.getElementById('adminEmail').textContent = u.email;
@@ -199,7 +212,10 @@
     document.getElementById('logoutBtn').addEventListener('click', (e) => { e.preventDefault(); doLogout(); });
     document.getElementById('logoutBtn2').addEventListener('click', doLogout);
 
-    loadProfile().catch(() => { window.location.href = '/login.html'; });
+    loadProfile().catch((err) => {
+      if (err && err.status === 401) { window.location.href = '/login.html'; return; }
+      showToast(ICON_ALERT + (err && err.message ? escapeHtml(err.message) : 'เชื่อมต่อเซิร์ฟเวอร์ขัดข้อง ลองใหม่อีกครั้ง'));
+    });
   </script>
 </body>
 </html>
