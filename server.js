@@ -1514,7 +1514,8 @@ app.put('/api/admin/users/:id', requireAdmin, async (req, res) => {
     if (!['pending', 'active'].includes(status)) {
       return res.status(400).json({ ok: false, message: 'สถานะไม่ถูกต้อง' });
     }
-    if (id === req.admin.id) {
+    // แอดมินห้ามตั้งสถานะตัวเองเป็น pending (กันล็อกตัวเองออก) — แต่แก้ไขอย่างอื่นของตัวเองได้
+    if (id === req.admin.id && status !== 'active') {
       return res.status(400).json({ ok: false, message: 'ไม่สามารถเปลี่ยนสถานะบัญชีตัวเองได้' });
     }
     fields.status = status;
