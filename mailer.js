@@ -100,13 +100,13 @@ async function sendEmail({ to, subject, htmlBody }) {
  */
 function sendVerificationEmail({ email, token, baseUrl }) {
   const link = `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
-  const subject = 'ยืนยันอีเมล — SalePage';
+  const subject = 'ยืนยันอีเมลของคุณ — SalePage';
+  // เนื้อหาธรรมดา ไม่มีปุ่ม/สีเยอะ — Gmail กรองเมลแบบมีปุ่มตกแต่ง (เทสต์แล้วฉบับธรรมดาส่งถึง)
   const htmlBody = `
-    <p>สวัสดีครับ/ค่ะ,</p>
-    <p>ขอบคุณที่สมัครสมาชิกกับ SalePage ของเรา</p>
-    <p>กรุณาคลิกปุ่มด้านล่างเพื่อยืนยันอีเมลของคุณ (ลิงก์มีอายุ 24 ชั่วโมง):</p>
-    <p><a href="${link}" style="background:#667eea;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;">ยืนยันอีเมล</a></p>
-    <p>หรือคัดลอกลิงก์: ${link}</p>
+    <p>สวัสดีครับ/ค่ะ</p>
+    <p>ขอบคุณที่สมัครสมาชิกกับ SalePage</p>
+    <p>กรุณายืนยันอีเมลของคุณโดยเปิดลิงก์ด้านล่าง (ใช้ได้ 24 ชั่วโมง):</p>
+    <p><a href="${link}">${link}</a></p>
     <p>หากคุณไม่ได้สมัครสมาชิก กรุณาเพิกเฉยอีเมลนี้</p>
   `;
   // ส่งแบบไม่บล็อก — บันทึกผลลัพธ์ที่ console เสมอ (ทั้งสำเร็จ/จำลอง/ล้มเหลว)
