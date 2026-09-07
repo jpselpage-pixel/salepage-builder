@@ -443,6 +443,7 @@
     function startResendTimer() { remaining = 60; tickTimer(); }
 
     resendBtn.addEventListener('click', async () => {
+      if (remaining > 0) return; // กันกดตอนกำลังนับถอยหลัง
       resendBtn.disabled = true;
       try {
         const res = await fetch('/api/forgot-password', {
