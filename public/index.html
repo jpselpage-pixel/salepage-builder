@@ -373,6 +373,13 @@
         const data = await res.json();
         if (!data.ok) return;
         const u = data.user;
+        // บัญชียังยืนยันเบอร์ไม่ครบ → ยังไม่ถือว่าสมัครเสร็จ ให้ไปทำขั้นตอนให้ครบก่อน
+        if (u.status !== 'active') {
+          const target = u.provider === 'google' ? '/google-setup.html' : '/otp.html';
+          document.getElementById('authButtons').innerHTML =
+            '<a class="btn btn-primary" href="' + target + '">ทำขั้นตอนสมัครให้ครบ</a>';
+          return;
+        }
         document.getElementById('authButtons').innerHTML =
           '<a class="btn btn-primary" href="/dashboard/pages">บัญชีของฉัน</a>';
       } catch (e) { /* ยังไม่ล็อกอิน */ }

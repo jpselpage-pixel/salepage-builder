@@ -59,11 +59,16 @@ app.use('/admin', async (req, res, next) => {
   next();
 });
 
-// ป้องกันหน้า /dashboard และ /settings — ต้องล็อกอินเท่านั้น (อยู่ก่อน routes + static)
+// ป้องกันหน้า /dashboard และ /settings — ต้องล็อกอินและยืนยันเบอร์ (active) แล้วเท่านั้น
+// (บัญชีค้างกลางคัน: ยังไม่ถือว่าสมัครเสร็จ → พาไปทำขั้นตอนยืนยันให้ครบก่อน)
 app.use(['/dashboard', '/settings'], async (req, res, next) => {
   const user = await getCurrentUser(req);
   if (!user) {
     return res.redirect('/login.html?next=' + encodeURIComponent(req.originalUrl || '/dashboard/pages'));
+  }
+  if (user.status !== 'active') {
+    const completeUrl = user.provider === 'google' ? '/google-setup.html' : '/otp.html';
+    return res.redirect(completeUrl);
   }
   next();
 });
