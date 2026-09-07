@@ -122,10 +122,11 @@
           <div>
             <div class="user-email" id="userEmail">—</div>
             <div class="user-meta">
-              <span class="badge badge-success">
+              <span class="badge badge-success" id="phoneVerifiedBadge">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 ยืนยันเบอร์แล้ว
               </span>
+              <span class="badge badge-warning" id="phoneUnverifiedBadge" style="display:none;">ยังไม่ยืนยันเบอร์</span>
               <span class="badge badge-info" id="emailVerifiedBadge" style="display:none;">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 อีเมลยืนยันแล้ว
@@ -298,6 +299,17 @@
           statusEl.innerHTML = 'ยืนยันเบอร์โทรแล้ว ' + ICON_CHECK + ' + ยืนยันอีเมลแล้ว ' + ICON_CHECK + ' — บัญชีสมบูรณ์';
         } else {
           statusEl.innerHTML = 'ยืนยันเบอร์โทรแล้ว ' + ICON_CHECK + ' · ยังไม่ได้ยืนยันอีเมล (ดูแบนเนอร์ด้านล่าง)';
+        }
+
+        // ป้าย "ยืนยันเบอร์แล้ว" แสดงเฉพาะบัญชีที่ยืนยันเบอร์ครบแล้ว (status active)
+        const phoneVerified = document.getElementById('phoneVerifiedBadge');
+        const phoneUnverified = document.getElementById('phoneUnverifiedBadge');
+        if (user.status === 'active') {
+          phoneVerified.style.display = '';
+          phoneUnverified.style.display = 'none';
+        } else {
+          phoneVerified.style.display = 'none';
+          phoneUnverified.style.display = '';
         }
 
         const verifiedBadge = document.getElementById('emailVerifiedBadge');
