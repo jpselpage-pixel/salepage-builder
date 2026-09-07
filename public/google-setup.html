@@ -241,6 +241,10 @@
       return d;
     }
 
+    // ช่องเบอร์กรอกได้เฉพาะตัวเลข — มีหรือไม่มี 0 นำหน้าก็ได้ (ระบบจัดรูปแบบให้เองตอนส่ง)
+    const phoneField = document.getElementById('phone');
+    phoneField.addEventListener('input', () => { phoneField.value = phoneField.value.replace(/[^0-9]/g, ''); });
+
     // ---------- ช่อง OTP 6 หลัก ----------
     const otpInputs = Array.from(document.querySelectorAll('#otpInputs input'));
     function currentCode() { return otpInputs.map((i) => i.value).join(''); }

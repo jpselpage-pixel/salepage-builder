@@ -176,6 +176,9 @@
       phone: document.getElementById('phoneError')
     };
 
+    // ช่องเบอร์กรอกได้เฉพาะตัวเลข — มีหรือไม่มี 0 นำหน้าก็ได้ (ระบบจัดรูปแบบให้เองตอนส่ง)
+    fields.phone.addEventListener('input', () => { fields.phone.value = fields.phone.value.replace(/[^0-9]/g, ''); });
+
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     // เบอร์โทรไทย — ยอมรับทั้งแบบมี/ไม่มี 0 นำหน้า และแบบมี 66/+66
