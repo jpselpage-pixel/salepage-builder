@@ -100,7 +100,8 @@ async function sendEmail({ to, subject, htmlBody }) {
  */
 function sendVerificationEmail({ email, token, baseUrl }) {
   const link = `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
-  const subject = 'ยืนยันอีเมลของคุณ — SalePage';
+  // หัวข้อเป็นอังกฤษ (ASCII) — Gmail กรองเมลหัวข้อภาษาไทยจาก sender นี้ (เทสต์แล้วฉบับ EN ถึง)
+  const subject = 'Verify your email — SalePage';
   // เนื้อหาธรรมดา ไม่มีปุ่ม/สีเยอะ — Gmail กรองเมลแบบมีปุ่มตกแต่ง (เทสต์แล้วฉบับธรรมดาส่งถึง)
   const htmlBody = `
     <p>สวัสดีครับ/ค่ะ</p>
