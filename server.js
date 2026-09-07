@@ -1599,28 +1599,89 @@ app.get('/verify-email', async (req, res) => {
 });
 
 function buildResultPage(success, message) {
-  const icon = success ? '✅' : '❌';
-  const color = success ? '#2e7d32' : '#d93025';
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const accent = success ? '#16a34a' : '#dc2626';
+  const accentBg = success ? '#dcfce7' : '#fee2e2';
+  const statusSvg = success
+    ? '<svg viewBox="0 0 24 24" fill="none" width="34" height="34"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" width="30" height="30"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  const headline = success ? 'ยืนยันอีเมลสำเร็จ' : 'เกิดข้อผิดพลาด';
+  const sub = success
+    ? 'อีเมลของคุณได้รับการยืนยันแล้ว — เข้าสู่ระบบเพื่อเริ่มใช้งานได้เลย'
+    : esc(message);
   return `<!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ผลการยืนยันอีเมล</title>
+  <title>${success ? 'ยืนยันอีเมลสำเร็จ' : 'เกิดข้อผิดพลาด'} | SalePage</title>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #fff; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-    .card { border: 1px solid #e8e8e8; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,.08); padding: 40px; max-width: 400px; text-align: center; }
-    .icon { font-size: 56px; }
-    .msg { color: ${color}; font-size: 18px; font-weight: 600; margin: 16px 0; }
-    a { display: inline-block; margin-top: 8px; background: #667eea; color: #fff; text-decoration: none; padding: 12px 28px; border-radius: 8px; }
-    a:hover { opacity: .9; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Prompt', Tahoma, Arial, sans-serif;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: radial-gradient(1200px 600px at 10% -10%, #e0e7ff 0%, transparent 55%),
+                  radial-gradient(1000px 500px at 110% 110%, #ede9fe 0%, transparent 50%),
+                  linear-gradient(160deg, #f8fafc 0%, #eef2ff 100%);
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border: 1px solid rgba(99, 102, 241, 0.12);
+      border-radius: 24px;
+      box-shadow: 0 24px 60px -20px rgba(79, 70, 229, 0.25);
+      padding: 48px 40px 40px;
+      text-align: center;
+    }
+    .brand {
+      display: inline-flex; align-items: center; gap: 9px;
+      font-size: 15px; font-weight: 700; color: #4f46e5; letter-spacing: .2px;
+      margin-bottom: 26px;
+    }
+    .brand .logo {
+      width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      box-shadow: 0 6px 14px -4px rgba(99, 102, 241, .6);
+    }
+    .status {
+      width: 76px; height: 76px; border-radius: 50%;
+      background: ${accentBg}; color: ${accent};
+      display: grid; place-items: center; margin: 0 auto 22px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.03);
+    }
+    h1 { font-size: 21px; font-weight: 700; color: #0f172a; margin-bottom: 10px; }
+    .sub { font-size: 14.5px; line-height: 1.7; color: #64748b; margin-bottom: 30px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: linear-gradient(135deg, #6366f1, #7c3aed);
+      color: #fff; text-decoration: none; font-size: 15px; font-weight: 600;
+      padding: 13px 30px; border-radius: 12px;
+      box-shadow: 0 10px 22px -8px rgba(99, 102, 241, .7);
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 14px 26px -8px rgba(99, 102, 241, .8); }
+    .btn svg { width: 17px; height: 17px; }
+    .hint { margin-top: 18px; font-size: 12.5px; color: #94a3b8; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="icon">${icon}</div>
-    <div class="msg">${message}</div>
-    <a href="/login.html">ไปหน้าเข้าสู่ระบบ</a>
+    <div class="brand">
+      <span class="logo"><svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+      SalePage
+    </div>
+    <div class="status">${statusSvg}</div>
+    <h1>${success ? 'ยืนยันอีเมลสำเร็จ' : 'เกิดข้อผิดพลาด'}</h1>
+    <div class="sub">${success ? sub : sub}</div>
+    <a class="btn" href="/login.html">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      ไปหน้าเข้าสู่ระบบ
+    </a>
+    <div class="hint">SalePage Builder — สร้างหน้าเว็บขายของในไม่กี่นาที</div>
   </div>
 </body>
 </html>`;
