@@ -26,6 +26,12 @@ const pool = mysql.createPool({
   connectTimeout: 10000,
 });
 
+// บังคับทุก connection ให้ใช้ UTC — ไม่งั้น CURRENT_TIMESTAMP (เช่น created_at)
+// จะบันทึกเป็นเวลาท้องถิ่นของเครื่อง MySQL แล้วตีความผิดเพี้ยน (VPS ตั้งเวลาไทย +07)
+pool.on('connection', (conn) => {
+  conn.query("SET time_zone = '+00:00'").catch(() => {});
+});
+
 // mysql2 pool ไม่ retry ให้อัตโนมัติ — ถ้า connection ถูกตัดกลางอากาศ (proxy หลุด/restart)
 // คำสั่ง SELECT ที่เพิ่งส่งไปจะ error ทั้งที่ฐานข้อมูลพร้อมแล้ว ขอ retry 1 ครั้งเฉพาะคำสั่งอ่าน
 // (คำสั่งเขียนไม่ retry เพื่อป้องกันการ insert ซ้ำ ถ้าคำสั่งแรกไปถึง DB แล้วแต่ connection หลุดตอนตอบกลับ)
