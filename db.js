@@ -268,8 +268,9 @@ async function deleteExpiredSessions() {
 // ---------------------------------------------------------------------------
 async function createOtp({ userId, codeHash, contact, purpose = 'signup', expiresAt, codeVisible = null }) {
   // รหัสเก่าที่ยังไม่ใช้ → ตัดสิทธิ์ทันที (เก็บประวัติไว้ให้แอดมินดู — ไม่ลบ)
+  // หมายเหตุ (ผลส่ง SMS) ของรหัสเก่าเก็บไว้ตามเดิม ไม่ทับ — สถานะ "ถูกแทนที่" ดูจากคอลัมน์สถานะ
   await pool.execute(
-    `UPDATE otp_codes SET replaced = 1, note = 'ถูกแทนที่โดยรหัสใหม่ (มีการขอซ้ำ)' 
+    `UPDATE otp_codes SET replaced = 1
         WHERE user_id = ? AND purpose = ? AND used = 0 AND replaced = 0`,
     [userId, purpose]
   );
