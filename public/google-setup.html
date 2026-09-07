@@ -320,6 +320,7 @@
     let devOtp = null;
     const sendOtpBtn = document.getElementById('sendOtpBtn');
     sendOtpBtn.addEventListener('click', async () => {
+      if (remaining > 0) return; // กันกดซ้ำระหว่างนับถอยหลัง
       const phone = normalizeThaiPhone(document.getElementById('phone').value);
       const phoneError = document.getElementById('phoneError');
       phoneError.style.display = 'none';
@@ -346,6 +347,8 @@
           document.getElementById('devOtpText').textContent = devOtp;
           document.getElementById('devBanner').style.display = 'block';
         }
+        // ส่งครั้งแรกสำเร็จแล้ว → ซ่อนปุ่มนี้ เหลือ "ส่งรหัสใหม่" (มีนับถอยหลัง) อย่างเดียว
+        sendOtpBtn.style.display = 'none';
         document.getElementById('otpPhoneLabel').textContent = phone;
         document.getElementById('otpSection').style.display = '';
         otpInputs.forEach((i) => { i.value = ''; });
