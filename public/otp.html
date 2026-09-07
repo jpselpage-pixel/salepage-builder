@@ -212,8 +212,10 @@
     const resendTimer = document.getElementById('resendTimer');
     const RESEND_COOLDOWN = 60;
     let remaining = 0;
+    let timerId = null; // ตัวนับเดียว — เคลียร์ตัวเก่าก่อนสร้างใหม่กันเลขซ้อน
 
     function tickTimer() {
+      clearTimeout(timerId);
       if (remaining <= 0) {
         resendBtn.disabled = false;
         resendTimer.textContent = '';
@@ -222,7 +224,13 @@
       resendBtn.disabled = true;
       resendTimer.textContent = ' (' + remaining + ' วินาที)';
       remaining--;
-      setTimeout(tickTimer, 1000);
+      timerId = setTimeout(tickTimer, 1000);
+    }
+
+    function startResendTimer() {
+      clearTimeout(timerId);
+      remaining = RESEND_COOLDOWN;
+      tickTimer();
     }
 
     resendBtn.addEventListener('click', async () => {
@@ -263,8 +271,7 @@
     });
 
     // เริ่มนับถอยหลัง 60 วินาทีเมื่อเปิดหน้า (กันขอรหัสซ้ำทันที)
-    remaining = RESEND_COOLDOWN;
-    tickTimer();
+    startResendTimer();
   </script>
 </body>
 </html>

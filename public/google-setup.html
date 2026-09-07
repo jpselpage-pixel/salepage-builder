@@ -404,14 +404,16 @@
     const resendBtn = document.getElementById('resendBtn');
     const resendTimer = document.getElementById('resendTimer');
     let remaining = 0;
+    let timerId = null; // ตัวนับเดียว — เคลียร์ตัวเก่าก่อนสร้างใหม่กันเลขซ้อน
     function tickTimer() {
+      clearTimeout(timerId);
       if (remaining <= 0) { resendBtn.disabled = false; resendTimer.textContent = ''; return; }
       resendBtn.disabled = true;
       resendTimer.textContent = ' (' + remaining + ' วินาที)';
       remaining--;
-      setTimeout(tickTimer, 1000);
+      timerId = setTimeout(tickTimer, 1000);
     }
-    function startResendTimer() { remaining = 60; tickTimer(); }
+    function startResendTimer() { clearTimeout(timerId); remaining = 60; tickTimer(); }
 
     resendBtn.addEventListener('click', async () => {
       if (remaining > 0) return; // กันกดตอนกำลังนับถอยหลัง
