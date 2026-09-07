@@ -302,7 +302,9 @@ async function markOtpUsed(id) {
 // เบอร์/อีเมลปลายทางจากรายการ OTP ล่าสุดของคนนี้ (ใช้กรณีบัญชียังไม่ได้บันทึกเบอร์)
 async function findLatestOtpContact(userId, purpose = 'signup') {
   const [rows] = await pool.execute(
-    'SELECT phone FROM otp_codes WHERE user_id = ? AND purpose = ? ORDER BY id DESC LIMIT 1',
+    `SELECT phone FROM otp_codes 
+      WHERE user_id = ? AND purpose = ? AND phone <> '' 
+      ORDER BY id DESC LIMIT 1`,
     [userId, purpose]
   );
   return rows[0] ? rows[0].phone : null;
