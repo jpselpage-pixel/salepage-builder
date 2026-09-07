@@ -29,7 +29,9 @@ const pool = mysql.createPool({
 // บังคับทุก connection ให้ใช้ UTC — ไม่งั้น CURRENT_TIMESTAMP (เช่น created_at)
 // จะบันทึกเป็นเวลาท้องถิ่นของเครื่อง MySQL แล้วตีความผิดเพี้ยน (VPS ตั้งเวลาไทย +07)
 pool.on('connection', (conn) => {
-  conn.query("SET time_zone = '+00:00'").catch(() => {});
+  conn.query("SET time_zone = '+00:00'", (err) => {
+    if (err) console.error('⚠️ ตั้ง time_zone ล้มเหลว:', err.message);
+  });
 });
 
 // mysql2 pool ไม่ retry ให้อัตโนมัติ — ถ้า connection ถูกตัดกลางอากาศ (proxy หลุด/restart)
