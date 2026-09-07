@@ -109,8 +109,12 @@ function sendVerificationEmail({ email, token, baseUrl }) {
     <p>หรือคัดลอกลิงก์: ${link}</p>
     <p>หากคุณไม่ได้สมัครสมาชิก กรุณาเพิกเฉยอีเมลนี้</p>
   `;
-  // ส่งแบบไม่บล็อก — ผลลัพธ์ไปที่ console
-  sendEmail({ to: email, subject, htmlBody }).catch((err) => console.error('❌ ส่งอีเมลยืนยันผิดพลาด:', err.message));
+  // ส่งแบบไม่บล็อก — บันทึกผลลัพธ์ที่ console เสมอ (ทั้งสำเร็จ/จำลอง/ล้มเหลว)
+  sendEmail({ to: email, subject, htmlBody }).then((r) => {
+    if (!r || !r.ok) console.error('❌ ส่งอีเมลยืนยันไม่สำเร็จ:', r && r.error ? r.error : 'ไม่ทราบสาเหตุ');
+    else if (r.simulated) console.log('📧 [ยืนยันอีเมล — โหมดจำลอง] ถึง ' + email);
+    else console.log('📧 ส่งอีเมลยืนยันแล้ว → ' + email + ' (id=' + r.messageId + ')');
+  }).catch((err) => console.error('❌ ส่งอีเมลยืนยันผิดพลาด:', err.message));
   return { link, token };
 }
 
@@ -127,7 +131,11 @@ function sendOtpEmail({ email, code }) {
     <p style="font-size:28px;font-weight:bold;letter-spacing:6px;color:#4f46e5;">${code}</p>
     <p>รหัสนี้มีอายุ 5 นาที หากคุณไม่ได้เป็นผู้ขอ กรุณาเพิกเฉยอีเมลนี้</p>
   `;
-  sendEmail({ to: email, subject, htmlBody }).catch((err) => console.error('❌ ส่ง OTP ทางอีเมลผิดพลาด:', err.message));
+  sendEmail({ to: email, subject, htmlBody }).then((r) => {
+    if (!r || !r.ok) console.error('❌ ส่ง OTP ทางอีเมลไม่สำเร็จ:', r && r.error ? r.error : 'ไม่ทราบสาเหตุ');
+    else if (r.simulated) console.log('📧 [OTP อีเมล — โหมดจำลอง] ถึง ' + email);
+    else console.log('📧 ส่ง OTP อีเมลแล้ว → ' + email + ' (id=' + r.messageId + ')');
+  }).catch((err) => console.error('❌ ส่ง OTP ทางอีเมลผิดพลาด:', err.message));
 }
 
 module.exports = { sendVerificationEmail, sendOtpEmail, sendEmail, getSmtpConfig, devModeEnabled, _resetTransporter, DEV_MODE };
