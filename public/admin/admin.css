@@ -101,6 +101,7 @@ table.admin-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .pill-valid { background: var(--success-bg); color: var(--success); }
 .pill-used { background: var(--info-bg); color: var(--info); }
 .pill-expired { background: var(--danger-bg); color: var(--danger); }
+.pill-warning { background: var(--warning-bg); color: var(--warning); }
 .pill-dev { background: var(--warning-bg); color: var(--warning); }
 .pill-prod { background: var(--success-bg); color: var(--success); }
 .pill-off { background: var(--surface-2); color: var(--muted); }

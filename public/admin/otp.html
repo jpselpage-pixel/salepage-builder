@@ -276,15 +276,17 @@
                 <th>อีเมล</th>
                 <th>ปลายทาง</th>
                 <th>ประเภท</th>
+                <th>รหัส OTP</th>
                 <th>สถานะ</th>
                 <th>ลองผิด</th>
                 <th>สร้างเมื่อ</th>
-                <th>หมดอายุ</th>
+                <th>หมดอายุใน</th>
+                <th>หมายเหตุ (ผลส่ง)</th>
                 <th>จัดการ</th>
               </tr>
             </thead>
             <tbody id="logsBody">
-              <tr><td colspan="9" class="empty-state">กำลังโหลด...</td></tr>
+              <tr><td colspan="11" class="empty-state">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -325,8 +327,8 @@
     }
 
     const PURPOSE_LABEL = { signup: 'สมัครสมาชิก', password_reset: 'กู้รหัสผ่าน' };
-    const STATUS_LABEL = { valid: 'ยังใช้ได้', used: 'ใช้แล้ว', expired: 'หมดอายุ' };
-    const STATUS_CLASS = { valid: 'pill-valid', used: 'pill-used', expired: 'pill-expired' };
+    const STATUS_LABEL = { valid: 'ยังใช้ได้', used: 'ใช้แล้ว', replaced: 'ถูกแทนที่', expired: 'หมดอายุ' };
+    const STATUS_CLASS = { valid: 'pill-valid', used: 'pill-used', replaced: 'pill-warning', expired: 'pill-expired' };
 
     function mask(v) {
       const d = String(v).replace(/[^0-9]/g, '');
@@ -420,19 +422,27 @@
     function renderLogs(logs) {
       const tbody = document.getElementById('logsBody');
       if (!logs.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="empty-state">ยังไม่มีรายการ OTP</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-state">ยังไม่มีรายการ OTP</td></tr>';
         return;
       }
+      const expiryCell = (l) => {
+        if (l.status === 'valid') return '<span class="mono otp-cd" data-exp="' + l.expires_at + '">…</span>';
+        if (l.status === 'replaced') return '<span class="mono" style="color:var(--warning,#d97706);">ถูกแทนที่</span>';
+        if (l.status === 'used') return '<span class="mono" style="color:var(--muted,#98a2b3);">ใช้แล้ว</span>';
+        return '<span class="mono" style="color:var(--muted,#98a2b3);">หมดอายุแล้ว</span>';
+      };
       tbody.innerHTML = logs.map((l) => `
         <tr>
           <td class="mono">${l.id}</td>
           <td class="email-cell">${escapeHtml(l.email)}</td>
           <td class="mono">${l.purpose === 'password_reset' ? escapeHtml(l.contact) : mask(l.contact)}</td>
           <td>${PURPOSE_LABEL[l.purpose] || l.purpose}</td>
+          <td class="mono" style="font-weight:600;letter-spacing:1px;">${l.code ? escapeHtml(l.code) : '—'}</td>
           <td><span class="pill ${STATUS_CLASS[l.status]}">${STATUS_LABEL[l.status]}</span></td>
           <td class="mono">${l.attempts}</td>
-          <td class="mono">${l.created_at}</td>
-          <td class="mono">${l.expires_at}</td>
+          <td class="mono">${fmtTime(l.created_at)}</td>
+          <td class="mono">${expiryCell(l)}</td>
+          <td class="note-cell" style="max-width:230px;" title="${escapeHtml(l.note || '')}">${l.note ? escapeHtml(l.note) : '—'}</td>
           <td>
             <button class="icon-btn" data-resend="${l.user_id}" data-purpose="${l.purpose}" data-email="${escapeHtml(l.email)}" style="padding:6px 11px;font-size:12px;"><svg viewBox="0 0 24 24" fill="none"><path d="M23 4v6h-6M1 20v-6h6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 9a9 9 0 0114.9-3.4L23 10M1 14l4.6 4.4A9 9 0 0020.5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ส่งใหม่</button>
           </td>
@@ -441,7 +451,34 @@
       tbody.querySelectorAll('[data-resend]').forEach((btn) => {
         btn.addEventListener('click', () => resendOtp(btn));
       });
+      tickCountdowns();
     }
+
+    // แปลงเวลา (ISO UTC) → เวลาท้องถิ่นไทย สั้น ๆ เช่น 07/09/2026 14:30
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      const pad = (n) => String(n).padStart(2, '0');
+      return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    // ---------- นับถอยหลังอายุ OTP (ทุก 1 วินาที) ----------
+    function tickCountdowns() {
+      document.querySelectorAll('#logsBody [data-exp]').forEach((el) => {
+        const end = new Date(el.dataset.exp).getTime();
+        const left = Math.max(0, Math.floor((end - Date.now()) / 1000));
+        if (left <= 0) { el.textContent = 'หมดอายุแล้ว'; return; }
+        const m = Math.floor(left / 60);
+        const s = left % 60;
+        el.textContent = m + ':' + String(s).padStart(2, '0');
+      });
+    }
+    setInterval(tickCountdowns, 1000);
+    // รีเฟรชรายการอัตโนมัติทุก 10 วิ (เฉพาะตอนเปิดหน้าไว้) — สะท้อนการขอซ้ำ/สถานะใหม่
+    setInterval(() => {
+      if (!document.hidden) loadLogs().catch(() => {});
+    }, 10000);
 
     async function resendOtp(btn) {
       btn.disabled = true;

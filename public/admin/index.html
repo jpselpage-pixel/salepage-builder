@@ -134,8 +134,8 @@
     }
 
     const PURPOSE_LABEL = { signup: 'สมัครสมาชิก', password_reset: 'กู้รหัสผ่าน' };
-    const STATUS_LABEL = { valid: 'ยังใช้ได้', used: 'ใช้แล้ว', expired: 'หมดอายุ' };
-    const STATUS_CLASS = { valid: 'pill-valid', used: 'pill-used', expired: 'pill-expired' };
+    const STATUS_LABEL = { valid: 'ยังใช้ได้', used: 'ใช้แล้ว', replaced: 'ถูกแทนที่', expired: 'หมดอายุ' };
+    const STATUS_CLASS = { valid: 'pill-valid', used: 'pill-used', replaced: 'pill-warning', expired: 'pill-expired' };
 
     function mask(v) {
       const d = String(v).replace(/[^0-9]/g, '');

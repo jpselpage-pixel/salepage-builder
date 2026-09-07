@@ -131,6 +131,21 @@ async function initSchema() {
       CONSTRAINT fk_pages_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  // เพิ่มคอลัมน์ใหม่ให้ตารางที่สร้างไว้แล้ว (MySQL ไม่มี ADD COLUMN IF NOT EXISTS)
+  await ensureColumn('otp_codes', 'code_visible', 'code_visible VARCHAR(10) NULL');
+  await ensureColumn('otp_codes', 'note', 'note VARCHAR(255) NULL');
+  await ensureColumn('otp_codes', 'replaced', 'replaced TINYINT(1) NOT NULL DEFAULT 0');
+}
+
+// เพิ่มคอลัมน์ถ้ายังไม่มี (ใช้กับตารางที่สร้างจาก schema เก่า)
+async function ensureColumn(table, column, ddl) {
+  const [rows] = await pool.execute(
+    'SELECT COUNT(*) AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?',
+    [table, column]
+  );
+  if (Number(rows[0].c) === 0) {
+    await pool.execute(`ALTER TABLE \`${table}\` ADD COLUMN ${ddl}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -243,18 +258,30 @@ async function deleteExpiredSessions() {
 // ---------------------------------------------------------------------------
 // OTP
 // ---------------------------------------------------------------------------
-async function createOtp({ userId, codeHash, contact, purpose = 'signup', expiresAt }) {
-  await pool.execute('DELETE FROM otp_codes WHERE user_id = ? AND purpose = ?', [userId, purpose]);
+async function createOtp({ userId, codeHash, contact, purpose = 'signup', expiresAt, codeVisible = null }) {
+  // รหัสเก่าที่ยังไม่ใช้ → ตัดสิทธิ์ทันที (เก็บประวัติไว้ให้แอดมินดู — ไม่ลบ)
+  await pool.execute(
+    `UPDATE otp_codes SET replaced = 1, note = 'ถูกแทนที่โดยรหัสใหม่ (มีการขอซ้ำ)' 
+        WHERE user_id = ? AND purpose = ? AND used = 0 AND replaced = 0`,
+    [userId, purpose]
+  );
   const [result] = await pool.execute(
-    'INSERT INTO otp_codes (user_id, code_hash, phone, purpose, expires_at) VALUES (?, ?, ?, ?, ?)',
-    [userId, codeHash, contact, purpose, expiresAt]
+    'INSERT INTO otp_codes (user_id, code_hash, phone, purpose, expires_at, code_visible) VALUES (?, ?, ?, ?, ?, ?)',
+    [userId, codeHash, contact, purpose, expiresAt, codeVisible]
   );
   return Number(result.insertId);
 }
 
+// บันทึกผลการส่ง (SMS/อีเมล) ลงรายการ OTP
+async function setOtpNote(id, note) {
+  await pool.execute('UPDATE otp_codes SET note = ? WHERE id = ?', [note, id]);
+}
+
 async function findLatestOtp(userId, purpose = 'signup') {
   const [rows] = await pool.execute(
-    'SELECT * FROM otp_codes WHERE user_id = ? AND purpose = ? ORDER BY id DESC LIMIT 1',
+    `SELECT * FROM otp_codes 
+      WHERE user_id = ? AND purpose = ? AND used = 0 AND replaced = 0 
+      ORDER BY id DESC LIMIT 1`,
     [userId, purpose]
   );
   return rows[0] || null;
@@ -367,7 +394,8 @@ async function listOtpLogs(limit = 50) {
   const safeLimit = Math.max(1, Math.min(500, Number(limit) || 50));
   const [rows] = await pool.execute(
     `SELECT o.id, o.user_id, o.phone AS contact, o.purpose,
-            o.attempts, o.used, o.expires_at, o.created_at, u.email
+            o.attempts, o.used, o.replaced, o.code_visible, o.note,
+            o.expires_at, o.created_at, u.email
        FROM otp_codes o
        JOIN users u ON u.id = o.user_id
       ORDER BY o.id DESC LIMIT ${safeLimit}`
@@ -380,11 +408,11 @@ async function countStats() {
   const [activeUsers] = await pool.execute("SELECT COUNT(*) AS c FROM users WHERE status = 'active'");
   const [otpTotal] = await pool.execute('SELECT COUNT(*) AS c FROM otp_codes');
   const [otpValid] = await pool.execute(
-    "SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND expires_at > CURRENT_TIMESTAMP"
+    'SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND replaced = 0 AND expires_at > CURRENT_TIMESTAMP'
   );
   const [otpUsed] = await pool.execute('SELECT COUNT(*) AS c FROM otp_codes WHERE used = 1');
   const [otpExpired] = await pool.execute(
-    "SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND expires_at <= CURRENT_TIMESTAMP"
+    'SELECT COUNT(*) AS c FROM otp_codes WHERE used = 0 AND replaced = 0 AND expires_at <= CURRENT_TIMESTAMP'
   );
   return {
     users: users[0].c,
@@ -512,6 +540,7 @@ module.exports = {
   deleteSession,
   deleteExpiredSessions,
   createOtp,
+  setOtpNote,
   findLatestOtp,
   markOtpUsed,
   incrementOtpAttempts,

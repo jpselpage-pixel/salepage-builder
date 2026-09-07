@@ -70,19 +70,41 @@ async function issueOtp(userId, contact, purpose = 'signup') {
     contact,
     purpose,
     expiresAt,
+    codeVisible: code, // เก็บรหัส (plaintext) ให้แอดมินดูใน log — การยืนยันยังใช้ hash เสมอ
   });
 
+  // ส่งจริง + บันทึกผลลง log — ทำแบบไม่บล็อก response (ผู้ใช้ไม่ต้องรอ SMS)
   if (purpose === 'password_reset') {
-    // กู้รหัสผ่าน → ส่ง OTP ทางอีเมล
-    mailer.sendOtpEmail({ email: contact, code });
-    console.log(`🔐 [OTP กู้รหัสผ่าน — โหมดจำลอง] ส่งไปยังอีเมล ${contact}`);
+    deliverOtpEmail(otpId, contact, code, ttl);
   } else {
-    // ยืนยันเบอร์ → ส่ง SMS (จริง/จำลอง ตาม config) — ส่งแบบไม่บล็อก response
-    sendOtpSms(contact, code).catch((err) => {
-      console.error('❌ ส่ง SMS OTP ผิดพลาด:', err.message);
-    });
+    deliverOtpSms(otpId, contact, code, ttl);
   }
   return { code, expiresAt, otpId };
+}
+
+/** ส่ง SMS + บันทึกผล (สำเร็จ/ไม่สำเร็จ/เครดิตหมด/โหมดจำลอง) ลงรายการ OTP */
+async function deliverOtpSms(otpId, phone, code, ttl) {
+  try {
+    const result = await sendOtpSms(phone, code, ttl);
+    await db.setOtpNote(otpId, result.note);
+  } catch (err) {
+    await db.setOtpNote(otpId, 'ส่ง SMS ผิดพลาด: ' + String(err.message || err).slice(0, 200));
+  }
+}
+
+/** ส่งอีเมล OTP (กู้รหัสผ่าน) + บันทึกผล */
+async function deliverOtpEmail(otpId, email, code, ttl) {
+  try {
+    if (!devModeEnabled()) {
+      mailer.sendOtpEmail({ email, code });
+      await db.setOtpNote(otpId, 'ส่งอีเมล OTP แล้ว (ตรวจอินบ็อกซ์)');
+    } else {
+      console.log(`🔐 [OTP กู้รหัสผ่าน — โหมดจำลอง] ส่งไปยังอีเมล ${email}`);
+      await db.setOtpNote(otpId, 'โหมดทดสอบ (dev) — ไม่ได้ส่งอีเมลจริง');
+    }
+  } catch (err) {
+    await db.setOtpNote(otpId, 'ส่งอีเมลผิดพลาด: ' + String(err.message || err).slice(0, 200));
+  }
 }
 
 /**
@@ -120,9 +142,9 @@ async function verifyOtp(userId, inputCode, purpose = 'signup') {
  * ส่ง SMS OTP:
  *  - โหมดจริง (dev ปิด) → ส่ง SMS ผ่าน provider ที่เลือก (Twilio / ThaiBulkSMS)
  *  - โหมด dev → จำลอง (พิมพ์ที่ console + หน้าเว็บแสดงรหัส)
+ * @returns {{ ok: boolean, note: string }}
  */
-async function sendOtpSms(phone, code) {
-  const ttl = getOtpTtlMinutes();
+async function sendOtpSms(phone, code, ttl) {
   const body = `รหัสยืนยันของคุณคือ ${code} (มีอายุ ${ttl} นาที) — ร้านค้าออนไลน์`;
   const dev = devModeEnabled();
 
@@ -131,16 +153,18 @@ async function sendOtpSms(phone, code) {
     const result = await sms.sendSms({ to: phone, body });
     if (result.ok) {
       console.log(`📱 [SMS จริง — ${result.provider}] ส่งไป ${phone} (id=${result.sid})`);
-    } else {
-      console.log(`📱 [SMS จริง — ส่งไม่สำเร็จ] ไป ${phone}: ${result.error}`);
-      console.log('   ⚠️ ตรวจการตั้งค่า SMS ที่หน้าแอดมิน (ผู้ให้บริการ/API Key/เครดิต)');
+      const rem = result.remaining != null ? ` เครดิตคงเหลือ ${result.remaining}` : '';
+      return { ok: true, note: `ส่ง SMS สำเร็จ (${result.provider})${rem}` };
     }
-    return;
+    console.log(`📱 [SMS จริง — ส่งไม่สำเร็จ] ไป ${phone}: ${result.error}`);
+    console.log('   ⚠️ ตรวจการตั้งค่า SMS ที่หน้าแอดมิน (ผู้ให้บริการ/API Key/เครดิต)');
+    return { ok: false, note: `ส่ง SMS ไม่สำเร็จ: ${String(result.error).slice(0, 200)}` };
   }
 
   console.log('📱 [SMS — โหมดจำลอง] ส่ง OTP ไปที่ ' + phone);
   console.log('   รหัสยืนยันของคุณ: ' + code);
   console.log('   (หมดอายุใน ' + ttl + ' นาที — ยังไม่ได้ส่ง SMS จริง)');
+  return { ok: true, note: 'โหมดทดสอบ (dev) — ไม่ได้ส่ง SMS จริง' };
 }
 
 module.exports = {

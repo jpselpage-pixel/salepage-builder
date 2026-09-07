@@ -1659,13 +1659,22 @@ app.get('/api/admin/stats', requireAdmin, async (req, res) => {
 // รายการ OTP ทั้งหมด (สำหรับหน้าจัดการ SMS-OTP)
 app.get('/api/admin/otp-logs', requireAdmin, async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 200);
-  const logs = (await db.listOtpLogs(limit)).map((l) => ({
-    ...l,
-    status: l.used === 1
-      ? 'used'
-      : l.expires_at <= localNowSql() ? 'expired' : 'valid', // expires_at เก็บแบบ localtime
-  }));
-  res.json({ ok: true, logs });
+  const nowMs = Date.now();
+  const logs = (await db.listOtpLogs(limit)).map((l) => {
+    const expiresMs = new Date(l.expires_at).getTime();
+    let status;
+    if (l.used === 1) status = 'used';
+    else if (l.replaced === 1) status = 'replaced'; // ถูกตัดสิทธิ์เพราะมีการขอรหัสใหม่
+    else if (expiresMs <= nowMs) status = 'expired';
+    else status = 'valid';
+    return {
+      ...l,
+      status,
+      code: l.code_visible || null,
+      remainingSec: status === 'valid' ? Math.max(0, Math.floor((expiresMs - nowMs) / 1000)) : 0,
+    };
+  });
+  res.json({ ok: true, logs, serverTime: new Date().toISOString() });
 });
 
 // แอดมินสั่งส่ง OTP ใหม่ให้ผู้ใช้ (ข้าม cooldown 60 วิ ใช้ support)
