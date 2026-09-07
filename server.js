@@ -1684,13 +1684,31 @@ app.post('/api/admin/otp/resend', requireAdmin, async (req, res) => {
   const user = await db.findUserById(userId);
   if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' });
 
-  const contact = purpose === 'password_reset' ? user.email : user.phone;
+  // ปลายทาง: รับเบอร์ที่แอดมินพิมพ์แทนได้ → ถ้าไม่ใส่ ใช้เบอร์ในบัญชี → ถ้ายังไม่มี ใช้เบอร์จาก OTP ครั้งก่อน
+  let contact;
+  if (purpose === 'password_reset') {
+    contact = user.email;
+  } else if (req.body?.phone) {
+    contact = normalizeThaiPhone(String(req.body.phone));
+  } else {
+    contact = user.phone || (await db.findLatestOtpContact(user.id, purpose)) || '';
+  }
+
+  if (purpose === 'signup' && !isValidThaiPhone(contact)) {
+    return res.status(400).json({
+      ok: false,
+      field: 'phone',
+      message: 'ยังไม่มีเบอร์โทรสำหรับส่ง OTP — ใส่เบอร์ปลายทางก่อนส่ง หรือให้ผู้ใช้กรอกเบอร์ในระบบก่อน',
+    });
+  }
+
   const otpResult = await otp.issueOtp(user.id, contact, purpose);
   console.log(`👑 [แอดมิน] ส่ง OTP ใหม่ (${purpose}) ให้ ${user.email} → ${contact}`);
 
   res.json({
     ok: true,
     message: 'ส่ง OTP ใหม่แล้ว',
+    contact,
     dev: devMode() ? { devOtp: otpResult.code } : null,
   });
 });

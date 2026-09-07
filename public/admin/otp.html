@@ -435,7 +435,7 @@
         <tr>
           <td class="mono">${l.id}</td>
           <td class="email-cell">${escapeHtml(l.email)}</td>
-          <td class="mono">${l.purpose === 'password_reset' ? escapeHtml(l.contact) : mask(l.contact)}</td>
+          <td class="mono">${l.purpose === 'password_reset' ? escapeHtml(l.contact) : (l.contact ? mask(l.contact) : '—')}</td>
           <td>${PURPOSE_LABEL[l.purpose] || l.purpose}</td>
           <td class="mono" style="font-weight:600;letter-spacing:1px;">${l.code ? escapeHtml(l.code) : '—'}</td>
           <td><span class="pill ${STATUS_CLASS[l.status]}">${STATUS_LABEL[l.status]}</span></td>

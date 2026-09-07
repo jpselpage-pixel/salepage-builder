@@ -299,6 +299,15 @@ async function markOtpUsed(id) {
   await pool.execute('UPDATE otp_codes SET used = 1 WHERE id = ?', [id]);
 }
 
+// เบอร์/อีเมลปลายทางจากรายการ OTP ล่าสุดของคนนี้ (ใช้กรณีบัญชียังไม่ได้บันทึกเบอร์)
+async function findLatestOtpContact(userId, purpose = 'signup') {
+  const [rows] = await pool.execute(
+    'SELECT phone FROM otp_codes WHERE user_id = ? AND purpose = ? ORDER BY id DESC LIMIT 1',
+    [userId, purpose]
+  );
+  return rows[0] ? rows[0].phone : null;
+}
+
 async function incrementOtpAttempts(id) {
   await pool.execute('UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?', [id]);
 }
@@ -550,6 +559,7 @@ module.exports = {
   createOtp,
   setOtpNote,
   findLatestOtp,
+  findLatestOtpContact,
   markOtpUsed,
   incrementOtpAttempts,
   createEmailToken,
