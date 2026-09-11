@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard | SalePage Builder</title>
+  <title>บัญชีของฉัน | ระบบสมาชิก</title>
   <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/settings.css">
   <script src="../js/theme.js"></script>
@@ -18,7 +18,7 @@
           <path d="M9 14h6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
       </div>
-      <span class="brand-name">SalePage</span>
+      <span class="brand-name">ระบบสมาชิก</span>
     </a>
     <div style="display:flex;align-items:center;gap:8px;">
       <button class="theme-toggle" type="button" aria-label="สลับธีม" style="position:static;">
@@ -37,11 +37,6 @@
   <div class="settings-layout">
     <!-- เมนูหมวดหมู่ -->
     <aside class="settings-menu">
-      <div class="menu-title">Dashboard</div>
-      <a class="menu-item" href="/dashboard/pages">
-        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        เพจ
-      </a>
       <div class="menu-title">ตั้งค่า</div>
       <a class="menu-item" href="/settings/profile">
         <svg viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/></svg>
@@ -50,6 +45,11 @@
       <a class="menu-item" href="/settings/security">
         <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="11" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         ความปลอดภัย
+      </a>
+      <div class="menu-title" id="shopMenuTitle">ร้านค้า</div>
+      <a class="menu-item" id="shopMenuLink" href="/shop">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span id="shopMenuLabel">ร้านค้าของฉัน</span>
       </a>
       <div class="menu-divider"></div>
       <button class="menu-item" type="button" id="logoutBtn">
@@ -60,55 +60,6 @@
 
     <!-- แผงเนื้อหา -->
     <main class="settings-panel">
-      <!-- ===== เพจ ===== -->
-      <section id="panel-pages">
-        <div class="pages-head">
-          <div class="pages-head-left">
-            <div class="panel-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
-            <div class="pages-head-text">
-              <h1>เพจของฉัน</h1>
-              <p>จัดการเซลเพจขายของออนไลน์ของคุณ</p>
-            </div>
-          </div>
-          <div class="pages-head-right">
-            <span class="plan-badge" id="planBadge">แพ็กเกจฟรี</span>
-            <button class="plan-upgrade-btn" type="button" id="upgradeBtn">
-              อัปเกรดแพ็กเกจ
-              <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- แท่งลิมิตแพ็กเกจ -->
-        <div class="pages-usage">
-          <div class="pages-usage-top">
-            <span>ใช้ไปแล้ว <b id="planUsed">0</b> จาก <b id="planLimit">1</b> เพจ</span>
-            <span id="planPct">0%</span>
-          </div>
-          <div class="plan-bar">
-            <div class="plan-bar-fill" id="planBar"></div>
-          </div>
-        </div>
-
-        <!-- ข้อความแจ้งสร้างสำเร็จ -->
-        <div class="success-box" id="createdMsg" style="display:none;margin-bottom:20px;"></div>
-
-        <!-- รายการเพจ -->
-        <div id="pagesList" style="display:none;"></div>
-
-        <div class="pages-empty" id="pagesEmpty">
-          <div class="pages-empty-icon">
-            <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.6"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-          </div>
-          <h3>ยังไม่มีเซลเพจ</h3>
-          <p>สร้างเซลเพจแรกของคุณเพื่อเริ่มขายของออนไลน์<br>ไม่ต้องเขียนโค้ด ทำเสร็จในไม่กี่นาที</p>
-          <button class="btn btn-primary" id="createPageBtn" type="button">
-            <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-            สร้างเพจใหม่
-          </button>
-        </div>
-      </section>
-
       <!-- ===== โปรไฟล์ ===== -->
       <section id="panel-profile" style="display:none;">
         <div class="panel-head">
@@ -122,6 +73,7 @@
           <div>
             <div class="user-email" id="userEmail">—</div>
             <div class="user-meta">
+              <span class="badge" id="roleBadge">—</span>
               <span class="badge badge-success" id="phoneVerifiedBadge">
                 <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 ยืนยันเบอร์แล้ว
@@ -140,6 +92,7 @@
           <div class="info-row"><span class="label">อีเมล</span><span class="value" id="infoEmail">—</span></div>
           <div class="info-row"><span class="label">เบอร์โทรศัพท์</span><span class="value" id="infoPhone">—</span></div>
           <div class="info-row"><span class="label">สถานะ</span><span class="value" id="infoStatus">—</span></div>
+          <div class="info-row" id="giftRow" style="display:none;"><span class="label">ของขวัญร้านค้า</span><span class="value" id="infoGift">—</span></div>
         </div>
 
         <div class="verify-banner" id="verifyBanner">
@@ -230,10 +183,9 @@
   <script>
     const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:4px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-    // ---------- เลือก panel ตาม URL (pages / profile / security) ----------
-    const section = (window.location.pathname.split('/').filter(Boolean).pop() || 'pages');
-    const activePanel = ['pages', 'profile', 'security'].includes(section) ? section : 'pages';
-    document.getElementById('panel-pages').style.display = activePanel === 'pages' ? '' : 'none';
+    // ---------- เลือก panel ตาม URL (profile / security) ----------
+    const section = (window.location.pathname.split('/').filter(Boolean).pop() || 'profile');
+    const activePanel = ['profile', 'security'].includes(section) ? section : 'profile';
     document.getElementById('panel-profile').style.display = activePanel === 'profile' ? '' : 'none';
     document.getElementById('panel-security').style.display = activePanel === 'security' ? '' : 'none';
     document.querySelectorAll('.settings-menu .menu-item').forEach((el) => {
@@ -282,7 +234,7 @@
         }
         // เตะไปหน้า login เฉพาะ session หมดอายุจริง (401) — error อื่น (DB/เครือข่าย) แจ้งเตือนไม่เตะออก
         if (!data.ok) {
-          if (res.status === 401) { window.location.href = '/login.html?next=/dashboard/' + activePanel; return; }
+          if (res.status === 401) { window.location.href = '/login.html?next=/settings/' + activePanel; return; }
           throw new Error(data.message || 'โหลดข้อมูลไม่สำเร็จ');
         }
 
@@ -291,6 +243,15 @@
         document.getElementById('avatar').textContent = user.email.charAt(0).toUpperCase();
         document.getElementById('infoEmail').textContent = user.email;
         document.getElementById('infoPhone').textContent = user.phone;
+
+        // ของขวัญร้านค้า (ถ้ามี) — แสดงวันหมดอายุ
+        if (user.gift_expires_at) {
+          const g = new Date(user.gift_expires_at);
+          const pad = (n) => String(n).padStart(2, '0');
+          document.getElementById('infoGift').textContent =
+            'ใช้ได้ถึง ' + pad(g.getDate()) + '/' + pad(g.getMonth() + 1) + '/' + g.getFullYear();
+          document.getElementById('giftRow').style.display = '';
+        }
 
         const statusEl = document.getElementById('infoStatus');
         if (user.status !== 'active') {
@@ -312,9 +273,31 @@
           phoneUnverified.style.display = '';
         }
 
+        // ป้ายบทบาทผู้ใช้ (ผู้ใช้งานทั่วไป / เจ้าของร้าน / admin / เจ้าของระบบ)
+        const roleBadge = document.getElementById('roleBadge');
+        const roleText = { owner: 'เจ้าของระบบ', admin: 'admin', shop: 'เจ้าของร้าน' };
+        const roleClass = { owner: 'badge-success', admin: 'badge-warning', shop: 'badge-info' };
+        roleBadge.textContent = roleText[user.role] || 'ผู้ใช้งานทั่วไป';
+        roleBadge.className = 'badge ' + (roleClass[user.role] || 'badge-info');
+
+        // เมนูร้านค้าตามบทบาท: user → หน้าซื้อแพ็กเกจ, shop → จัดการร้าน, admin/owner → ซ่อน
+        const shopLink = document.getElementById('shopMenuLink');
+        const shopLabel = document.getElementById('shopMenuLabel');
+        const shopTitle = document.getElementById('shopMenuTitle');
+        if (user.role === 'admin' || user.role === 'owner') {
+          shopLink.style.display = 'none';
+          shopTitle.style.display = 'none';
+        } else if (user.role === 'shop') {
+          shopLabel.textContent = 'ร้านค้าของฉัน';
+          shopLink.href = '/shop/menu.html';
+        } else {
+          shopLabel.textContent = 'ซื้อแพ็กเกจร้านค้า';
+          shopLink.href = '/shop/purchase.html';
+        }
+
         const verifiedBadge = document.getElementById('emailVerifiedBadge');
         const unverifiedBadge = document.getElementById('emailUnverifiedBadge');
-        if (user.role === 'admin') {
+        if (user.role === 'admin' || user.role === 'owner') {
           document.getElementById('adminLink').style.display = '';
         }
         if (user.is_email_verified) {
@@ -327,7 +310,7 @@
         }
       } catch (err) {
         const loginErr = (err && err.status === 401);
-        if (loginErr) { window.location.href = '/login.html?next=/dashboard/' + activePanel; return; }
+        if (loginErr) { window.location.href = '/login.html?next=/settings/' + activePanel; return; }
         notify(err && err.message ? err.message : 'เชื่อมต่อเซิร์ฟเวอร์ขัดข้อง ลองใหม่อีกครั้ง');
       }
     }
@@ -460,83 +443,6 @@
       }
     });
 
-    // ---------- ปุ่มสร้างเพจใหม่ → หน้าตั้งชื่อเพจ ----------
-    document.getElementById('createPageBtn').addEventListener('click', () => {
-      window.location.href = '/dashboard/pages/new';
-    });
-
-    // ---------- โหลดรายการเพจ + อัปเดตแท่งลิมิต ----------
-    async function loadPages() {
-      try {
-        const res = await fetch('/api/pages');
-        const data = await res.json();
-        if (!data.ok) return;
-
-        const pages = data.pages || [];
-        const limit = data.limit || 1;
-
-        // แท่งลิมิต
-        document.getElementById('planUsed').textContent = pages.length;
-        document.getElementById('planLimit').textContent = limit;
-        updatePlanBar();
-
-        // ข้อความสร้างสำเร็จ (?created=slug)
-        const created = new URLSearchParams(window.location.search).get('created');
-        if (created) {
-          const msg = document.getElementById('createdMsg');
-          msg.innerHTML = ICON_CHECK + ' <strong>สร้างเพจ "' + escapeHtml(created) + '" สำเร็จแล้ว!</strong>';
-          msg.style.display = 'block';
-          history.replaceState(null, '', '/dashboard/pages');
-        }
-
-        // แสดงรายการหรือ empty state
-        const listEl = document.getElementById('pagesList');
-        const emptyEl = document.getElementById('pagesEmpty');
-        if (pages.length === 0) {
-          emptyEl.style.display = '';
-          return;
-        }
-        emptyEl.style.display = 'none';
-        listEl.style.display = '';
-    listEl.innerHTML = pages.map((p) => `
-      <a class="page-item" href="/dashboard/pages/${encodeURIComponent(p.slug)}/editor">
-        <div class="page-item-icon">
-          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </div>
-        <div class="page-item-info">
-          <div class="page-item-title">${escapeHtml(p.title || p.slug)}</div>
-          <div class="page-item-slug">${escapeHtml(window.location.origin)}/p/${escapeHtml(p.slug)}</div>
-        </div>
-        <span class="page-item-status ${p.status === 'published' ? 'published' : ''}">${p.status === 'published' ? 'เผยแพร่แล้ว' : 'ฉบับร่าง'}</span>
-        <svg class="page-item-chev" viewBox="0 0 24 24" fill="none"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </a>
-    `).join('');
-      } catch (e) { /* ข้าม */ }
-    }
-
-    function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-    }
-
-    // ---------- ปุ่มอัปเกรดแพ็กเกจ → หน้าเลือกแพ็กเกจ ----------
-    document.getElementById('upgradeBtn').addEventListener('click', () => {
-      window.location.href = '/dashboard/upgrade';
-    });
-
-    // ---------- อัปเดตแท่งลิมิตแพ็กเกจ ----------
-    function updatePlanBar() {
-      const used = Number(document.getElementById('planUsed').textContent) || 0;
-      const limit = Number(document.getElementById('planLimit').textContent) || 1;
-      const pct = Math.min(100, Math.round((used / limit) * 100));
-      const bar = document.getElementById('planBar');
-      bar.style.width = pct + '%';
-      bar.classList.toggle('full', used >= limit);
-      bar.classList.toggle('warn', used >= limit * 0.8 && used < limit);
-      const pctEl = document.getElementById('planPct');
-      if (pctEl) pctEl.textContent = pct + '%';
-    }
-    updatePlanBar();
-
     // ---------- ออกจากระบบ ----------
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await fetch('/api/logout', { method: 'POST' });
@@ -544,7 +450,6 @@
     });
 
     loadMe();
-    loadPages();
   </script>
 </body>
 </html>

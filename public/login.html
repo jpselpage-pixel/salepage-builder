@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>เข้าสู่ระบบ | ร้านค้าออนไลน์</title>
+  <title>เข้าสู่ระบบ | ระบบสมาชิก</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="js/theme.js"></script>
 </head>
@@ -23,12 +23,12 @@
             <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <span class="brand-name">ร้านค้าออนไลน์</span>
+        <span class="brand-name">ระบบสมาชิก</span>
       </div>
 
       <div class="brand-content">
-        <h1>ช้อปปิ้งออนไลน์<br>สะดวก ง่าย ปลอดภัย</h1>
-        <p>ยินดีต้อนรับกลับสู่ร้านค้าออนไลน์ของเรา ลงชื่อเข้าใช้เพื่อจัดการคำสั่งซื้อและบัญชีของคุณ</p>
+        <h1>ระบบสมาชิก<br>สะดวก ง่าย ปลอดภัย</h1>
+        <p>ยินดีต้อนรับกลับสู่ระบบสมาชิกของเรา ลงชื่อเข้าใช้เพื่อจัดการบัญชีของคุณ</p>
         <div class="brand-features">
           <div class="brand-feature">
             <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -45,7 +45,7 @@
         </div>
       </div>
 
-      <div class="brand-footer">© 2026 ร้านค้าออนไลน์ — สงวนลิขสิทธิ์</div>
+      <div class="brand-footer">© 2026 ระบบสมาชิก — สงวนลิขสิทธิ์</div>
     </aside>
 
     <!-- พาเนลฟอร์ม (ขวา) -->
@@ -69,7 +69,7 @@
                 <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <span class="brand-name">ร้านค้าออนไลน์</span>
+            <span class="brand-name">ระบบสมาชิก</span>
           </div>
           <h1>ยินดีต้อนรับกลับ!</h1>
           <p>เข้าสู่ระบบเพื่อจัดการบัญชีและคำสั่งซื้อของคุณ</p>
@@ -175,7 +175,7 @@
         // ถ้ามี ?next= (ถูกเด้งมาจากหน้าที่ต้องล็อกอิน) → กลับไปหน้านั้น
         const nextParam = new URLSearchParams(window.location.search).get('next');
         const safeNext = nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//') ? nextParam : null;
-        window.location.href = safeNext || data.redirect || '/dashboard/pages';
+        window.location.href = safeNext || data.redirect || '/settings/profile';
       } catch {
         showError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
       } finally {

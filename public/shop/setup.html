@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตั้งข้อมูลร้าน | ระบบสมาชิก</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/shop.css">
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="brand" href="/shop">
+      <div class="brand-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <span class="brand-name">ระบบสมาชิก</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="theme-toggle" type="button" aria-label="สลับธีม" style="position:static;">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" style="display:none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <a class="btn btn-outline btn-small" href="/shop/menu.html">จัดการเมนู</a>
+      <a class="btn btn-outline btn-small" href="/shop/orders.html">สั่งอาหาร</a>
+      <a class="btn btn-outline btn-small" href="/shop/kitchen.html">ครัว</a>
+      <a class="btn btn-outline btn-small" href="/shop/history.html">ประวัติ</a>
+      <a class="btn btn-outline btn-small" href="#" id="logoutBtn">ออกจากระบบ</a>
+    </div>
+  </nav>
+
+  <div class="shop-wrap">
+    <div class="shop-head">
+      <h1>ข้อมูลร้านค้า</h1>
+      <p>กรอกข้อมูลเบื้องต้นของร้าน — เมื่อบันทึกครบแล้วจะเริ่มจัดการเมนูได้</p>
+      <div class="shop-actions" id="shopActions" style="display:none;">
+        <a class="btn btn-primary btn-small" href="/shop/menu.html">ไปหน้าจัดการเมนู</a>
+        <a class="btn btn-outline btn-small" id="viewShopLink" href="#" target="_blank">เปิดหน้าร้านสาธารณะ</a>
+      </div>
+    </div>
+
+    <div class="shop-card">
+      <h2>ข้อมูลร้าน</h2>
+      <form class="shop-form" id="shopForm" novalidate>
+        <div class="field">
+          <label for="name">ชื่อร้านค้า *</label>
+          <div class="input-wrap"><input type="text" id="name" maxlength="120" placeholder="เช่น ร้านป้าแดงโภชนา" required></div>
+          <div class="field-error" id="errName"></div>
+        </div>
+        <div class="field">
+          <label for="phone">เบอร์ติดต่อร้านค้า *</label>
+          <div class="input-wrap"><input type="tel" id="phone" maxlength="30" placeholder="เช่น 0812345678" required></div>
+          <div class="field-error" id="errPhone"></div>
+        </div>
+        <div class="field">
+          <label for="lineUrl">ลิงก์ LINE ร้านค้า</label>
+          <div class="input-wrap"><input type="text" id="lineUrl" maxlength="255" placeholder="เช่น https://line.me/R/ti/p/@myshop"></div>
+        </div>
+        <div class="field">
+          <label for="mapsUrl">URL Google Maps (แสดงโลเคชั่น)</label>
+          <div class="input-wrap"><input type="text" id="mapsUrl" maxlength="500" placeholder="วางลิงก์แชร์จาก Google Maps"></div>
+        </div>
+        <div class="field">
+          <label>โลโก้ร้านค้า</label>
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <img class="logo-preview" id="logoPreview" alt="โลโก้" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84'%3E%3Crect width='84' height='84' fill='%23eef0fa'/%3E%3C/svg%3E">
+            <input type="file" id="logoFile" accept="image/png,image/jpeg,image/webp,image/gif" style="font-size:13px;">
+          </div>
+          <div class="field-error" id="errLogo"></div>
+        </div>
+
+        <div class="success-box" id="okBox"></div>
+        <div class="error-msg" id="errMsg"></div>
+        <div class="form-actions" style="margin-top:16px;">
+          <button type="submit" class="btn btn-primary" id="saveBtn">บันทึกข้อมูลร้าน</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let logoUrl = '';
+    let hasShop = false;
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      let data;
+      try { data = await res.json(); } catch { const e = new Error('เซิร์ฟเวอร์ตอบสนองไม่ถูกต้อง (HTTP ' + res.status + ')'); e.status = res.status; throw e; }
+      if (!data.ok) { const e = new Error(data.message || 'เกิดข้อผิดพลาด'); e.status = res.status; throw e; }
+      return data;
+    }
+    function showErr(id, msg) { const el = document.getElementById(id); el.textContent = msg || ''; el.style.display = msg ? 'block' : 'none'; }
+
+    async function loadShop() {
+      try {
+        const data = await api('/api/shop/me');
+        if (data.shop) {
+          hasShop = true;
+          document.getElementById('name').value = data.shop.name || '';
+          document.getElementById('phone').value = data.shop.phone || '';
+          document.getElementById('lineUrl').value = data.shop.line_url || '';
+          document.getElementById('mapsUrl').value = data.shop.maps_url || '';
+          logoUrl = data.shop.logo_url || '';
+          if (logoUrl) document.getElementById('logoPreview').src = logoUrl;
+          document.getElementById('shopActions').style.display = '';
+          document.getElementById('viewShopLink').href = data.publicUrl || '#';
+          document.getElementById('saveBtn').textContent = 'บันทึกการแก้ไข';
+        }
+      } catch (err) {
+        if (err.status === 403) { window.location.href = '/shop'; return; }
+      }
+    }
+
+    document.getElementById('logoFile').addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      showErr('errLogo', '');
+      if (file.size > 3 * 1024 * 1024) { showErr('errLogo', 'ไฟล์ใหญ่เกิน 3MB'); return; }
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const fr = new FileReader();
+          fr.onload = () => resolve(fr.result);
+          fr.onerror = reject;
+          fr.readAsDataURL(file);
+        });
+        const up = await api('/api/shop/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
+        logoUrl = up.url;
+        document.getElementById('logoPreview').src = logoUrl;
+      } catch (err) { showErr('errLogo', err.message); }
+    });
+
+    document.getElementById('shopForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      ['errName', 'errPhone', 'errMsg'].forEach((id) => showErr(id, ''));
+      const name = document.getElementById('name').value.trim();
+      const phone = document.getElementById('phone').value.trim();
+      if (name.length < 2) return showErr('errName', 'กรุณากรอกชื่อร้าน (อย่างน้อย 2 ตัวอักษร)');
+      if (phone.length < 6) return showErr('errPhone', 'กรุณากรอกเบอร์ติดต่อร้าน');
+
+      const payload = {
+        name, phone,
+        lineUrl: document.getElementById('lineUrl').value.trim(),
+        mapsUrl: document.getElementById('mapsUrl').value.trim(),
+        logoUrl,
+      };
+      const btn = document.getElementById('saveBtn');
+      btn.disabled = true; btn.classList.add('loading');
+      try {
+        const data = await api('/api/shop', {
+          method: hasShop ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        hasShop = true;
+        if (data.shop && data.shop.public_code) {
+          document.getElementById('shopActions').style.display = '';
+          document.getElementById('viewShopLink').href = '/s/' + data.shop.public_code;
+        }
+        const ok = document.getElementById('okBox');
+        ok.innerHTML = '<strong>บันทึกข้อมูลร้านแล้ว</strong> — ไปหน้าจัดการเมนูได้เลย';
+        ok.style.display = 'block';
+        document.getElementById('saveBtn').textContent = 'บันทึกการแก้ไข';
+      } catch (err) {
+        if (err.status === 403) { window.location.href = '/shop'; return; }
+        if (/ชื่อร้าน/.test(err.message)) showErr('errName', err.message);
+        else if (/เบอร์/.test(err.message)) showErr('errPhone', err.message);
+        else showErr('errMsg', err.message);
+      } finally {
+        btn.disabled = false; btn.classList.remove('loading');
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    loadShop();
+  </script>
+</body>
+</html>

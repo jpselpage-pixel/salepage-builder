@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สั่งอาหาร | ระบบสมาชิก</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/shop.css">
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="brand" href="/shop">
+      <div class="brand-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <span class="brand-name" id="shopName">ร้านของฉัน</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="theme-toggle" type="button" aria-label="สลับธีม" style="position:static;">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" style="display:none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <a class="btn btn-outline btn-small" href="/shop/kitchen.html">ครัว</a>
+      <a class="btn btn-outline btn-small" href="/shop/history.html">ประวัติ</a>
+      <a class="btn btn-outline btn-small" href="/shop/menu.html">จัดการเมนู</a>
+      <a class="btn btn-outline btn-small" href="/shop/setup.html">ตั้งค่าข้อมูลร้าน</a>
+      <a class="btn btn-outline btn-small" href="#" id="logoutBtn">ออกจากระบบ</a>
+    </div>
+  </nav>
+
+  <div class="shop-wrap">
+    <div class="shop-head">
+      <h1>สั่งอาหาร</h1>
+      <p>สร้างโต๊ะเพื่อออกรหัส QR ให้ลูกค้าสแกนสั่งอาหาร — ระบบจะรวมรายการของแต่ละโต๊ะเป็นบิลเดียว จนกว่าจะกดเช็คบิล</p>
+      <div class="shop-actions">
+        <button class="btn btn-outline btn-small" id="refreshBtn" type="button">รีเฟรช</button>
+      </div>
+    </div>
+
+    <div class="shop-card">
+      <h2>โต๊ะ &amp; QR <span class="count" id="tableCount"></span></h2>
+      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        <input class="mini-input" id="newTableCode" placeholder="เลขโต๊ะ เช่น 1, A2, โต๊ะริมหน้าต่าง" style="flex:1;min-width:180px;" maxlength="30">
+        <button class="mini-btn primary" id="addTableBtn" type="button">เพิ่มโต๊ะ + สร้าง QR</button>
+      </div>
+      <div id="tableList"></div>
+    </div>
+
+    <div class="shop-card">
+      <h2>บิลที่เปิดอยู่ <span class="count" id="billCount"></span></h2>
+      <div id="billList"></div>
+    </div>
+  </div>
+
+  <!-- Modal เพิ่มอาหาร (แคชเชียร์) -->
+  <div class="modal-overlay" id="addModal">
+    <div class="modal">
+      <h3>เพิ่มอาหารเข้าบิล</h3>
+      <p class="sub" id="addSub">—</p>
+      <div class="field">
+        <label for="addMenu">เลือกเมนู</label>
+        <select id="addMenu" class="mini-input" style="width:100%;"></select>
+      </div>
+      <div id="addGroups" style="max-height:40vh;overflow:auto;"></div>
+      <div class="field" style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+        <span style="font-size:13.5px;font-weight:600;">จำนวน</span>
+        <button class="mini-btn" id="addQtyMinus" type="button">−</button>
+        <span id="addQtyValue" style="min-width:26px;text-align:center;font-weight:700;">1</span>
+        <button class="mini-btn" id="addQtyPlus" type="button">+</button>
+      </div>
+      <div class="error-msg" id="addErr"></div>
+      <div class="modal-actions">
+        <button class="mini-btn" id="addClose" type="button">ปิด</button>
+        <button class="mini-btn primary" id="addConfirm" type="button">เพิ่มลงบิล</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const money = (n) => '฿' + Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    let toastTimer = null;
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      let data;
+      try { data = await res.json(); } catch { const e = new Error('เซิร์ฟเวอร์ตอบสนองไม่ถูกต้อง (HTTP ' + res.status + ')'); e.status = res.status; throw e; }
+      if (!data.ok) { const e = new Error(data.message || 'เกิดข้อผิดพลาด'); e.status = res.status; throw e; }
+      return data;
+    }
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.classList.add('show');
+      clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+    }
+    const qrUrl = (id) => '/api/shop/tables/' + id + '/qr?origin=' + encodeURIComponent(location.origin);
+    const billNoFmt = (n) => (n ? '#' + String(n).padStart(4, '0') : '—');
+
+    // เปิดหน้าต่างพิมพ์ป้าย: QR + เลขโต๊ะ + เลขที่บิลปัจจุบัน
+    function printLabel(t) {
+      const billNo = t.open_order ? t.open_order.bill_no : null;
+      const url = location.origin + qrUrl(t.id);
+      const w = window.open('', '_blank');
+      if (!w) return alert('เบราว์เซอร์บล็อกป๊อปอัป กรุณาอนุญาตแล้วลองใหม่');
+      w.document.write('<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>ป้ายโต๊ะ ' + esc(t.code) + '</title></head>' +
+        '<body style="font-family:sans-serif;text-align:center;padding:24px;margin:0;">' +
+        '<div style="font-size:22px;font-weight:800;">โต๊ะ ' + esc(t.code) + '</div>' +
+        '<div style="font-size:16px;margin:6px 0 12px;">บิล ' + billNoFmt(billNo) + '</div>' +
+        '<img src="' + url + '" style="width:280px;height:280px;" onload="setTimeout(function(){window.print();},300)">' +
+        '<div style="font-size:13px;color:#666;margin-top:10px;">สแกนเพื่อสั่งอาหาร</div>' +
+        '</body></html>');
+      w.document.close();
+    }
+
+    let tablesCache = [];
+    let shopData = null;
+
+    async function loadTables() {
+      const data = await api('/api/shop/tables');
+      tablesCache = data.tables || [];
+      document.getElementById('tableCount').textContent = tablesCache.length ? '(' + tablesCache.length + ')' : '';
+      const box = document.getElementById('tableList');
+      if (!tablesCache.length) { box.innerHTML = '<div class="cat-empty">ยังไม่มีโต๊ะ — เพิ่มโต๊ะแรกด้านบนได้เลย</div>'; return; }
+      box.innerHTML = tablesCache.map((t) => `
+        <div class="table-card">
+          <img class="table-qr" src="${qrUrl(t.id)}" alt="QR โต๊ะ ${esc(t.code)}">
+          <div class="table-info">
+            <div class="table-code">โต๊ะ ${esc(t.code)}</div>
+            <div class="table-sub">${t.open_order
+              ? 'บิล ' + billNoFmt(t.open_order.bill_no) + (t.open_order.item_count ? ' · ' + t.open_order.item_count + ' รายการ · ' + money(t.open_order.total) : ' · ยังไม่มีรายการ')
+              : 'ยังไม่เปิดบิล'}</div>
+            <div class="table-actions">
+              <a class="mini-btn" href="${qrUrl(t.id)}" download="table-${esc(t.code)}-qr.png">ดาวน์โหลด QR</a>
+              <button class="mini-btn" data-print="${t.id}" type="button">พิมพ์ป้าย (มีเลขบิล)</button>
+              <button class="mini-btn" data-ren="${t.id}" data-code="${esc(t.code)}" type="button">เปลี่ยนเลข</button>
+              <button class="mini-btn danger" data-del="${t.id}" ${t.open_order && t.open_order.item_count ? 'disabled title="ต้องเช็คบิลก่อนจึงจะลบได้"' : ''} type="button">ลบ</button>
+            </div>
+            ${t.open_order && t.open_order.item_count ? '<div class="table-sub" style="color:var(--warning);">⚠ ยังมีบิลที่ยังไม่เช็คบิล — ลบไม่ได้จนกว่าจะกดเช็คบิล</div>' : ''}
+          </div>
+        </div>`).join('');
+
+      box.querySelectorAll('[data-ren]').forEach((b) => b.addEventListener('click', async () => {
+        const code = prompt('เลขโต๊ะใหม่', b.dataset.code);
+        if (!code || !code.trim()) return;
+        try { await api('/api/shop/tables/' + b.dataset.ren, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: code.trim() }) }); toast('บันทึกแล้ว'); await loadAll(); }
+        catch (e) { alert(e.message); }
+      }));
+      box.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirm('ลบโต๊ะนี้?')) return;
+        try { await api('/api/shop/tables/' + b.dataset.del, { method: 'DELETE' }); toast('ลบโต๊ะแล้ว'); await loadAll(); }
+        catch (e) { alert(e.message); }
+      }));
+      box.querySelectorAll('[data-print]').forEach((b) => b.addEventListener('click', () => {
+        const t = tablesCache.find((x) => x.id === Number(b.dataset.print));
+        if (t) printLabel(t);
+      }));
+    }
+
+    const ST = { pending: ['รอทำ', 'st-pending'], cooking: ['กำลังทำ', 'st-cooking'], done: ['เสร็จแล้ว', 'st-done'], cancelled: ['ยกเลิก', 'st-cancelled'] };
+
+    async function loadBills() {
+      const data = await api('/api/shop/orders/open');
+      const orders = (data.orders || []).filter((o) => o.item_count > 0);
+      document.getElementById('billCount').textContent = orders.length ? '(' + orders.length + ')' : '';
+      const box = document.getElementById('billList');
+      if (!orders.length) { box.innerHTML = '<div class="cat-empty">ยังไม่มีบิลที่เปิดอยู่</div>'; return; }
+      box.innerHTML = orders.map((o) => {
+        const uncleared = o.items.filter((i) => i.status === 'pending' || i.status === 'cooking').length;
+        return `
+        <div class="bill-card">
+          <div class="bill-head">
+            <div class="table-code">บิล ${billNoFmt(o.bill_no)} · โต๊ะ ${esc(o.table_code)}</div>
+            <div class="bill-total">${money(o.total)}</div>
+          </div>
+          <div class="bill-items">
+            ${o.items.map((it) => {
+              let opts = []; try { opts = it.options_json ? JSON.parse(it.options_json) : []; } catch (e) {}
+              const st = it.status || 'pending';
+              const [label, cls] = ST[st] || [st, ''];
+              const cancelled = st === 'cancelled';
+              return `<div class="bill-item"${cancelled ? ' style="opacity:.6;"' : ''}>
+                <span>${it.quantity} × ${cancelled ? '<span style="text-decoration:line-through;">' + esc(it.menu_name) + '</span>' : esc(it.menu_name)}${opts.length ? ' <small>(' + esc(opts.join(', ')) + ')</small>' : ''} <span class="st-badge ${cls}">${label}</span> <span class="k-timer" data-created="${esc(it.created_at)}" data-status="${esc(st)}" data-done="${esc(it.done_at || '')}">—</span>${cancelled && it.cancel_reason ? ' <small>(' + esc(it.cancel_reason) + ')</small>' : ''}</span>
+                <span style="display:flex;gap:8px;align-items:center;white-space:nowrap;">${cancelled ? '—' : money(it.line_total)}<button class="mini-btn danger" data-delitem="${it.id}" type="button">ลบ</button></span>
+              </div>`;
+            }).join('')}
+          </div>
+          <div class="bill-actions">
+            <button class="mini-btn" data-add="${o.table_id}" type="button">＋ เพิ่มอาหาร</button>
+            <button class="mini-btn primary" data-checkout="${o.table_id}" ${uncleared ? 'disabled title="ครัวยังไม่เคลียร์"' : ''} type="button">เช็คบิล (ปิดบิล + เปิดบิลใหม่)</button>
+          </div>
+          ${uncleared ? '<div class="table-sub" style="color:var(--warning);">⚠ ครัวยังไม่เคลียร์ ' + uncleared + ' รายการ (รอทำ/กำลังทำ) — เช็คบิลไม่ได้</div>' : ''}
+        </div>`;
+      }).join('');
+
+      box.querySelectorAll('[data-checkout]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirm('ยืนยันเช็คบิลโต๊ะนี้?')) return;
+        b.disabled = true;
+        try {
+          const r = await api('/api/shop/tables/' + b.dataset.checkout + '/checkout', { method: 'POST' });
+          toast(r.message || 'เช็คบิลแล้ว');
+          await loadAll();
+        } catch (e) { alert(e.message); b.disabled = false; }
+      }));
+      box.querySelectorAll('[data-delitem]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirm('ลบรายการนี้ออกจากบิล?')) return;
+        b.disabled = true;
+        try { await api('/api/shop/order-items/' + b.dataset.delitem, { method: 'DELETE' }); toast('ลบรายการแล้ว'); await loadAll(); }
+        catch (e) { alert(e.message); b.disabled = false; }
+      }));
+      box.querySelectorAll('[data-add]').forEach((b) => b.addEventListener('click', () => openAdd(Number(b.dataset.add))));
+      tickTimers();
+    }
+
+    // ---------- นาฬิกาจับเวลาต่อรายการ (นับจากเวลาที่ลูกค้าสั่ง) ----------
+    function fmtDur(ms) {
+      const s = Math.max(0, Math.floor(ms / 1000));
+      const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+      const p = (n) => String(n).padStart(2, '0');
+      return h > 0 ? h + ':' + p(m) + ':' + p(sec) : p(m) + ':' + p(sec);
+    }
+    function tickTimers() {
+      const now = Date.now();
+      document.querySelectorAll('.k-timer').forEach((el) => {
+        if (el.dataset.status === 'cancelled') { el.textContent = '—'; return; }
+        const created = new Date(el.dataset.created).getTime();
+        if (isNaN(created)) { el.textContent = '—'; return; }
+        const done = el.dataset.done ? new Date(el.dataset.done).getTime() : NaN;
+        const end = (el.dataset.status === 'done' && !isNaN(done)) ? done : now;
+        const ms = end - created;
+        el.textContent = fmtDur(ms);
+        el.classList.remove('t-ok', 't-warn', 't-danger', 't-done');
+        if (el.dataset.status === 'done') { el.classList.add('t-done'); return; }
+        const min = ms / 60000;
+        el.classList.add(min >= 15 ? 't-danger' : min >= 5 ? 't-warn' : 't-ok');
+      });
+    }
+    setInterval(tickTimers, 1000);
+
+    async function loadShop() {
+      try {
+        const data = await api('/api/shop/me');
+        if (!data.shop) { window.location.href = '/shop/setup.html'; return false; }
+        shopData = data;
+        document.getElementById('shopName').textContent = data.shop.name || 'ร้านของฉัน';
+        return true;
+      } catch (e) {
+        if (e.status === 403) { window.location.href = '/shop'; return false; }
+        throw e;
+      }
+    }
+
+    async function loadAll() { if (await loadShop()) { await Promise.all([loadTables(), loadBills()]); } }
+
+    document.getElementById('addTableBtn').addEventListener('click', async () => {
+      const el = document.getElementById('newTableCode');
+      const code = el.value.trim();
+      if (!code) return alert('กรุณากรอกเลขโต๊ะ');
+      try { await api('/api/shop/tables', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) }); el.value = ''; toast('เพิ่มโต๊ะแล้ว'); await loadAll(); }
+      catch (e) { alert(e.message); }
+    });
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+      try { await loadAll(); toast('อัปเดตข้อมูลแล้ว'); } catch (e) { alert(e.message); }
+    });
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    // โหลดใหม่เป็นระยะ (เห็นออเดอร์ใหม่โดยไม่ต้องกดเอง)
+    // ---------- เพิ่มอาหาร (แคชเชียร์) ----------
+    const addModal = document.getElementById('addModal');
+    let addTableId = null;
+    let addQty = 1;
+
+    function renderAddGroups(menuId) {
+      const box = document.getElementById('addGroups');
+      if (!shopData || !menuId) { box.innerHTML = ''; return; }
+      const gids = shopData.menuGroups.filter((g) => g.menu_id === menuId).map((g) => g.group_id);
+      const groups = gids.map((id) => shopData.optionGroups.find((g) => g.id === id)).filter(Boolean);
+      if (!groups.length) { box.innerHTML = '<div style="color:var(--muted);font-size:13px;">เมนูนี้ไม่มีตัวเลือก</div>'; return; }
+      box.innerHTML = groups.map((g) => {
+        const items = shopData.optionItems.filter((i) => i.group_id === g.id);
+        return `<div class="opt-group" style="margin:10px 0;">
+          <div class="g-head"><span class="n">${esc(g.name)} <small style="color:var(--muted);font-weight:500;">(${g.required ? 'บังคับ' : 'ไม่บังคับ'}${g.multi ? ' · หลายอย่าง' : ' · เลือก 1'})</small></span></div>
+          <div style="display:grid;gap:6px;margin-top:8px;">
+            ${items.map((i) => `<label style="display:flex;gap:8px;align-items:center;font-size:14px;"><input type="${g.multi ? 'checkbox' : 'radio'}" name="ag${g.id}" value="${i.id}"> <span>${esc(i.name)}${Number(i.price_delta) ? ' <small style="color:var(--muted);">+' + money(i.price_delta).replace('฿', '') + '฿</small>' : ''}</span></label>`).join('')}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function openAdd(tableId) {
+      if (!shopData) { alert('ยังโหลดข้อมูลร้านไม่เสร็จ'); return; }
+      addTableId = tableId; addQty = 1;
+      document.getElementById('addQtyValue').textContent = '1';
+      document.getElementById('addErr').style.display = 'none';
+      const menus = (shopData.menus || []).filter((m) => Number(m.available) === 1);
+      document.getElementById('addMenu').innerHTML = menus.map((m) => `<option value="${m.id}">${esc(m.name)} — ${money(m.price)}</option>`).join('');
+      const t = tablesCache.find((x) => x.id === tableId);
+      document.getElementById('addSub').textContent = t ? 'โต๊ะ ' + t.code : '';
+      renderAddGroups(menus.length ? menus[0].id : 0);
+      addModal.classList.add('show');
+    }
+    function closeAdd() { addModal.classList.remove('show'); addTableId = null; }
+    document.getElementById('addClose').addEventListener('click', closeAdd);
+    addModal.addEventListener('click', (e) => { if (e.target === addModal) closeAdd(); });
+    document.getElementById('addMenu').addEventListener('change', (e) => renderAddGroups(Number(e.target.value)));
+    document.getElementById('addQtyMinus').addEventListener('click', () => { addQty = Math.max(1, addQty - 1); document.getElementById('addQtyValue').textContent = addQty; });
+    document.getElementById('addQtyPlus').addEventListener('click', () => { addQty = Math.min(99, addQty + 1); document.getElementById('addQtyValue').textContent = addQty; });
+    document.getElementById('addConfirm').addEventListener('click', async (e) => {
+      const errEl = document.getElementById('addErr'); errEl.style.display = 'none';
+      const menuId = Number(document.getElementById('addMenu').value);
+      if (!menuId) { errEl.textContent = 'ไม่มีเมนูให้เลือก'; errEl.style.display = 'block'; return; }
+      const optionItemIds = Array.from(document.querySelectorAll('#addGroups input:checked')).map((el) => Number(el.value));
+      const btn = e.target; btn.disabled = true;
+      try {
+        await api('/api/shop/tables/' + addTableId + '/items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items: [{ menuId, quantity: addQty, optionItemIds }] }) });
+        toast('เพิ่มอาหารแล้ว');
+        closeAdd();
+        await loadAll();
+      } catch (err) { errEl.textContent = err.message; errEl.style.display = 'block'; }
+      finally { btn.disabled = false; }
+    });
+
+    loadAll().catch((e) => alert(e.message));
+    setInterval(() => { loadBills().catch(() => {}); }, 20000);
+  </script>
+</body>
+</html>

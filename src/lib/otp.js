@@ -10,13 +10,15 @@
 'use strict';
 
 const crypto = require('node:crypto');
-const db = require('./db');
+const db = require('../db');
 const mailer = require('./mailer');
 const sms = require('./sms');
+const { devMode } = require('./settings');
+const { sha256 } = require('./crypto');
+const { nowSql, futureSql } = require('./time');
 
 const OTP_TTL_MINUTES = Number(process.env.OTP_TTL_MINUTES || 5);
 const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS || 5);
-const DEV_MODE = String(process.env.DEV_MODE || 'true') === 'true';
 
 // อ่านค่าตั้งค่าจากตาราง settings ก่อน (แอดมินปรับได้) แล้วค่อยใช้ค่า env เป็นค่าเริ่มต้น
 function getOtpTtlMinutes() {
@@ -29,27 +31,10 @@ function getOtpMaxAttempts() {
   return s !== null && s !== '' ? Number(s) : OTP_MAX_ATTEMPTS;
 }
 
-function devModeEnabled() {
-  const s = db.getSetting('dev_mode');
-  return s !== null ? s === 'true' : DEV_MODE;
-}
-
 function generateOtp() {
   // 6 หลักแบบสุ่มปลอดภัย (หลีกเลี่ยงเลขขึ้นต้น 0 เพื่อให้จำง่าย/กันลักไก่)
   const digits = crypto.randomInt(0, 1000000).toString().padStart(6, '0');
   return digits;
-}
-
-function hashOtp(code) {
-  return crypto.createHash('sha256').update(code).digest('hex');
-}
-
-// เวลา UTC รูปแบบ YYYY-MM-DD HH:MM:SS (ให้ตรงกับ UTC_TIMESTAMP() ใน MySQL)
-function utcNowSql() {
-  return new Date().toISOString().slice(0, 19).replace('T', ' ');
-}
-function utcFutureSql(ms) {
-  return new Date(Date.now() + ms).toISOString().slice(0, 19).replace('T', ' ');
 }
 
 /**
@@ -62,11 +47,11 @@ function utcFutureSql(ms) {
 async function issueOtp(userId, contact, purpose = 'signup') {
   const code = generateOtp();
   const ttl = getOtpTtlMinutes();
-  const expiresAt = utcFutureSql(ttl * 60 * 1000);
+  const expiresAt = futureSql(ttl * 60 * 1000);
 
   const otpId = await db.createOtp({
     userId,
-    codeHash: hashOtp(code),
+    codeHash: sha256(code),
     contact,
     purpose,
     expiresAt,
@@ -75,7 +60,7 @@ async function issueOtp(userId, contact, purpose = 'signup') {
 
   // ส่งจริง + บันทึกผลลง log — ทำแบบไม่บล็อก response (ผู้ใช้ไม่ต้องรอ SMS)
   if (purpose === 'password_reset') {
-    deliverOtpEmail(otpId, contact, code, ttl);
+    deliverOtpEmail(otpId, contact, code);
   } else {
     deliverOtpSms(otpId, contact, code, ttl);
   }
@@ -93,9 +78,9 @@ async function deliverOtpSms(otpId, phone, code, ttl) {
 }
 
 /** ส่งอีเมล OTP (กู้รหัสผ่าน) + บันทึกผล */
-async function deliverOtpEmail(otpId, email, code, ttl) {
+async function deliverOtpEmail(otpId, email, code) {
   try {
-    if (!devModeEnabled()) {
+    if (!devMode()) {
       mailer.sendOtpEmail({ email, code });
       await db.setOtpNote(otpId, 'ส่งอีเมล OTP แล้ว (ตรวจอินบ็อกซ์)');
     } else {
@@ -117,13 +102,13 @@ async function verifyOtp(userId, inputCode, purpose = 'signup') {
   if (!record || record.used === 1) {
     return { ok: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว' };
   }
-  if (record.expires_at <= utcNowSql()) {
+  if (record.expires_at <= nowSql()) {
     return { ok: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาขอรหัสใหม่' };
   }
   if (record.attempts >= getOtpMaxAttempts()) {
     return { ok: false, message: 'ลองผิดเกินจำนวนครั้งที่กำหนด กรุณาขอรหัสใหม่' };
   }
-  if (hashOtp(inputCode.trim()) !== record.code_hash) {
+  if (sha256(inputCode.trim()) !== record.code_hash) {
     await db.incrementOtpAttempts(record.id);
     const left = getOtpMaxAttempts() - (record.attempts + 1);
     return {
@@ -145,8 +130,8 @@ async function verifyOtp(userId, inputCode, purpose = 'signup') {
  * @returns {{ ok: boolean, note: string }}
  */
 async function sendOtpSms(phone, code, ttl) {
-  const body = `รหัสยืนยันของคุณคือ ${code} (มีอายุ ${ttl} นาที) — ร้านค้าออนไลน์`;
-  const dev = devModeEnabled();
+  const body = `รหัสยืนยันของคุณคือ ${code} (มีอายุ ${ttl} นาที) — ระบบสมาชิก`;
+  const dev = devMode();
 
   if (!dev) {
     // โหมดจริง: ส่งผ่าน provider ที่เลือกไว้ (ตรวจ config ของ provider นั้นโดยตรงใน sms.js)
@@ -172,8 +157,4 @@ module.exports = {
   verifyOtp,
   getOtpTtlMinutes,
   getOtpMaxAttempts,
-  devModeEnabled,
-  OTP_TTL_MINUTES,
-  OTP_MAX_ATTEMPTS,
-  DEV_MODE,
 };

@@ -13,15 +13,8 @@
  */
 'use strict';
 
-const db = require('./db');
-
-const DEV_MODE = String(process.env.DEV_MODE || 'true') === 'true';
-
-// อ่านโหมด dev แบบ dynamic (แอดมินสลับได้ผ่านตาราง settings)
-function devModeEnabled() {
-  const s = db.getSetting('dev_mode');
-  return s !== null ? s === 'true' : DEV_MODE;
-}
+const db = require('../db');
+const { devMode } = require('./settings');
 
 function getSmtpConfig() {
   const host = db.getSetting('smtp_host') || process.env.SMTP_HOST || '';
@@ -48,7 +41,7 @@ function _resetTransporter() { transporter = null; }
  */
 async function sendEmail({ to, subject, htmlBody }) {
   const cfg = getSmtpConfig();
-  const dev = devModeEnabled();
+  const dev = devMode();
 
   if (cfg.configured && !dev) {
     try {
@@ -101,11 +94,11 @@ async function sendEmail({ to, subject, htmlBody }) {
 function sendVerificationEmail({ email, token, baseUrl }) {
   const link = `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
   // หัวข้อเป็นอังกฤษ (ASCII) — Gmail กรองเมลหัวข้อภาษาไทยจาก sender นี้ (เทสต์แล้วฉบับ EN ถึง)
-  const subject = 'Verify your email — SalePage';
+  const subject = 'Verify your email — Member System';
   // เนื้อหาธรรมดา ไม่มีปุ่ม/สีเยอะ — Gmail กรองเมลแบบมีปุ่มตกแต่ง (เทสต์แล้วฉบับธรรมดาส่งถึง)
   const htmlBody = `
     <p>สวัสดีครับ/ค่ะ</p>
-    <p>ขอบคุณที่สมัครสมาชิกกับ SalePage</p>
+    <p>ขอบคุณที่สมัครสมาชิกกับระบบสมาชิก</p>
     <p>กรุณายืนยันอีเมลของคุณโดยเปิดลิงก์ด้านล่าง (ใช้ได้ 24 ชั่วโมง):</p>
     <p><a href="${link}">${link}</a></p>
     <p>หากคุณไม่ได้สมัครสมาชิก กรุณาเพิกเฉยอีเมลนี้</p>
@@ -124,7 +117,7 @@ function sendVerificationEmail({ email, token, baseUrl }) {
  * โหมด dev: แสดงรหัสที่ console + server.js แนบ devOtp กลับให้ทดสอบ
  */
 function sendOtpEmail({ email, code }) {
-  const subject = 'รหัสยืนยัน (OTP) — SalePage';
+  const subject = 'รหัสยืนยัน (OTP) — ระบบสมาชิก';
   const htmlBody = `
     <p>สวัสดีครับ/ค่ะ,</p>
     <p>คุณได้ขอรหัสยืนยันเพื่อกู้รหัสผ่านบัญชีของคุณ</p>
@@ -139,4 +132,4 @@ function sendOtpEmail({ email, code }) {
   }).catch((err) => console.error('❌ ส่ง OTP ทางอีเมลผิดพลาด:', err.message));
 }
 
-module.exports = { sendVerificationEmail, sendOtpEmail, sendEmail, getSmtpConfig, devModeEnabled, _resetTransporter, DEV_MODE };
+module.exports = { sendVerificationEmail, sendOtpEmail, sendEmail, getSmtpConfig, _resetTransporter };

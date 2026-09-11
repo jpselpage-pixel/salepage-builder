@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดการเมนู | ระบบสมาชิก</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/shop.css">
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="brand" href="/shop">
+      <div class="brand-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <span class="brand-name" id="shopName">ร้านของฉัน</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="theme-toggle" type="button" aria-label="สลับธีม" style="position:static;">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" style="display:none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <a class="btn btn-outline btn-small" href="/shop/orders.html">สั่งอาหาร</a>
+      <a class="btn btn-outline btn-small" href="/shop/kitchen.html">ครัว</a>
+      <a class="btn btn-outline btn-small" href="/shop/history.html">ประวัติ</a>
+      <a class="btn btn-outline btn-small" href="/shop/setup.html">ตั้งค่าข้อมูลร้าน</a>
+      <a class="btn btn-outline btn-small" id="viewShopLink" href="#" target="_blank">ดูร้าน</a>
+      <a class="btn btn-outline btn-small" href="#" id="logoutBtn">ออกจากระบบ</a>
+    </div>
+  </nav>
+
+  <div class="shop-wrap">
+    <div class="shop-head">
+      <h1>จัดการเมนู</h1>
+      <p>สร้างหมวดหมู่/หมวดหมู่ย่อย เพิ่มเมนูพร้อมรูปและราคา และตั้งตัวเลือกในเมนู (เช่น ระดับความเผ็ด, ทานที่ร้าน/ห่อกลับบ้าน)</p>
+      <div class="toast" id="toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%);"></div>
+    </div>
+
+    <div class="shop-grid">
+      <!-- หมวดหมู่ -->
+      <div>
+        <div class="shop-card">
+          <h2>หมวดหมู่ <span class="count" id="catCount"></span></h2>
+          <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <input class="mini-input" id="newCatName" placeholder="ชื่อหมวดหมู่ เช่น อาหาร" style="flex:1;min-width:140px;">
+            <select class="mini-input" id="newCatParent">
+              <option value="">— หมวดหลัก —</option>
+            </select>
+            <button class="mini-btn primary" id="addCatBtn" type="button">เพิ่ม</button>
+          </div>
+          <div id="catList"></div>
+        </div>
+      </div>
+
+      <!-- เมนู -->
+      <div>
+        <div class="shop-card">
+          <h2>เมนูสินค้า <span class="count" id="menuCount"></span></h2>
+          <form id="menuForm" class="shop-form" novalidate style="border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:14px;">
+            <input type="hidden" id="menuId">
+            <div class="field" style="max-width:none;">
+              <label for="menuName">ชื่อเมนู *</label>
+              <div class="input-wrap"><input type="text" id="menuName" maxlength="150" placeholder="เช่น ข้าวผัด" required></div>
+            </div>
+            <div class="row">
+              <div class="field"><label for="menuCat">หมวดหมู่</label>
+                <select id="menuCat" class="mini-input" style="width:100%;"></select></div>
+              <div class="field"><label for="menuPrice">ราคา (บาท)</label>
+                <input type="number" id="menuPrice" min="0" step="0.01" class="mini-input" style="width:100%;" placeholder="0"></div>
+            </div>
+            <div class="field" style="max-width:none;">
+              <label for="menuDesc">รายละเอียด</label>
+              <div class="input-wrap"><input type="text" id="menuDesc" maxlength="500" placeholder="คำอธิบายสั้น ๆ"></div>
+            </div>
+            <div class="field">
+              <label>รูปเมนู</label>
+              <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <img class="logo-preview" id="menuImgPreview" alt="รูปเมนู" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84'%3E%3Crect width='84' height='84' fill='%23eef0fa'/%3E%3C/svg%3E">
+                <input type="file" id="menuImgFile" accept="image/png,image/jpeg,image/webp,image/gif" style="font-size:13px;">
+              </div>
+            </div>
+            <label class="check-row" style="display:flex;gap:8px;align-items:center;font-size:13.5px;margin-bottom:10px;">
+              <input type="checkbox" id="menuAvailable" checked> <span>พร้อมขาย</span>
+            </label>
+            <div class="field" style="max-width:none;">
+              <label>ตัวเลือกที่ใช้กับเมนูนี้</label>
+              <div id="menuGroupPick" style="display:grid;gap:6px;font-size:13.5px;"></div>
+            </div>
+            <div class="error-msg" id="menuErr"></div>
+            <div style="display:flex;gap:8px;">
+              <button type="submit" class="mini-btn primary" id="menuSaveBtn">เพิ่มเมนู</button>
+              <button type="button" class="mini-btn" id="menuCancelBtn" style="display:none;">ยกเลิกแก้ไข</button>
+            </div>
+          </form>
+          <div id="menuList"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- กลุ่มตัวเลือก -->
+    <div class="shop-card">
+      <h2>กลุ่มตัวเลือกในเมนู <span class="count" id="grpCount"></span></h2>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;">เช่น “ระดับความเผ็ด” (เลือก 1 อย่าง) หรือ “รูปแบบการทาน” (ทานที่ร้าน / ห่อกลับบ้าน) — สร้างกลุ่ม+ตัวเลือก แล้วไปติ๊กผูกกับเมนูด้านบน</p>
+      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+        <input class="mini-input" id="newGrpName" placeholder="ชื่อกลุ่ม เช่น ระดับความเผ็ด" style="flex:1;min-width:160px;">
+        <label style="font-size:13px;display:flex;gap:5px;align-items:center;"><input type="checkbox" id="newGrpRequired"> บังคับเลือก</label>
+        <label style="font-size:13px;display:flex;gap:5px;align-items:center;"><input type="checkbox" id="newGrpMulti"> เลือกได้หลายอย่าง</label>
+        <button class="mini-btn primary" id="addGrpBtn" type="button">เพิ่มกลุ่ม</button>
+      </div>
+      <div id="grpList"></div>
+    </div>
+  </div>
+
+  <script>
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    let state = { shop: null, categories: [], menus: [], optionGroups: [], optionItems: [], menuGroups: [], publicUrl: '' };
+    let menuImageUrl = '';
+    let toastTimer = null;
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      let data;
+      try { data = await res.json(); } catch { const e = new Error('เซิร์ฟเวอร์ตอบสนองไม่ถูกต้อง (HTTP ' + res.status + ')'); e.status = res.status; throw e; }
+      if (!data.ok) { const e = new Error(data.message || 'เกิดข้อผิดพลาด'); e.status = res.status; throw e; }
+      return data;
+    }
+    function toast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+    }
+    async function refresh() {
+      const data = await api('/api/shop/me');
+      if (!data.shop) { window.location.href = '/shop/setup.html'; return; }
+      state = data;
+      document.getElementById('shopName').textContent = data.shop.name || 'ร้านของฉัน';
+      if (data.publicUrl) document.getElementById('viewShopLink').href = data.publicUrl;
+      renderCategories();
+      renderCategorySelects();
+      renderMenuGroupPick();
+      renderMenus();
+      renderGroups();
+    }
+
+    // ---------- หมวดหมู่ ----------
+    function parentOptionsHtml() {
+      return '<option value="">— หมวดหลัก —</option>' +
+        state.categories.filter((c) => !c.parent_id).map((c) => `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+    }
+    function renderCategories() {
+      const tops = state.categories.filter((c) => !c.parent_id);
+      document.getElementById('catCount').textContent = state.categories.length ? '(' + state.categories.length + ')' : '';
+      document.getElementById('newCatParent').innerHTML = parentOptionsHtml();
+      const box = document.getElementById('catList');
+      if (!tops.length) { box.innerHTML = '<div class="cat-empty">ยังไม่มีหมวดหมู่ — เพิ่มหมวดแรกด้านบนได้เลย</div>'; return; }
+      box.innerHTML = tops.map((c) => {
+        const subs = state.categories.filter((x) => x.parent_id === c.id);
+        return `<div class="cat-item">
+          <div class="cat-row">
+            <span class="cat-name">${esc(c.name)}${subs.length ? ' <small>(' + subs.length + ' หมวดย่อย)</small>' : ''}</span>
+            <button class="mini-btn" data-addsub="${c.id}" type="button">+ หมวดย่อย</button>
+            <button class="mini-btn" data-rencat="${c.id}" data-name="${esc(c.name)}" type="button">เปลี่ยนชื่อ</button>
+            <button class="mini-btn danger" data-delcat="${c.id}" type="button">ลบ</button>
+          </div>
+          ${subs.length ? '<div class="sub">' + subs.map((s) => `<div class="cat-row"><span class="cat-name">• ${esc(s.name)}</span><button class="mini-btn" data-rencat="${s.id}" data-name="${esc(s.name)}" type="button">เปลี่ยนชื่อ</button><button class="mini-btn danger" data-delcat="${s.id}" type="button">ลบ</button></div>`).join('') + '</div>' : ''}
+        </div>`;
+      }).join('');
+
+      box.querySelectorAll('[data-rencat]').forEach((b) => b.addEventListener('click', async () => {
+        const name = prompt('ชื่อหมวดหมู่ใหม่', b.dataset.name);
+        if (!name || !name.trim()) return;
+        try { await api('/api/shop/categories/' + b.dataset.rencat, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim() }) }); toast('บันทึกแล้ว'); await refresh(); }
+        catch (e) { alert(e.message); }
+      }));
+      box.querySelectorAll('[data-delcat]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirm('ลบหมวดหมู่นี้? (หมวดย่อยจะถูกลบด้วย เมนูที่อยู่ในหมวดจะไม่ถูกลบ แต่จะไม่มีหมวด)')) return;
+        try { await api('/api/shop/categories/' + b.dataset.delcat, { method: 'DELETE' }); toast('ลบแล้ว'); await refresh(); }
+        catch (e) { alert(e.message); }
+      }));
+      box.querySelectorAll('[data-addsub]').forEach((b) => b.addEventListener('click', async () => {
+        const name = prompt('ชื่อหมวดหมู่ย่อย');
+        if (!name || !name.trim()) return;
+        try { await api('/api/shop/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: name.trim(), parentId: Number(b.dataset.addsub) }) }); toast('เพิ่มหมวดย่อยแล้ว'); await refresh(); }
+        catch (e) { alert(e.message); }
+      }));
+    }
+    document.getElementById('addCatBtn').addEventListener('click', async () => {
+      const el = document.getElementById('newCatName');
+      const name = el.value.trim();
+      if (!name) return alert('กรุณากรอกชื่อหมวดหมู่');
+      const parentId = document.getElementById('newCatParent').value;
+      try {
+        await api('/api/shop/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, parentId: parentId ? Number(parentId) : null }) });
+        el.value = ''; toast('เพิ่มหมวดหมู่แล้ว'); await refresh();
+      } catch (e) { alert(e.message); }
+    });
+
+    // ---------- เมนู ----------
+    function renderCategorySelects() {
+      const opts = ['<option value="">— ไม่ระบุหมวด —</option>'];
+      state.categories.filter((c) => !c.parent_id).forEach((c) => {
+        opts.push(`<option value="${c.id}">${esc(c.name)}</option>`);
+        state.categories.filter((s) => s.parent_id === c.id).forEach((s) => opts.push(`<option value="${s.id}">&nbsp;&nbsp;└ ${esc(s.name)}</option>`));
+      });
+      document.getElementById('menuCat').innerHTML = opts.join('');
+    }
+    function renderMenuGroupPick() {
+      const box = document.getElementById('menuGroupPick');
+      if (!state.optionGroups.length) { box.innerHTML = '<span style="color:var(--muted);font-size:12.5px;">ยังไม่มีกลุ่มตัวเลือก — สร้างด้านล่างก่อน</span>'; return; }
+      box.innerHTML = state.optionGroups.map((g) => `<label style="display:flex;gap:7px;align-items:center;"><input type="checkbox" class="mgpick" value="${g.id}"> <span>${esc(g.name)} <small style="color:var(--muted);">(${g.required ? 'บังคับ' : 'ไม่บังคับ'}${g.multi ? ', หลายอย่าง' : ''})</small></span></label>`).join('');
+    }
+    function catName(id) { const c = state.categories.find((x) => x.id === id); return c ? c.name : '—'; }
+    function renderMenus() {
+      document.getElementById('menuCount').textContent = state.menus.length ? '(' + state.menus.length + ')' : '';
+      const box = document.getElementById('menuList');
+      if (!state.menus.length) { box.innerHTML = '<div class="cat-empty">ยังไม่มีเมนู</div>'; return; }
+      box.innerHTML = state.menus.map((m) => `<div class="menu-item ${m.available ? '' : 'off'}">
+        ${m.image_url ? `<img src="${esc(m.image_url)}" alt="">` : '<img alt="">'}
+        <div class="info"><div class="n">${esc(m.name)}</div><div class="m">${esc(catName(m.category_id))}${m.available ? '' : ' · ปิดขาย'}</div></div>
+        <div class="price">฿${Number(m.price).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
+        <label class="sw" title="${m.available ? 'เปิดให้สั่งอยู่ — กดเพื่อปิด' : 'ปิดการสั่งอยู่ — กดเพื่อเปิด'}">
+          <input type="checkbox" data-avail="${m.id}" ${m.available ? 'checked' : ''}>
+          <span class="sw-slider"></span>
+        </label>
+        <button class="mini-btn" data-editmenu="${m.id}" type="button">แก้ไข</button>
+        <button class="mini-btn danger" data-delmenu="${m.id}" type="button">ลบ</button>
+      </div>`).join('');
+      box.querySelectorAll('[data-avail]').forEach((cb) => cb.addEventListener('change', async () => {
+        try {
+          await api('/api/shop/menus/' + cb.dataset.avail, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ available: cb.checked }) });
+          toast(cb.checked ? 'เปิดให้ลูกค้าสั่งแล้ว' : 'ปิดการสั่งของเมนูนี้แล้ว');
+          await refresh();
+        } catch (e) { alert(e.message); cb.checked = !cb.checked; }
+      }));
+      box.querySelectorAll('[data-editmenu]').forEach((b) => b.addEventListener('click', () => startEditMenu(Number(b.dataset.editmenu))));
+      box.querySelectorAll('[data-delmenu]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirm('ลบเมนูนี้?')) return;
+        try { await api('/api/shop/menus/' + b.dataset.delmenu, { method: 'DELETE' }); toast('ลบเมนูแล้ว'); await refresh(); }
+        catch (e) { alert(e.message); }
+      }));
+    }
+    function startEditMenu(id) {
+      const m = state.menus.find((x) => x.id === id);
+      if (!m) return;
+      document.getElementById('menuId').value = m.id;
+      document.getElementById('menuName').value = m.name || '';
+      document.getElementById('menuCat').value = m.category_id || '';
+      document.getElementById('menuPrice').value = m.price || '';
+      document.getElementById('menuDesc').value = m.description || '';
+      document.getElementById('menuAvailable').checked = !!m.available;
+      menuImageUrl = m.image_url || '';
+      document.getElementById('menuImgPreview').src = menuImageUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84'%3E%3Crect width='84' height='84' fill='%23eef0fa'/%3E%3C/svg%3E";
+      const linked = state.menuGroups.filter((g) => g.menu_id === m.id).map((g) => g.group_id);
+      document.querySelectorAll('.mgpick').forEach((cb) => { cb.checked = linked.includes(Number(cb.value)); });
+      document.getElementById('menuSaveBtn').textContent = 'บันทึกเมนู';
+      document.getElementById('menuCancelBtn').style.display = '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function resetMenuForm() {
+      document.getElementById('menuForm').reset();
+      document.getElementById('menuId').value = '';
+      document.getElementById('menuAvailable').checked = true;
+      menuImageUrl = '';
+      document.getElementById('menuImgPreview').src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='84'%3E%3Crect width='84' height='84' fill='%23eef0fa'/%3E%3C/svg%3E";
+      document.querySelectorAll('.mgpick').forEach((cb) => { cb.checked = false; });
+      document.getElementById('menuSaveBtn').textContent = 'เพิ่มเมนู';
+      document.getElementById('menuCancelBtn').style.display = 'none';
+    }
+    document.getElementById('menuCancelBtn').addEventListener('click', resetMenuForm);
+    document.getElementById('menuImgFile').addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (file.size > 3 * 1024 * 1024) { alert('ไฟล์ใหญ่เกิน 3MB'); return; }
+      try {
+        const dataUrl = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(file); });
+        const up = await api('/api/shop/upload', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dataUrl }) });
+        menuImageUrl = up.url;
+        document.getElementById('menuImgPreview').src = menuImageUrl;
+      } catch (err) { alert(err.message); }
+    });
+    document.getElementById('menuForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const errEl = document.getElementById('menuErr'); errEl.style.display = 'none';
+      const id = document.getElementById('menuId').value;
+      const name = document.getElementById('menuName').value.trim();
+      if (!name) { errEl.textContent = 'กรุณากรอกชื่อเมนู'; errEl.style.display = 'block'; return; }
+      const cat = document.getElementById('menuCat').value;
+      const payload = {
+        name,
+        categoryId: cat ? Number(cat) : null,
+        price: Number(document.getElementById('menuPrice').value) || 0,
+        description: document.getElementById('menuDesc').value.trim(),
+        imageUrl: menuImageUrl,
+        available: document.getElementById('menuAvailable').checked,
+      };
+      try {
+        let menuId = Number(id);
+        if (id) { await api('/api/shop/menus/' + id, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); }
+        else { const r = await api('/api/shop/menus', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); menuId = r.id; }
+        const groupIds = Array.from(document.querySelectorAll('.mgpick:checked')).map((cb) => Number(cb.value));
+        await api('/api/shop/menus/' + menuId + '/groups', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groupIds }) });
+        toast(id ? 'บันทึกเมนูแล้ว' : 'เพิ่มเมนูแล้ว'); resetMenuForm(); await refresh();
+      } catch (err) {
+        if (err.status === 403) { window.location.href = '/shop/setup.html'; return; }
+        errEl.textContent = err.message; errEl.style.display = 'block';
+      }
+    });
+
+    // ---------- กลุ่มตัวเลือก ----------
+    function renderGroups() {
+      document.getElementById('grpCount').textContent = state.optionGroups.length ? '(' + state.optionGroups.length + ')' : '';
+      const box = document.getElementById('grpList');
+      if (!state.optionGroups.length) { box.innerHTML = '<div class="cat-empty">ยังไม่มีกลุ่มตัวเลือก</div>'; return; }
+      box.innerHTML = state.optionGroups.map((g) => {
+        const items = state.optionItems.filter((i) => i.group_id === g.id);
+        return `<div class="opt-group">
+          <div class="g-head">
+            <span class="n">${esc(g.name)} <small style="color:var(--muted);font-weight:500;">(${g.required ? 'บังคับ' : 'ไม่บังคับ'}${g.multi ? ' · หลายอย่าง' : ' · เลือก 1'})</small></span>
+            <button class="mini-btn danger" data-delgrp="${g.id}" type="button">ลบกลุ่ม</button>
+          </div>
+          <div class="chips">
+            ${items.map((i) => `<span class="opt-chip">${esc(i.name)}${Number(i.price_delta) ? ' +' + Number(i.price_delta) + '฿' : ''} <button data-delitem="${i.id}" title="ลบ">&times;</button></span>`).join('') || '<span style="color:var(--muted);font-size:12.5px;">ยังไม่มีตัวเลือก</span>'}
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+            <input class="mini-input" data-itemname="${g.id}" placeholder="ชื่อตัวเลือก เช่น เผ็ดมาก" style="flex:1;min-width:130px;">
+            <input class="mini-input" data-itemprice="${g.id}" type="number" step="0.01" placeholder="+ราคา" style="width:90px;">
+            <button class="mini-btn" data-additem="${g.id}" type="button">เพิ่มตัวเลือก</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      box.querySelectorAll('[data-delgrp]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirm('ลบกลุ่มตัวเลือกนี้และตัวเลือกทั้งหมดในกลุ่ม?')) return;
+        try { await api('/api/shop/option-groups/' + b.dataset.delgrp, { method: 'DELETE' }); toast('ลบกลุ่มแล้ว'); await refresh(); }
+        catch (e) { alert(e.message); }
+      }));
+      box.querySelectorAll('[data-delitem]').forEach((b) => b.addEventListener('click', async () => {
+        try { await api('/api/shop/option-items/' + b.dataset.delitem, { method: 'DELETE' }); await refresh(); }
+        catch (e) { alert(e.message); }
+      }));
+      box.querySelectorAll('[data-additem]').forEach((b) => b.addEventListener('click', async () => {
+        const gid = b.dataset.additem;
+        const nameEl = box.querySelector(`[data-itemname="${gid}"]`);
+        const priceEl = box.querySelector(`[data-itemprice="${gid}"]`);
+        const name = nameEl.value.trim();
+        if (!name) return alert('กรุณากรอกชื่อตัวเลือก');
+        try {
+          await api('/api/shop/option-groups/' + gid + '/items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, priceDelta: Number(priceEl.value) || 0 }) });
+          await refresh();
+        } catch (e) { alert(e.message); }
+      }));
+    }
+    document.getElementById('addGrpBtn').addEventListener('click', async () => {
+      const el = document.getElementById('newGrpName');
+      const name = el.value.trim();
+      if (!name) return alert('กรุณากรอกชื่อกลุ่มตัวเลือก');
+      try {
+        await api('/api/shop/option-groups', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, required: document.getElementById('newGrpRequired').checked, multi: document.getElementById('newGrpMulti').checked }),
+        });
+        el.value = ''; document.getElementById('newGrpRequired').checked = false; document.getElementById('newGrpMulti').checked = false;
+        toast('เพิ่มกลุ่มตัวเลือกแล้ว'); await refresh();
+      } catch (e) { alert(e.message); }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    refresh().catch((err) => {
+      if (err.status === 403) window.location.href = '/shop/setup.html';
+      else alert(err.message);
+    });
+  </script>
+</body>
+</html>

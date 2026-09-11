@@ -3,14 +3,56 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>สร้างเซลเพจออนไลน์ | SalePage Builder</title>
-  <meta name="description" content="สร้างเซลเพจ (Sale Page) ขายของออนไลน์อย่างมืออาชีพในไม่กี่นาที เลือกธีมสำเร็จรูป กรอกข้อมูล แล้วแชร์ลิงก์ขายได้ทันที">
+  <title>ระบบสมาชิก</title>
+  <meta name="description" content="ระบบสมาชิก: สมัครสมาชิก ยืนยันตัวตน เข้าสู่ระบบ และจัดการบัญชี">
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/landing.css">
   <script src="js/theme.js"></script>
+  <style>
+    .home-hero {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 96px 24px 72px;
+      text-align: center;
+    }
+    .home-hero h1 {
+      font-size: clamp(30px, 5vw, 44px);
+      line-height: 1.3;
+      margin: 0 0 18px;
+    }
+    .home-hero p {
+      font-size: 17px;
+      line-height: 1.8;
+      color: var(--muted);
+      margin: 0 auto 32px;
+      max-width: 540px;
+    }
+    .home-hero-cta {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .home-hero-cta .btn { width: auto; }
+    @media (max-width: 520px) {
+      .home-hero { padding: 56px 16px 48px; }
+      .home-hero h1 { font-size: 30px; }
+      .site-nav { padding: 12px 14px; }
+      .site-nav .brand-name { font-size: 16px; }
+    }
+    .home-footer {
+      border-top: 1px solid var(--border);
+      margin-top: 48px;
+      padding: 24px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .home-footer a { color: var(--muted); }
+    .home-footer a:hover { color: var(--accent); }
+  </style>
 </head>
 <body>
-  <nav class="lp-nav" id="topNav">
+  <nav class="site-nav">
     <a class="brand" href="/">
       <div class="brand-logo">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -19,22 +61,9 @@
           <path d="M9 14h6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
       </div>
-      <span>SalePage</span>
+      <span class="brand-name">ระบบสมาชิก</span>
     </a>
-
-    <button class="lp-burger" type="button" id="burgerBtn" aria-label="เปิดเมนู">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-    </button>
-
-    <div class="nav-links" id="navLinks">
-      <a href="#features">ฟีเจอร์</a>
-      <a href="#how">วิธีใช้งาน</a>
-      <a href="#templates">ตัวอย่างผลงาน</a>
-      <a href="#pricing">ราคา</a>
-      <a href="#faq">คำถามที่พบบ่อย</a>
-    </div>
-
-    <div class="nav-actions">
+    <div style="display:flex;align-items:center;gap:8px;">
       <button class="theme-toggle" type="button" aria-label="สลับธีม" style="position:static;">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" style="display:none">
           <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
@@ -45,328 +74,34 @@
         </svg>
       </button>
       <span id="authButtons">
-        <a class="btn btn-outline" href="login.html">เข้าสู่ระบบ</a>
-        <a class="btn btn-primary" href="register.html">เริ่มใช้งานฟรี</a>
+        <a class="btn btn-outline btn-small" href="login.html">เข้าสู่ระบบ</a>
+        <a class="btn btn-primary btn-small" href="register.html">สมัครสมาชิก</a>
       </span>
     </div>
   </nav>
 
-  <!-- Hero -->
-  <header class="lp-hero">
-    <div class="lp-hero-inner">
-      <div>
-        <span class="lp-hero-badge">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 7.2H22l-6 4.6 2.3 7.2-6.3-4.5-6.3 4.5L8 13.8 2 9.2h7.6z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-          เครื่องมือสร้างเซลเพจออนไลน์
-        </span>
-        <h1>สร้าง<span class="grad">เซลเพจ</span><br>ขายของออนไลน์ให้ปัง<br>ในไม่กี่นาที</h1>
-        <p class="lead">ไม่ต้องเขียนโค้ด ไม่ต้องจ้างทีม เลือกธีมสำเร็จรูป กรอกข้อมูลสินค้า แล้วได้หน้าเว็บขายของมืออาชีพพร้อมแชร์ลิงก์ได้ทันที — ใช้ได้บนมือถือ คอมพิวเตอร์ และทุกแพลตฟอร์ม</p>
-        <div class="lp-hero-cta">
-          <a class="btn btn-primary" href="register.html">
-            เริ่มสร้างเซลเพจฟรี
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </a>
-          <a class="btn btn-outline" href="#templates">ดูตัวอย่างผลงาน</a>
-        </div>
-        <p class="lp-hero-note">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          สมัครฟรี ใช้ได้จริง ไม่ต้องใช้บัตรเครดิต
-        </p>
-      </div>
-
-      <div class="lp-mockup-wrap">
-        <div class="lp-float-card lp-float-1">
-          <div class="f-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-          <div>ยอดขายเพิ่มขึ้น<small>+ 87% ภายใน 30 วัน</small></div>
-        </div>
-        <div class="lp-float-card lp-float-2">
-          <div class="f-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M13 2L4.1 12.5a1 1 0 00.8 1.6H11l-1 8 8.9-10.5a1 1 0 00-.8-1.6H13z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
-          <div>เปิดใช้งาน<br><small>ไม่ถึง 5 นาที</small></div>
-        </div>
-        <div class="lp-mockup-phone">
-          <div class="lp-mockup-screen">
-            <div class="mock-banner">
-              <span class="m-tag">โปรโมชันพิเศษ</span>
-              <div class="m-title">คอร์สออนไลน์สร้างแบรนด์<br>ฉบับเริ่มต้นจากศูนย์</div>
-            </div>
-            <div class="mock-body">
-              <div class="mock-img">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M20 13v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5M12 15V3M7 7l5-5 5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </div>
-              <div class="m-name">คอร์สออนไลน์สร้างแบรนด์</div>
-              <div class="m-desc">เรียนกับมืออาชีพ 12 บทเรียน วิดีโอความละเอียดสูง เรียนซ้ำได้ตลอดชีพ</div>
-              <div class="m-price">฿1,990 <small>฿3,990</small></div>
-              <div class="m-btn">สั่งซื้อเลย</div>
-              <div class="m-foot"><span>✓ ไฟล์ดิจิทัล</span><span>✓ รับทันที</span><span>✓ ใบกำกับภาษี</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
+  <header class="home-hero">
+    <h1>ยินดีต้อนรับสู่ระบบสมาชิก</h1>
+    <p>สมัครสมาชิก ยืนยันตัวตน และเข้าสู่ระบบเพื่อจัดการบัญชีของคุณได้ในที่เดียว</p>
+    <div class="home-hero-cta" id="heroCta">
+      <a class="btn btn-primary" href="register.html">สมัครสมาชิกฟรี</a>
+      <a class="btn btn-outline" href="login.html">เข้าสู่ระบบ</a>
     </div>
   </header>
 
-  <!-- สถิติ -->
-  <section class="lp-stats">
-    <div class="lp-stats-inner">
-      <div class="lp-stat"><b>50,000+</b><span>เซลเพจที่สร้างสำเร็จ</span></div>
-      <div class="lp-stat"><b>12,000+</b><span>ร้านค้าที่ใช้งาน</span></div>
-      <div class="lp-stat"><b>99.9%</b><span>ความพร้อมใช้งาน</span></div>
-      <div class="lp-stat"><b>4.9/5</b><span>คะแนนรีวิวจากผู้ใช้</span></div>
+  <footer class="home-footer">
+    <div>
+      <a href="privacy.html">นโยบายความเป็นส่วนตัว</a>
+      &nbsp;·&nbsp;
+      <a href="login.html">เข้าสู่ระบบ</a>
+      &nbsp;·&nbsp;
+      <a href="register.html">สมัครสมาชิก</a>
     </div>
-  </section>
-
-  <!-- ฟีเจอร์ -->
-  <section class="lp-section" id="features">
-    <div class="lp-section-head">
-      <span class="lp-eyebrow">ฟีเจอร์เด่น</span>
-      <h2>ทุกอย่างที่ต้องใช้<br>ในการขายของออนไลน์</h2>
-      <p>เครื่องมือครบวงจรที่ออกแบบมาให้พ่อค้าแม่ค้าออนไลน์เริ่มต้นได้ง่าย ไม่ต้องมีความรู้ด้านเทคนิคเลย</p>
-    </div>
-    <div class="lp-features">
-      <div class="lp-feature lp-reveal">
-        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/></svg></div>
-        <h3>ธีมสำเร็จรูปสวยๆ</h3>
-        <p>เลือกธีมเซลเพจที่ออกแบบอย่างมืออาชีพ ปรับสี ฟอนต์ และรูปภาพได้ตามแบรนด์ของคุณ</p>
-      </div>
-      <div class="lp-feature lp-reveal">
-        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <h3>กรอกข้อมูลง่ายๆ</h3>
-        <p>เพิ่มชื่อสินค้า ราคา รายละเอียด และรูปภาพ ผ่านฟอร์มที่เข้าใจง่าย ไม่ต้องแตะโค้ดแม้แต่บรรทัดเดียว</p>
-      </div>
-      <div class="lp-feature lp-reveal">
-        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none"><rect x="7" y="2" width="10" height="20" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M11 18h2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <h3>รองรับมือถือทุกเครื่อง</h3>
-        <p>เซลเพจของคุณแสดงผลสวยงามครบทุกรายละเอียดบนสมาร์ตโฟน แท็บเล็ต และคอมพิวเตอร์</p>
-      </div>
-      <div class="lp-feature lp-reveal">
-        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 12v7a2 2 0 002 2h12a2 2 0 002-2v-7M16 6l-4-4-4 4M12 2v13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <h3>แชร์ลิงก์ได้ทุกช่องทาง</h3>
-        <p>ได้ลิงก์เซลเพจพร้อมใช้ แชร์ผ่าน LINE, Facebook, TikTok, IG หรือแปะในโฆษณาได้ทันที</p>
-      </div>
-      <div class="lp-feature lp-reveal">
-        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M4 19V5a2 2 0 012-2h12a2 2 0 012 2v9H8a4 4 0 00-4 5z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 19a3 3 0 013-3h14v3a2 2 0 01-2 2H6a3 3 0 01-3-3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
-        <h3>รองรับหลายช่องทางชำระเงิน</h3>
-        <p>เชื่อมต่อพร้อมเพย์, บัตรเครดิต, โอนผ่านธนาคาร หรือให้ลูกค้าสั่งผ่าน LINE เพื่อจ่ายทีหลังได้</p>
-      </div>
-      <div class="lp-feature lp-reveal">
-        <div class="f-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 15l4-5 3 3 5-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <h3>วัดผลยอดขายได้</h3>
-        <p>ดูรายงานยอดวิว ยอดคลิก และยอดสั่งซื้อแบบเรียลไทม์ เพื่อปรับปรุงเซลเพจให้ขายดีขึ้นเรื่อยๆ</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- วิธีใช้งาน -->
-  <section class="lp-section" id="how" style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
-    <div class="lp-section-head">
-      <span class="lp-eyebrow">วิธีใช้งาน</span>
-      <h2>เริ่มต้นได้ใน 3 ขั้นตอน</h2>
-      <p>จากศูนย์ถึงมีเซลเพจพร้อมขาย ใช้เวลาไม่ถึง 5 นาที — ทดลองใช้ฟรี ไม่ต้องใช้บัตรเครดิต</p>
-    </div>
-    <div class="lp-steps">
-      <div class="lp-step lp-reveal">
-        <div class="s-num">1</div>
-        <h3>เลือกธีมที่ชอบ</h3>
-        <p>เลือกจากธีมเซลเพจสำเร็จรูปที่ออกแบบโดยมืออาชีพ ตรงกับสไตล์สินค้าของคุณ</p>
-      </div>
-      <div class="lp-step lp-reveal">
-        <div class="s-num">2</div>
-        <h3>กรอกข้อมูลสินค้า</h3>
-        <p>ใส่ชื่อสินค้า ราคา รายละเอียด รูปภาพ และช่องทางรับเงิน — ทำเสร็จในไม่กี่คลิก</p>
-      </div>
-      <div class="lp-step lp-reveal">
-        <div class="s-num">3</div>
-        <h3>แชร์ลิงก์แล้วขายได้เลย</h3>
-        <p>ได้ลิงก์เซลเพจพร้อมใช้ แชร์ลงโซเชียลหรือลงโฆษณา เริ่มรับออเดอร์ได้ทันที</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- ตัวอย่างผลงาน -->
-  <section class="lp-section" id="templates">
-    <div class="lp-section-head">
-      <span class="lp-eyebrow">ตัวอย่างผลงาน</span>
-      <h2>ธีมที่พร้อมใช้งาน</h2>
-      <p>ทุกธีมปรับแต่งสีและเนื้อหาได้เอง ดูตัวอย่างสไตล์ธีมยอดนิยมของเรา</p>
-    </div>
-    <div class="lp-templates">
-      <div class="lp-tpl lp-reveal">
-        <div class="tpl-preview">
-          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.5"/><rect x="6" y="12" width="12" height="3" rx="1" fill="currentColor" opacity="0.35"/><rect x="6" y="17" width="8" height="2" rx="1" fill="currentColor" opacity="0.25"/></svg>
-        </div>
-        <div class="tpl-info">
-          <h3>ธีมมินิมอล</h3>
-          <p>เรียบหรู เน้นรูปสินค้า เหมาะกับสินค้าราคาสูงและแบรนด์</p>
-        </div>
-      </div>
-      <div class="lp-tpl lp-reveal">
-        <div class="tpl-preview">
-          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><rect x="6" y="6" width="12" height="7" rx="1.5" fill="currentColor" opacity="0.3"/><rect x="6" y="16" width="7" height="4" rx="1" fill="currentColor" opacity="0.22"/><rect x="15" y="16" width="3" height="4" rx="1" fill="currentColor" opacity="0.22"/></svg>
-        </div>
-        <div class="tpl-info">
-          <h3>ธีมสีสดใส</h3>
-          <p>ดึงดูดสายตา เหมาะกับสินค้าแฟชั่น ของใช้ และสินค้ายอดนิยม</p>
-        </div>
-      </div>
-      <div class="lp-tpl lp-reveal">
-        <div class="tpl-preview">
-          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="15" r="3" fill="currentColor" opacity="0.3"/><rect x="6" y="19" width="12" height="2" rx="1" fill="currentColor" opacity="0.2"/></svg>
-        </div>
-        <div class="tpl-info">
-          <h3>ธีมพรีเมียม</h3>
-          <p>ดูแพง น่าเชื่อถือ เหมาะกับคอร์สออนไลน์ บริการ และสินค้าดิจิทัล</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ราคา -->
-  <section class="lp-section" id="pricing" style="background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);">
-    <div class="lp-section-head">
-      <span class="lp-eyebrow">ราคา</span>
-      <h2>เริ่มต้นฟรี ไม่มีค่าใช้จ่ายแอบแฝง</h2>
-      <p>เริ่มใช้งานฟรีได้เลย อัปเกรดเมื่อพร้อมขยายธุรกิจ — ยกเลิกได้ทุกเมื่อ</p>
-    </div>
-    <div class="lp-pricing">
-      <div class="lp-price lp-reveal">
-        <div class="p-name">ฟรี</div>
-        <div class="p-price">฿0<small> / เดือน</small></div>
-        <p class="p-desc">เหมาะสำหรับเริ่มต้นทดลองสร้างเซลเพจแรกของคุณ</p>
-        <ul>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> เซลเพจ 1 หน้า</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ธีมพื้นฐานทั้งหมด</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> รองรับมือถือ</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> แชร์ลิงก์ได้</li>
-        </ul>
-        <a class="btn btn-outline" href="register.html">เริ่มใช้ฟรี</a>
-      </div>
-
-      <div class="lp-price lp-price-featured lp-reveal">
-        <span class="lp-price-pop">ยอดนิยม</span>
-        <div class="p-name">โปร</div>
-        <div class="p-price">฿199<small> / เดือน</small></div>
-        <p class="p-desc">สำหรับร้านค้าที่ขายจริงและต้องการเติบโต</p>
-        <ul>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> เซลเพจไม่จำกัด</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ธีมพรีเมียมทั้งหมด</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> เชื่อมช่องทางชำระเงิน</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> รายงานยอดขาย</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> โปรโมชัน &amp; คูปอง</li>
-        </ul>
-        <a class="btn btn-primary" href="register.html">เลือกแพ็กโปร</a>
-      </div>
-
-      <div class="lp-price lp-reveal">
-        <div class="p-name">พรีเมียม</div>
-        <div class="p-price">฿499<small> / เดือน</small></div>
-        <p class="p-desc">สำหรับธุรกิจที่ต้องการเครื่องมือครบและเติบโตเต็มรูปแบบ</p>
-        <ul>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ทุกอย่างในแพ็กโปร</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> โดเมนของตัวเอง</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ตัวติดตามการติดต่อ (Pixel)</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ระบบสมาชิก &amp; คอร์ส</li>
-          <li><svg viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg> สนับสนุนด่วน 24/7</li>
-        </ul>
-        <a class="btn btn-outline" href="register.html">เลือกแพ็กพรีเมียม</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- FAQ -->
-  <section class="lp-section" id="faq">
-    <div class="lp-section-head">
-      <span class="lp-eyebrow">คำถามที่พบบ่อย</span>
-      <h2>มีคำถาม? เรามีคำตอบ</h2>
-    </div>
-    <div class="lp-faq">
-      <div class="lp-faq-item open">
-        <button class="lp-faq-q" type="button">ต้องมีความรู้เขียนโค้ดไหม?
-          <svg class="chev" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div class="lp-faq-a">ไม่ต้องเลยครับ ทุกอย่างทำผ่านฟอร์มและคลิกเลือก ไม่ต้องแตะโค้ดสักบรรทัดเดียว เหมาะสำหรับมือใหม่ที่ไม่มีพื้นฐานด้านเทคนิค</div>
-      </div>
-      <div class="lp-faq-item">
-        <button class="lp-faq-q" type="button">สร้างเซลเพจใช้เวลานานไหม?
-          <svg class="chev" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div class="lp-faq-a">เฉลี่ยไม่ถึง 5 นาทีครับ เริ่มจากเลือกธีม แล้วกรอกข้อมูลสินค้า ราคา และรูปภาพ — ระบบจะสร้างหน้าเว็บที่พร้อมใช้งานให้อัตโนมัติ</div>
-      </div>
-      <div class="lp-faq-item">
-        <button class="lp-faq-q" type="button">เปลี่ยนธีมทีหลังได้ไหม?
-          <svg class="chev" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div class="lp-faq-a">ได้ครับ เปลี่ยนธีมได้ตลอดเวลาโดยไม่ต้องกรอกข้อมูลใหม่ ข้อมูลสินค้าที่คุณใส่ไว้จะแสดงผลในธีมใหม่อัตโนมัติ</div>
-      </div>
-      <div class="lp-faq-item">
-        <button class="lp-faq-q" type="button">ลูกค้าสั่งซื้อแล้วจ่ายเงินยังไง?
-          <svg class="chev" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div class="lp-faq-a">ในแพ็กโปรขึ้นไป เชื่อมต่อช่องทางชำระเงินได้ เช่น พร้อมเพย์ บัตรเครดิต และโอนผ่านธนาคาร หรือเลือกให้ลูกค้าสั่งซื้อแล้วคุยจ่ายทีหลังผ่าน LINE ได้</div>
-      </div>
-      <div class="lp-faq-item">
-        <button class="lp-faq-q" type="button">ข้อมูลและรูปภาพปลอดภัยไหม?
-          <svg class="chev" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div class="lp-faq-a">ปลอดภัยครับ เราปกป้องข้อมูลตามมาตรฐาน PDPA และใช้การเข้ารหัสข้อมูลส่วนบุคคลทั้งหมด ข้อมูลของคุณเป็นของคุณเสมอ</div>
-      </div>
-      <div class="lp-faq-item">
-        <button class="lp-faq-q" type="button">ยกเลิกแพ็กเกจได้ไหม?
-          <svg class="chev" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div class="lp-faq-a">ได้ครับ ยกเลิกได้ทุกเมื่อจากหน้าบัญชี เริ่มต้นใช้ฟรีได้ก่อน ไม่ต้องผูกมัด อยากอัปเกรดค่อยอัปเกรด</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- CTA -->
-  <section class="lp-cta">
-    <div class="lp-cta-box">
-      <h2>พร้อมที่จะเริ่มขายของออนไลน์<br>อย่างมืออาชีพแล้วหรือยัง?</h2>
-      <p>สร้างเซลเพจแรกของคุณฟรีวันนี้ — ใช้เวลาไม่ถึง 5 นาที</p>
-      <a class="btn btn-primary" href="register.html">เริ่มใช้งานฟรีเลย</a>
-      <div class="lp-cta-note">สมัครฟรี · ไม่ต้องใช้บัตรเครดิต · ยกเลิกได้ทุกเมื่อ</div>
-    </div>
-  </section>
-
-  <!-- Footer -->
-  <footer class="lp-footer">
-    <div class="lp-footer-inner">
-      <a class="brand" href="/">
-        <div class="brand-logo">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="4" width="18" height="16" rx="3" stroke="#fff" stroke-width="1.8"/>
-            <path d="M3 9h18" stroke="#fff" stroke-width="1.8"/>
-            <path d="M9 14h6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <span>SalePage</span>
-      </a>
-      <div class="lp-footer-links">
-        <a href="login.html">เข้าสู่ระบบ</a>
-        <a href="register.html">สมัครสมาชิก</a>
-        <a href="privacy.html">นโยบายความเป็นส่วนตัว</a>
-      </div>
-      <div class="lp-footer-copy">© 2026 SalePage Builder — สงวนลิขสิทธิ์</div>
-    </div>
+    <div style="margin-top:10px;">© 2026 ระบบสมาชิก — สงวนลิขสิทธิ์</div>
   </footer>
 
   <script>
-    // เมนูมือถือ
-    document.getElementById('burgerBtn').addEventListener('click', () => {
-      document.getElementById('topNav').classList.toggle('nav-open');
-    });
-
-    // FAQ accordion
-    document.querySelectorAll('.lp-faq-q').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const item = btn.closest('.lp-faq-item');
-        const wasOpen = item.classList.contains('open');
-        document.querySelectorAll('.lp-faq-item').forEach((i) => i.classList.remove('open'));
-        if (!wasOpen) item.classList.add('open');
-      });
-    });
-
-    // เปลี่ยนปุ่ม nav ตามสถานะล็อกอิน
+    // เปลี่ยนปุ่มตามสถานะล็อกอิน
     async function initNav() {
       try {
         const res = await fetch('/api/me');
@@ -376,25 +111,18 @@
         // บัญชียังยืนยันเบอร์ไม่ครบ → ยังไม่ถือว่าสมัครเสร็จ ให้ไปทำขั้นตอนให้ครบก่อน
         if (u.status !== 'active') {
           const target = u.provider === 'google' ? '/google-setup.html' : '/otp.html';
-          document.getElementById('authButtons').innerHTML =
+          const html = '<a class="btn btn-primary btn-small" href="' + target + '">ทำขั้นตอนสมัครให้ครบ</a>';
+          document.getElementById('authButtons').innerHTML = html;
+          document.getElementById('heroCta').innerHTML =
             '<a class="btn btn-primary" href="' + target + '">ทำขั้นตอนสมัครให้ครบ</a>';
           return;
         }
-        document.getElementById('authButtons').innerHTML =
-          '<a class="btn btn-primary" href="/dashboard/pages">บัญชีของฉัน</a>';
+        const account = '<a class="btn btn-primary btn-small" href="/settings/profile">บัญชีของฉัน</a>';
+        document.getElementById('authButtons').innerHTML = account;
+        document.getElementById('heroCta').innerHTML =
+          '<a class="btn btn-primary" href="/settings/profile">ไปที่บัญชีของฉัน</a>';
       } catch (e) { /* ยังไม่ล็อกอิน */ }
     }
-
-    // fade-up เมื่อเลื่อนถึง
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.12 });
-    document.querySelectorAll('.lp-reveal').forEach((el) => observer.observe(el));
 
     initNav();
   </script>

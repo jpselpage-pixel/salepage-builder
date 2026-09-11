@@ -1,16 +1,20 @@
 {
-  "name": "online-shop",
+  "name": "member-system",
   "version": "1.0.0",
-  "description": "ระบบสมาชิกสำหรับเว็บขายของออนไลน์ (สมัครสมาชิก + เข้าสู่ระบบ)",
+  "description": "ระบบสมาชิก/ยืนยันตัวตน (สมัครสมาชิก + เข้าสู่ระบบ + OTP + Google)",
   "main": "server.js",
+  "private": true,
+  "engines": {
+    "node": ">=20.12"
+  },
   "scripts": {
     "start": "node --env-file-if-exists=.env server.js",
     "dev": "node --watch --env-file-if-exists=.env server.js"
   },
   "keywords": [
-    "shop",
-    "ecommerce",
     "auth",
+    "membership",
+    "otp",
     "thai"
   ],
   "license": "MIT",
@@ -19,6 +23,7 @@
     "express": "^4.21.2",
     "mysql2": "^3.23.3",
     "nodemailer": "^9.0.5",
+    "qrcode": "^1.5.4",
     "twilio": "^6.0.2"
   }
 }

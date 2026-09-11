@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ร้านค้า | ระบบสมาชิก</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/shop.css">
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <div id="app">
+    <div class="pub-empty" id="loading">กำลังโหลดเมนู...</div>
+  </div>
+
+  <script>
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const code = (location.pathname.split('/').filter(Boolean).pop() || '').trim();
+    const money = (n) => '฿' + Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+    function renderMenuCard(m, groups, items) {
+      const linked = groups.filter((g) => g.menu_id === m.id).map((g) => ({
+        group: groupsById[g.group_id],
+        items: items.filter((i) => i.group_id === g.group_id),
+      })).filter((x) => x.group);
+      return `<div class="pub-menu">
+        ${m.image_url ? `<img src="${esc(m.image_url)}" alt="${esc(m.name)}">` : '<img alt="">'}
+        <div style="flex:1;min-width:0;">
+          <div class="n">${esc(m.name)}</div>
+          ${m.description ? `<div class="d">${esc(m.description)}</div>` : ''}
+          <div class="p">${money(m.price)}</div>
+          ${linked.length ? '<div class="opts">' + linked.map((x) => `<div>• ${esc(x.group.name)}: ${x.items.map((i) => esc(i.name) + (Number(i.price_delta) ? ' (+' + money(i.price_delta).replace('฿','') + ')' : '')).join(' / ')}</div>`).join('') + '</div>' : ''}
+        </div>
+      </div>`;
+    }
+
+    let groupsById = {};
+
+    async function load() {
+      try {
+        const res = await fetch('/api/public/shops/' + encodeURIComponent(code));
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.message || 'ไม่พบร้านนี้');
+        const shop = data.shop;
+        const cats = data.categories || [];
+        const menus = (data.menus || []).filter((m) => Number(m.available) === 1);
+        const groups = data.menuGroups || [];
+        const items = data.optionItems || [];
+        const optGroups = data.optionGroups || [];
+        groupsById = {};
+        optGroups.forEach((g) => { groupsById[g.id] = g; });
+
+        const tops = cats.filter((c) => !c.parent_id);
+        const usedCatIds = new Set();
+        let body = '';
+
+        const renderCatMenus = (catId) => menus.filter((m) => m.category_id === catId).map((m) => renderMenuCard(m, groups, items)).join('');
+
+        for (const cat of tops) {
+          usedCatIds.add(cat.id);
+          const subs = cats.filter((c) => c.parent_id === cat.id);
+          const own = renderCatMenus(cat.id);
+          const subHtml = subs.map((s) => {
+            usedCatIds.add(s.id);
+            const inner = renderCatMenus(s.id);
+            return inner ? `<div class="pub-sub"><h3>${esc(s.name)}</h3>${inner}</div>` : '';
+          }).join('');
+          if (own || subHtml) body += `<div class="pub-cat"><h2>${esc(cat.name)}</h2>${own}${subHtml}</div>`;
+        }
+        const others = menus.filter((m) => !m.category_id || !usedCatIds.has(m.category_id)).map((m) => renderMenuCard(m, groups, items)).join('');
+        if (others) body += `<div class="pub-cat"><h2>เมนูอื่น ๆ</h2>${others}</div>`;
+        if (!body) body = '<div class="pub-empty">ร้านนี้ยังไม่มีเมนู</div>';
+
+        const contact = [];
+        if (shop.phone) contact.push(`<a href="tel:${esc(shop.phone)}">📞 ${esc(shop.phone)}</a>`);
+        if (shop.line_url) contact.push(`<a href="${esc(shop.line_url)}" target="_blank" rel="noopener">💬 LINE ร้านค้า</a>`);
+        if (shop.maps_url) contact.push(`<a href="${esc(shop.maps_url)}" target="_blank" rel="noopener">📍 ดูแผนที่</a>`);
+
+        document.getElementById('app').innerHTML = `
+          <header class="pub-hero">
+            <div class="pub-hero-inner">
+              ${shop.logo_url ? `<img class="pub-logo" src="${esc(shop.logo_url)}" alt="${esc(shop.name)}">` : '<div class="pub-logo"></div>'}
+              <div style="flex:1;min-width:220px;">
+                <h1>${esc(shop.name)}</h1>
+                <div class="pub-meta">${contact.length ? contact.join(' · ') : ''}</div>
+              </div>
+            </div>
+          </header>
+          <main class="pub-body">${body}</main>
+        `;
+        document.title = shop.name + ' | เมนูร้านค้า';
+      } catch (err) {
+        document.getElementById('app').innerHTML = '<div class="pub-empty" style="padding-top:80px;">' + esc(err.message || 'ไม่พบร้านนี้') + '</div>';
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

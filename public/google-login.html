@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>เข้าสู่ระบบด้วย Google | ร้านค้าออนไลน์</title>
+  <title>เข้าสู่ระบบด้วย Google | ระบบสมาชิก</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="js/theme.js"></script>
 </head>
@@ -22,7 +22,7 @@
             <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <span class="brand-name">ร้านค้าออนไลน์</span>
+        <span class="brand-name">ระบบสมาชิก</span>
       </div>
 
       <div class="brand-content">
@@ -40,7 +40,7 @@
         </div>
       </div>
 
-      <div class="brand-footer">© 2026 ร้านค้าออนไลน์ — สงวนลิขสิทธิ์</div>
+      <div class="brand-footer">© 2026 ระบบสมาชิก — สงวนลิขสิทธิ์</div>
     </aside>
 
     <main class="form-panel">
@@ -63,10 +63,10 @@
                 <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <span class="brand-name">ร้านค้าออนไลน์</span>
+            <span class="brand-name">ระบบสมาชิก</span>
           </div>
           <h1>เลือกบัญชี Google</h1>
-          <p>เพื่อดำเนินการต่อยัง <strong>ร้านค้าออนไลน์</strong></p>
+          <p>เพื่อดำเนินการต่อยัง <strong>ระบบสมาชิก</strong></p>
         </div>
 
         <!-- แบนเนอร์โหมดทดสอบ -->
@@ -130,7 +130,7 @@
         });
         const data = await res.json();
         if (!data.ok) { showError(data.message || 'เกิดข้อผิดพลาด'); return; }
-        window.location.href = data.redirect || '/dashboard/pages';
+        window.location.href = data.redirect || '/settings/profile';
       } catch {
         showError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
       } finally {

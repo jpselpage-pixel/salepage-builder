@@ -12,7 +12,7 @@
  */
 'use strict';
 
-const db = require('./db');
+const db = require('../db');
 
 // ---------------------------------------------------------------------------
 // เลือก provider
@@ -144,7 +144,7 @@ async function sendTestSms({ to }) {
   if (!to) {
     return { ok: false, provider, error: 'กรุณาระบุเบอร์ปลายทางสำหรับทดสอบ' };
   }
-  return sendSms({ to, body: '✅ ทดสอบการตั้งค่า SMS สำเร็จ — ร้านค้าออนไลน์' });
+  return sendSms({ to, body: '✅ ทดสอบการตั้งค่า SMS สำเร็จ — ระบบสมาชิก' });
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +158,9 @@ function getConfigSummary() {
       provider,
       configured: c.configured,
       keyMasked: c.apiKey ? c.apiKey.slice(0, 6) + '…' : null,
+      hasKey: Boolean(c.apiKey),
+      hasSecret: Boolean(c.apiSecret),
+      secretMasked: c.apiSecret ? '••••' + c.apiSecret.slice(-4) : null,
       sender: c.sender || null,
       senderFull: c.sender || '', // Sender ไม่ใช่ secret — เอาไว้เติมกลับในช่องกรอก
       source: db.getSetting('tbs_api_key') ? 'admin' : 'env',
@@ -171,6 +174,8 @@ function getConfigSummary() {
     sidFull: c.sid || '',      // SID ไม่ใช่ secret — เอาไว้เติมกลับในช่องกรอก
     fromFull: c.from || '',    // เบอร์ผู้ส่งไม่ใช่ secret
     from: c.from || null,
+    hasToken: Boolean(c.authToken),
+    tokenMasked: c.authToken ? '••••' + c.authToken.slice(-4) : null,
     source: db.getSetting('twilio_account_sid') ? 'admin' : 'env',
   };
 }
@@ -183,9 +188,6 @@ function _resetClient() {
 }
 
 module.exports = {
-  getProvider,
-  getTwilioConfig,
-  getThaiBulkSmsConfig,
   getConfigSummary,
   sendSms,
   sendTestSms,

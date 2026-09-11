@@ -35,7 +35,7 @@
         ผู้ใช้งาน
       </a>
       <div class="side-label">เว็บไซต์</div>
-      <a class="side-link" href="/dashboard/pages" title="เปิดหน้าเหมือนผู้ใช้">
+      <a class="side-link" href="/settings/profile" title="เปิดหน้าเหมือนผู้ใช้">
         <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         เปิดหน้าเหมือนผู้ใช้
       </a>
@@ -44,7 +44,7 @@
           <div class="avatar" id="adminAvatar">A</div>
           <div>
             <div class="u-email" id="adminEmail">—</div>
-            <div class="u-role">แอดมิน</div>
+            <div class="u-role" id="adminRoleLabel">—</div>
           </div>
         </a>
         <a class="side-link" href="#" id="logoutBtn">
@@ -165,19 +165,28 @@
           <td class="mono">${l.purpose === 'password_reset' ? escapeHtml(l.contact) : mask(l.contact)}</td>
           <td>${PURPOSE_LABEL[l.purpose] || l.purpose}</td>
           <td><span class="pill ${STATUS_CLASS[l.status]}">${STATUS_LABEL[l.status]}</span></td>
-          <td class="mono">${l.created_at}</td>
+          <td class="mono">${fmtTime(l.created_at)}</td>
         </tr>`).join('');
     }
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
+    // แปลงเวลา (ISO UTC) → เวลาท้องถิ่น อ่านง่าย เช่น 07/09/2026 14:30
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      const pad = (n) => String(n).padStart(2, '0');
+      return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
 
     async function init() {
       try {
         const me = await api('/api/me');
-        if (me.user.role !== 'admin') { window.location.href = '/login.html'; return; }
+        if (me.user.role !== 'admin' && me.user.role !== 'owner') { window.location.href = '/login.html'; return; }
         document.getElementById('adminEmail').textContent = me.user.email;
+        document.getElementById('adminRoleLabel').textContent = me.user.role === 'owner' ? 'เจ้าของระบบ' : 'แอดมิน';
         document.getElementById('adminAvatar').textContent = me.user.email.charAt(0).toUpperCase();
         await Promise.all([loadStats(), loadRecent()]);
       } catch (err) {

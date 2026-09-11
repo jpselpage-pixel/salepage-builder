@@ -1,0 +1,202 @@
+/* ============================================================
+   shop.css — พื้นที่ร้านค้า (เจ้าของร้าน) และหน้าร้านสาธารณะ
+   ใช้ตัวแปร/คลาสพื้นฐานจาก style.css
+   ============================================================ */
+
+.shop-wrap { max-width: 1100px; margin: 0 auto; padding: 28px 20px 72px; }
+.shop-head { margin-bottom: 22px; }
+.shop-head h1 { font-size: 24px; font-weight: 800; letter-spacing: -0.3px; }
+.shop-head p { color: var(--muted); font-size: 13.5px; margin-top: 6px; line-height: 1.7; }
+.shop-head .shop-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+.shop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 860px) { .shop-grid { grid-template-columns: 1fr; } }
+
+@media (max-width: 560px) {
+  .shop-wrap { padding: 22px 14px 60px; }
+  .menu-item { flex-wrap: wrap; }
+  .menu-item img { width: 46px; height: 46px; }
+  .pub-hero { padding: 28px 16px; }
+  .pub-hero h1 { font-size: 22px; }
+  .pub-logo { width: 74px; height: 74px; }
+  .pub-menu img { width: 76px; height: 76px; }
+  .shop-form .row .field { min-width: 120px; }
+}
+
+.shop-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 22px;
+  margin-bottom: 18px;
+}
+.shop-card > h2 { font-size: 16px; font-weight: 800; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.shop-card > h2 .count { font-size: 12px; font-weight: 700; color: var(--muted); }
+
+.shop-form .field { margin-bottom: 14px; max-width: 520px; }
+.shop-form .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.shop-form .row .field { flex: 1; min-width: 160px; }
+
+.cat-item { border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; background: var(--surface-2); }
+.cat-item .cat-row { display: flex; align-items: center; gap: 8px; }
+.cat-item .cat-name { font-weight: 700; font-size: 14px; flex: 1; }
+.cat-item .sub { margin: 8px 0 0 18px; }
+.cat-item .sub .cat-row { padding: 6px 0; }
+.cat-item .cat-name small { color: var(--muted); font-weight: 500; }
+.cat-empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+
+.menu-item { display: flex; gap: 12px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; background: var(--surface-2); }
+.menu-item img { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; background: var(--border); flex-shrink: 0; }
+.menu-item .info { flex: 1; min-width: 0; }
+.menu-item .info .n { font-weight: 700; font-size: 14px; }
+.menu-item .info .m { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.menu-item .price { font-weight: 800; white-space: nowrap; }
+.menu-item.off { opacity: 0.55; }
+
+.opt-group { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; background: var(--surface-2); }
+.opt-group .g-head { display: flex; align-items: center; gap: 8px; }
+.opt-group .g-head .n { font-weight: 700; flex: 1; }
+.opt-group .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.opt-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; font-size: 12.5px; }
+.opt-chip button { border: none; background: none; color: var(--danger); cursor: pointer; font-size: 14px; line-height: 1; }
+
+.mini-input { padding: 8px 11px; font-size: 13px; font-family: var(--font); color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); outline: none; }
+.mini-btn { padding: 7px 12px; font-size: 12.5px; font-weight: 700; font-family: var(--font); border-radius: var(--radius-sm); border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); cursor: pointer; }
+.mini-btn:hover { background: var(--surface-hover); }
+.mini-btn.primary { background: var(--accent-gradient); border: none; color: #fff; }
+.mini-btn.danger { color: var(--danger); border-color: var(--danger-border); background: transparent; }
+
+.logo-preview { width: 84px; height: 84px; border-radius: 16px; object-fit: cover; background: var(--surface-2); border: 1px solid var(--border); }
+.pkg-card { max-width: 520px; }
+.pkg-price { font-size: 34px; font-weight: 800; letter-spacing: -1px; margin: 6px 0 12px; }
+.pkg-price small { font-size: 14px; color: var(--muted); font-weight: 600; }
+.pkg-list { list-style: none; margin: 0 0 20px; display: grid; gap: 9px; }
+.pkg-list li { display: flex; gap: 9px; align-items: center; font-size: 14px; }
+
+/* ---------- หน้าร้านสาธารณะ ---------- */
+.pub-hero { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; padding: 40px 24px; }
+.pub-hero-inner { max-width: 900px; margin: 0 auto; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+.pub-logo { width: 92px; height: 92px; border-radius: 20px; object-fit: cover; background: rgba(255,255,255,.2); flex-shrink: 0; }
+.pub-hero h1 { font-size: 26px; font-weight: 800; margin-bottom: 8px; }
+.pub-meta { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; font-size: 14px; opacity: .95; }
+.pub-meta a { color: #fff; text-decoration: underline; }
+.pub-body { max-width: 900px; margin: 0 auto; padding: 26px 20px 72px; }
+.pub-cat { margin-bottom: 28px; }
+.pub-cat > h2 { font-size: 19px; font-weight: 800; margin-bottom: 4px; }
+.pub-sub > h3 { font-size: 15px; font-weight: 700; color: var(--muted); margin: 16px 0 10px; }
+.pub-menu { display: flex; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.pub-menu img { width: 92px; height: 92px; border-radius: 12px; object-fit: cover; background: var(--surface-2); flex-shrink: 0; }
+.pub-menu .n { font-weight: 700; font-size: 15.5px; }
+.pub-menu .d { color: var(--muted); font-size: 13px; margin-top: 3px; line-height: 1.6; }
+.pub-menu .p { font-weight: 800; margin-top: 6px; }
+.pub-menu .opts { margin-top: 8px; font-size: 12.5px; color: var(--muted); display: grid; gap: 3px; }
+.pub-empty { color: var(--muted); text-align: center; padding: 40px 0; }
+
+/* ---------- โต๊ะ & QR ---------- */
+.table-card { display: flex; gap: 14px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; margin-bottom: 10px; background: var(--surface-2); }
+.table-qr { width: 108px; height: 108px; border-radius: 10px; background: #fff; border: 1px solid var(--border); flex-shrink: 0; }
+.table-info { flex: 1; min-width: 0; }
+.table-code { font-weight: 800; font-size: 16px; }
+.table-sub { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+.table-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+/* ---------- บิล ---------- */
+.bill-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; background: var(--surface-2); }
+.bill-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.bill-total { font-weight: 800; font-size: 17px; }
+.bill-items { margin-top: 10px; display: grid; gap: 5px; }
+.bill-item { display: flex; justify-content: space-between; gap: 12px; font-size: 13.5px; }
+.bill-item small { color: var(--muted); }
+.bill-actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- ตะกร้า (หน้าร้านลูกค้า) ---------- */
+.cart-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--surface); border-top: 1px solid var(--border); box-shadow: 0 -6px 20px rgba(0,0,0,.08); padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cart-info { font-size: 14px; color: var(--muted); }
+.cart-info strong { color: var(--text); font-size: 16px; }
+.order-tap { cursor: pointer; }
+.order-tap:hover { background: var(--surface-hover); border-radius: 10px; }
+
+/* ---------- Modal + toast (ใช้ในหน้าร้านค้า) ---------- */
+.modal-overlay { position: fixed; inset: 0; background: rgba(16,24,40,.45); display: none; align-items: center; justify-content: center; padding: 18px; z-index: 60; }
+.modal-overlay.show { display: flex; }
+.modal { width: 100%; max-width: 460px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 22px; max-height: 90vh; overflow: auto; }
+.modal h3 { font-size: 18px; font-weight: 800; }
+.modal .sub { color: var(--muted); font-size: 13px; margin: 4px 0 8px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--text); color: var(--surface); padding: 11px 18px; border-radius: 12px; font-size: 13.5px; box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none; transition: opacity .2s ease, transform .2s ease; z-index: 70; max-width: 90vw; text-align: center; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 560px) {
+  .table-card { flex-wrap: wrap; }
+  .table-qr { width: 92px; height: 92px; }
+  .cart-bar { padding: 12px 14px; }
+  .cart-info { font-size: 13px; }
+}
+
+/* ---------- สถานะรายจาน + หน้าครัว ---------- */
+.st-badge { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; margin-left: 6px; white-space: nowrap; }
+.st-pending { background: var(--warning-bg); color: var(--warning); }
+.st-cooking { background: var(--info-bg); color: var(--info); }
+.st-done { background: var(--success-bg); color: var(--success); }
+
+.kitchen-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.k-bill { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; background: var(--surface); }
+.k-bill-head { background: var(--surface-2); padding: 10px 14px; font-weight: 800; font-size: 14.5px; border-bottom: 1px solid var(--border); }
+.k-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.k-item:last-child { border-bottom: none; }
+.k-item.k-done { opacity: 0.55; }
+.k-qty { font-weight: 800; font-size: 16px; min-width: 34px; }
+.k-info { flex: 1; min-width: 0; }
+.k-name { font-weight: 700; font-size: 14.5px; }
+.k-opts { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.k-time { color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.k-actions { flex-shrink: 0; }
+@media (max-width: 560px) { .k-item { flex-wrap: wrap; } .k-actions { width: 100%; } }
+button.cart-info { background: none; border: none; padding: 0; cursor: pointer; font-family: var(--font); text-align: left; color: var(--muted); }
+button.cart-info strong { color: var(--text); }
+.k-img { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; background: var(--surface-2); flex-shrink: 0; }
+.k-img-empty { background: var(--border); }
+.k-ctx { color: var(--accent); font-size: 12px; font-weight: 600; margin-top: 2px; }
+.st-cancelled { background: var(--danger-bg); color: var(--danger); }
+.k-timer { font-variant-numeric: tabular-nums; font-weight: 800; letter-spacing: .3px; }
+.k-timer.t-ok { color: var(--success); }
+.k-timer.t-warn { color: var(--warning); }
+.k-timer.t-danger { color: var(--danger); }
+.k-timer.t-done { color: var(--muted); }
+
+/* ตัวเลือกที่เลือกไว้ของเมนูนั้น (แสดงใต้ชื่อเมนู) */
+.menu-chosen { color: var(--accent); font-size: 12.5px; font-weight: 600; margin-top: 2px; }
+
+/* ป้าย "รายการทั้งหมด" ในส่วนหัวร้าน (กะทัดรัด) */
+.bill-pill { margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; border: 1px solid rgba(255,255,255,.45); background: rgba(255,255,255,.16); color: #fff; font-family: var(--font); font-size: 13px; font-weight: 700; cursor: pointer; transition: background-color .15s ease; }
+.bill-pill:hover { background: rgba(255,255,255,.28); }
+.bill-pill:active { transform: scale(0.98); }
+
+/* ---------- แถบหมวดหมู่ใหญ่ (เลื่อนซ้าย-ขวา, ติดบน) ---------- */
+.cat-nav { position: sticky; top: 0; z-index: 45; display: flex; gap: 8px; overflow-x: auto; white-space: nowrap; padding: 10px 64px 10px 0; margin: 0 0 14px; background: var(--bg); border-bottom: 1px solid var(--border); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.cat-nav::-webkit-scrollbar { display: none; }
+.cat-nav button { flex: 0 0 auto; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-family: var(--font); font-size: 13px; font-weight: 700; padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: background-color .15s ease, color .15s ease; }
+.cat-nav button.active { background: var(--accent-gradient); color: #fff; border-color: transparent; }
+.pub-cat { scroll-margin-top: 64px; }
+
+/* รายการในโมดัลบิล: ช่องจำนวน + ปุ่มเพิ่มเข้าตะกร้า */
+.bill-item { flex-wrap: wrap; }
+.bill-right { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.qty-ctl { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--border); border-radius: 999px; padding: 2px 6px; }
+.qty-ctl button { border: none; background: none; font-size: 16px; font-weight: 800; line-height: 1; cursor: pointer; color: var(--accent); padding: 2px 7px; }
+.qty-ctl .q { min-width: 20px; text-align: center; font-weight: 700; font-size: 13.5px; }
+
+/* ช่องจำนวน + ปุ่มเพิ่มตะกร้า ต่อเมนูในหน้ารายการ */
+.pub-menu { align-items: center; }
+.menu-add { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; flex-shrink: 0; }
+.menu-add .mini-btn { white-space: nowrap; }
+@media (max-width: 560px) { .menu-add { align-items: stretch; } .menu-add .mini-btn { width: 100%; } }
+
+/* สวิตช์เปิด/ปิดการสั่งของเมนู */
+.sw { position: relative; display: inline-block; width: 42px; height: 24px; flex-shrink: 0; }
+.sw input { opacity: 0; width: 0; height: 0; }
+.sw .sw-slider { position: absolute; inset: 0; background: var(--border-strong); border-radius: 999px; cursor: pointer; transition: background-color .2s ease; }
+.sw .sw-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s ease; box-shadow: var(--shadow-sm); }
+.sw input:checked + .sw-slider { background: var(--accent-gradient); }
+.sw input:checked + .sw-slider::before { transform: translateX(18px); }

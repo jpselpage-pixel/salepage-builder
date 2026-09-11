@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>สั่งอาหาร | ระบบสมาชิก</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/shop.css">
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <div id="app"><div class="pub-empty" style="padding-top:80px;">กำลังโหลดเมนู...</div></div>
+
+  <div class="cart-bar" id="orderBar" style="display:none;">
+    <div class="cart-info"><span id="orderCount">0</span> รายการ · <strong id="orderTotal">฿0</strong></div>
+    <button class="btn btn-primary" id="orderBtn" type="button">สั่งออเดอร์</button>
+  </div>
+
+  <!-- Modal รายการทั้งหมด (บิลของโต๊ะ) -->
+  <div class="modal-overlay" id="billModal">
+    <div class="modal">
+      <h3>รายการทั้งหมด <span id="billModalNo" style="color:var(--muted);font-size:13px;font-weight:600;"></span></h3>
+      <div id="billModalList" style="max-height:55vh;overflow:auto;margin:8px 0;"></div>
+      <div class="bill-head" style="border-top:1px solid var(--border);padding-top:10px;">
+        <span style="color:var(--muted);font-size:13px;">ยอดรวมโต๊ะ</span><span class="bill-total" id="billModalTotal">฿0</span>
+      </div>
+      <div class="modal-actions">
+        <button class="mini-btn" id="billModalClose" type="button">ปิด</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal เลือกตัวเลือก -->
+  <div class="modal-overlay" id="itemModal">
+    <div class="modal">
+      <h3 id="modalTitle">เมนู</h3>
+      <p class="sub" id="modalPrice">฿0</p>
+      <div id="modalGroups" style="max-height:46vh;overflow:auto;margin:6px 0 4px;"></div>
+      <div class="field" style="display:flex;align-items:center;gap:10px;margin-top:10px;">
+        <span style="font-size:13.5px;font-weight:600;">จำนวน</span>
+        <button class="mini-btn" id="qtyMinus" type="button">−</button>
+        <span id="qtyValue" style="min-width:28px;text-align:center;font-weight:700;">1</span>
+        <button class="mini-btn" id="qtyPlus" type="button">+</button>
+      </div>
+      <div class="error-msg" id="modalErr"></div>
+      <div class="modal-actions">
+        <button class="mini-btn" id="modalCancel" type="button">ยกเลิก</button>
+        <button class="mini-btn primary" id="modalAdd" type="button">ตกลง</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const money = (n) => '฿' + Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const token = (location.pathname.split('/').filter(Boolean).pop() || '').trim();
+    const f2 = (n) => Math.round(n * 100) / 100;
+    const billNoFmt = (n) => (n ? '#' + String(n).padStart(4, '0') : '—');
+    const ST_LABEL = { pending: 'รอทำ', cooking: 'กำลังทำ', done: 'เสร็จแล้ว', cancelled: 'ยกเลิก' };
+    const ST_CLASS = { pending: 'st-pending', cooking: 'st-cooking', done: 'st-done', cancelled: 'st-cancelled' };
+
+    let S = null;         // ข้อมูลจากเซิร์ฟเวอร์
+    let sel = {};         // เมนูที่เลือกระบุจำนวน: menuId -> { menuId, name, unitPrice, quantity, optionItemIds, optionsText }
+    let editing = null;   // เมนูที่กำลังตั้งค่าในโมดัล
+    let qty = 1;
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      let data;
+      try { data = await res.json(); } catch { const e = new Error('เซิร์ฟเวอร์ตอบสนองไม่ถูกต้อง (HTTP ' + res.status + ')'); e.status = res.status; throw e; }
+      if (!data.ok) { const e = new Error(data.message || 'เกิดข้อผิดพลาด'); e.status = res.status; throw e; }
+      return data;
+    }
+
+    function groupsForMenu(menuId) {
+      const gids = S.menuGroups.filter((g) => g.menu_id === menuId).map((g) => g.group_id);
+      return gids.map((id) => S.optionGroups.find((g) => g.id === id)).filter(Boolean)
+        .map((g) => ({ group: g, items: S.optionItems.filter((i) => i.group_id === g.id) }));
+    }
+
+    // ---------- วาดหน้า ----------
+    function render() {
+      const shop = S.shop;
+      const cats = S.categories || [];
+      const menus = (S.menus || []).filter((m) => Number(m.available) === 1);
+      const billItems = (S.bill && S.bill.items) || [];
+      const billTotal = (S.bill && S.bill.total) || 0;
+      const orderedCount = billItems.filter((it) => (it.status || 'pending') !== 'cancelled').reduce((s, it) => s + it.quantity, 0);
+
+      const menuCard = (m) => {
+        const cur = sel[m.id] ? sel[m.id].quantity : 0;
+        const chosen = sel[m.id] && sel[m.id].optionsText ? `<div class="menu-chosen">${esc(sel[m.id].optionsText)}</div>` : '';
+        return `
+        <div class="pub-menu order-tap" data-menu="${m.id}" role="button">
+          ${m.image_url ? `<img src="${esc(m.image_url)}" alt="${esc(m.name)}">` : '<img alt="">'}
+          <div style="flex:1;min-width:0;">
+            <div class="n">${esc(m.name)}</div>
+            ${m.description ? `<div class="d">${esc(m.description)}</div>` : ''}
+            ${chosen}
+            <div class="p">${money(m.price)}</div>
+          </div>
+          <div class="menu-add">
+            <span class="qty-ctl"><button type="button" data-dec="${m.id}">−</button><span class="q" data-q="${m.id}">${cur}</span><button type="button" data-inc="${m.id}">+</button></span>
+          </div>
+        </div>`;
+      };
+
+      const tops = cats.filter((c) => !c.parent_id);
+      const used = new Set();
+      const menusOf = (catId) => menus.filter((m) => m.category_id === catId).map(menuCard).join('');
+
+      let menuHtml = '';
+      const catNav = [];
+      for (const cat of tops) {
+        used.add(cat.id);
+        const subs = cats.filter((c) => c.parent_id === cat.id);
+        const own = menusOf(cat.id);
+        const subHtml = subs.map((s) => { used.add(s.id); const inner = menusOf(s.id); return inner ? `<div class="pub-sub"><h3>${esc(s.name)}</h3>${inner}</div>` : ''; }).join('');
+        if (own || subHtml) {
+          menuHtml += `<div class="pub-cat" id="cat-${cat.id}"><h2>${esc(cat.name)}</h2>${own}${subHtml}</div>`;
+          catNav.push({ id: cat.id, name: cat.name });
+        }
+      }
+      const others = menus.filter((m) => !m.category_id || !used.has(m.category_id)).map(menuCard).join('');
+      if (others) menuHtml += `<div class="pub-cat" id="cat-others"><h2>เมนูอื่น ๆ</h2>${others}</div>`;
+      if (!menuHtml) menuHtml = '<div class="pub-empty">ร้านนี้ยังไม่มีเมนู</div>';
+
+      const catNavHtml = catNav.length > 1
+        ? `<div class="cat-nav" id="catNav">${catNav.map((c) => `<button type="button" data-cat="${c.id}">${esc(c.name)}</button>`).join('')}</div>`
+        : '';
+
+      document.getElementById('app').innerHTML = `
+        <header class="pub-hero">
+          <div class="pub-hero-inner">
+            ${shop.logo_url ? `<img class="pub-logo" src="${esc(shop.logo_url)}" alt="${esc(shop.name)}">` : '<div class="pub-logo"></div>'}
+            <div style="flex:1;min-width:200px;">
+              <h1>${esc(shop.name)}</h1>
+              <div class="pub-meta"><strong>โต๊ะ ${esc(S.table.code)}</strong> · บิล <strong>${billNoFmt(S.bill.bill_no)}</strong>${shop.phone ? ' · <a href="tel:' + esc(shop.phone) + '">📞 ' + esc(shop.phone) + '</a>' : ''}${shop.line_url ? ' · <a href="' + esc(shop.line_url) + '" target="_blank" rel="noopener">💬 LINE</a>' : ''}</div>
+              ${billItems.length ? `<button class="bill-pill" id="billBtn" type="button">🧾 รายการทั้งหมด (${orderedCount} รายการ) · ${money(billTotal)}</button>` : ''}
+            </div>
+          </div>
+        </header>
+        <main class="pub-body">
+          ${catNavHtml}
+          <div class="shop-card">
+            <h2>เมนู — เลือกจำนวนแล้วกด “สั่งออเดอร์”</h2>
+            ${menuHtml}
+          </div>
+        </main>`;
+
+      document.querySelectorAll('.order-tap').forEach((el) => el.addEventListener('click', () => openItem(Number(el.dataset.menu))));
+      document.querySelectorAll('[data-cat]').forEach((b) => b.addEventListener('click', () => {
+        const el = document.getElementById('cat-' + b.dataset.cat);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }));
+      document.querySelectorAll('[data-inc]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); incQty(Number(b.dataset.inc)); }));
+      document.querySelectorAll('[data-dec]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); decQty(Number(b.dataset.dec)); }));
+      const billBtn = document.getElementById('billBtn');
+      if (billBtn) billBtn.addEventListener('click', openBill);
+      renderOrderBar();
+      renderBill();
+      document.title = shop.name + ' · โต๊ะ ' + S.table.code;
+    }
+
+    function setRowQty(id, n) {
+      const el = document.querySelector('[data-q="' + id + '"]');
+      if (el) el.textContent = n;
+    }
+
+    function incQty(id) {
+      const menu = S.menus.find((x) => x.id === id);
+      if (!menu) return;
+      // เมนูที่มีกลุ่มตัวเลือก และยังไม่เคยเลือก → เปิดหน้าต่างเลือกตัวเลือกอัตโนมัติเมื่อเริ่มกด +
+      if (groupsForMenu(id).length > 0 && !sel[id]) { openItem(id, 1); return; }
+      if (!sel[id]) sel[id] = { menuId: id, name: menu.name, unitPrice: f2(Number(menu.price)), quantity: 0, optionItemIds: [], optionsText: '' };
+      sel[id].quantity = Math.min(99, sel[id].quantity + 1);
+      setRowQty(id, sel[id].quantity);
+      renderOrderBar();
+    }
+
+    function decQty(id) {
+      if (!sel[id]) return;
+      sel[id].quantity = Math.max(0, sel[id].quantity - 1);
+      if (sel[id].quantity === 0) delete sel[id];
+      setRowQty(id, sel[id] ? sel[id].quantity : 0);
+      renderOrderBar();
+    }
+
+    function renderOrderBar() {
+      const entries = Object.values(sel).filter((x) => x.quantity > 0);
+      const count = entries.reduce((s, x) => s + x.quantity, 0);
+      const total = entries.reduce((s, x) => s + x.quantity * x.unitPrice, 0);
+      const bar = document.getElementById('orderBar');
+      document.getElementById('orderCount').textContent = count;
+      document.getElementById('orderTotal').textContent = money(total);
+      bar.style.display = count ? '' : 'none';
+      document.getElementById('orderBtn').disabled = !count;
+    }
+
+    // ---------- โมดัลเลือกตัวเลือก ----------
+    const itemModal = document.getElementById('itemModal');
+
+    function openItem(menuId, initQty) {
+      const menu = S.menus.find((m) => m.id === menuId);
+      if (!menu) return;
+      editing = menu;
+      const cur = sel[menuId];
+      qty = Math.max(1, Math.min(99, Number(initQty) || (cur ? cur.quantity : 1) || 1));
+      document.getElementById('modalTitle').textContent = menu.name;
+      document.getElementById('modalPrice').textContent = money(menu.price);
+      document.getElementById('qtyValue').textContent = qty;
+      document.getElementById('modalErr').style.display = 'none';
+
+      const groups = groupsForMenu(menuId);
+      const box = document.getElementById('modalGroups');
+      if (!groups.length) { box.innerHTML = '<div style="color:var(--muted);font-size:13px;">เมนูนี้ไม่มีตัวเลือก</div>'; }
+      else {
+        box.innerHTML = groups.map(({ group, items }) => `
+          <div class="opt-group" style="margin:10px 0;">
+            <div class="g-head"><span class="n">${esc(group.name)} <small style="color:var(--muted);font-weight:500;">(${group.required ? 'บังคับ' : 'ไม่บังคับ'}${group.multi ? ' · เลือกได้หลายอย่าง' : ' · เลือก 1'})</small></span></div>
+            <div style="display:grid;gap:6px;margin-top:8px;">
+              ${items.map((i) => `<label style="display:flex;gap:8px;align-items:center;font-size:14px;">
+                <input type="${group.multi ? 'checkbox' : 'radio'}" name="g${group.id}" value="${i.id}" data-group="${group.id}">
+                <span>${esc(i.name)}${Number(i.price_delta) ? ' <small style="color:var(--muted);">+' + money(i.price_delta).replace('฿', '') + '฿</small>' : ''}</span>
+              </label>`).join('')}
+            </div>
+          </div>`).join('');
+        // เติมตัวเลือกเดิมที่เคยเลือกไว้
+        if (cur && Array.isArray(cur.optionItemIds)) {
+          cur.optionItemIds.forEach((id) => { const el = box.querySelector('input[value="' + id + '"]'); if (el) el.checked = true; });
+        }
+      }
+      itemModal.classList.add('show');
+    }
+    function closeItem() { itemModal.classList.remove('show'); editing = null; }
+
+    document.getElementById('qtyMinus').addEventListener('click', () => { qty = Math.max(1, qty - 1); document.getElementById('qtyValue').textContent = qty; });
+    document.getElementById('qtyPlus').addEventListener('click', () => { qty = Math.min(99, qty + 1); document.getElementById('qtyValue').textContent = qty; });
+    document.getElementById('modalCancel').addEventListener('click', closeItem);
+    itemModal.addEventListener('click', (e) => { if (e.target === itemModal) closeItem(); });
+
+    document.getElementById('modalAdd').addEventListener('click', () => {
+      if (!editing) return;
+      const errEl = document.getElementById('modalErr'); errEl.style.display = 'none';
+      const groups = groupsForMenu(editing.id);
+      const chosen = [];
+      let extra = 0;
+      const chosenIds = [];
+      for (const { group } of groups) {
+        const picked = Array.from(document.querySelectorAll('input[data-group="' + group.id + '"]:checked')).map((el) => Number(el.value));
+        if (group.required && picked.length === 0) { errEl.textContent = 'กรุณาเลือก "' + group.name + '"'; errEl.style.display = 'block'; return; }
+        if (!group.multi && picked.length > 1) { errEl.textContent = '"' + group.name + '" เลือกได้อย่างเดียว'; errEl.style.display = 'block'; return; }
+        picked.forEach((id) => {
+          const it = S.optionItems.find((x) => x.id === id);
+          if (it) { chosen.push(it.name); chosenIds.push(it.id); extra += Number(it.price_delta) || 0; }
+        });
+      }
+      sel[editing.id] = {
+        menuId: editing.id, name: editing.name,
+        unitPrice: f2(Number(editing.price) + extra),
+        quantity: qty, optionItemIds: chosenIds, optionsText: chosen.join(', '),
+      };
+      const id = editing.id;
+      const name = editing.name;
+      const optionsText = chosen.join(', ');
+      closeItem();
+      // อัปเดตแถวนั้นโดยไม่ต้องวาดใหม่ทั้งหน้า
+      setRowQty(id, qty);
+      const card = document.querySelector('.order-tap[data-menu="' + id + '"]');
+      if (card) {
+        let c = card.querySelector('.menu-chosen');
+        if (optionsText) { if (!c) { c = document.createElement('div'); c.className = 'menu-chosen'; card.querySelector('.n').after(c); } c.textContent = optionsText; }
+        else if (c) { c.remove(); }
+      }
+      renderOrderBar();
+    });
+
+    // ---------- ส่งออเดอร์ ----------
+    document.getElementById('orderBtn').addEventListener('click', async (e) => {
+      const entries = Object.values(sel).filter((x) => x.quantity > 0);
+      if (!entries.length) return;
+      const btn = e.target; btn.disabled = true;
+      try {
+        const payload = { items: entries.map((c) => ({ menuId: c.menuId, quantity: c.quantity, optionItemIds: c.optionItemIds })) };
+        const data = await api('/api/public/order/' + encodeURIComponent(token) + '/items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        sel = {};
+        S.bill = data.bill;
+        render();
+        alert('ส่งออเดอร์แล้ว ✓');
+      } catch (err) {
+        alert(err.message || 'ส่งออเดอร์ไม่สำเร็จ');
+        btn.disabled = false;
+      }
+    });
+
+    // ---------- โมดัล "รายการทั้งหมด" (บิลของโต๊ะ) ----------
+    const billModal = document.getElementById('billModal');
+    function renderBill() {
+      const box = document.getElementById('billModalList');
+      if (!box) return;
+      const items = (S && S.bill && S.bill.items) || [];
+      const noEl = document.getElementById('billModalNo');
+      if (noEl) noEl.textContent = (S && S.bill && S.bill.bill_no) ? '(บิล ' + billNoFmt(S.bill.bill_no) + ')' : '';
+      const totalEl = document.getElementById('billModalTotal');
+      if (totalEl) totalEl.textContent = money((S && S.bill && S.bill.total) || 0);
+      if (!items.length) { box.innerHTML = '<div style="color:var(--muted);font-size:13px;">ยังไม่มีรายการที่สั่ง</div>'; return; }
+      box.innerHTML = items.map((it) => {
+        let opts = []; try { opts = it.options_json ? JSON.parse(it.options_json) : []; } catch (e) {}
+        const st = it.status || 'pending';
+        const cancelled = st === 'cancelled';
+        const cancelBtn = st === 'pending' ? '<button class="mini-btn danger" data-cancel="' + it.id + '" type="button">ยกเลิก</button>' : '';
+        const reason = cancelled && it.cancel_reason ? ' <small>(' + esc(it.cancel_reason) + ')</small>' : '';
+        return `<div class="bill-item"${cancelled ? ' style="opacity:.65;"' : ''}>
+          <span>${it.quantity} × <span${cancelled ? ' style="text-decoration:line-through;"' : ''}>${esc(it.menu_name)}</span>${opts.length ? ' <small>(' + esc(opts.join(', ')) + ')</small>' : ''} <span class="st-badge ${ST_CLASS[st]}">${ST_LABEL[st]}</span>${reason}</span>
+          <span class="bill-right">${cancelled ? '<span style="color:var(--muted);">ยกเลิก</span>' : '<span>' + money(it.line_total) + '</span>'}${cancelBtn}</span>
+        </div>`;
+      }).join('');
+      box.querySelectorAll('[data-cancel]').forEach((b) => b.addEventListener('click', async () => {
+        if (!confirm('ยกเลิกรายการนี้?')) return;
+        b.disabled = true;
+        try {
+          const data = await api('/api/public/order/' + encodeURIComponent(token) + '/items/' + b.dataset.cancel + '/cancel', { method: 'POST' });
+          S.bill = data.bill;
+          render();
+        } catch (err) { alert(err.message); b.disabled = false; }
+      }));
+    }
+    function openBill() { renderBill(); billModal.classList.add('show'); }
+    function closeBill() { billModal.classList.remove('show'); }
+    document.getElementById('billModalClose').addEventListener('click', closeBill);
+    billModal.addEventListener('click', (e) => { if (e.target === billModal) closeBill(); });
+
+    // ไฮไลต์หมวดที่กำลังดูอยู่ (scroll-spy)
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('catNav');
+      if (!nav) return;
+      const btns = Array.from(nav.querySelectorAll('[data-cat]'));
+      let current = null;
+      btns.forEach((b) => {
+        const el = document.getElementById('cat-' + b.dataset.cat);
+        if (el && el.getBoundingClientRect().top <= 90) current = b.dataset.cat;
+      });
+      btns.forEach((b) => b.classList.toggle('active', b.dataset.cat === current));
+    }, { passive: true });
+
+    // ---------- โหลด ----------
+    async function load() {
+      try {
+        S = await api('/api/public/order/' + encodeURIComponent(token));
+        sel = {};
+        render();
+      } catch (err) {
+        document.getElementById('app').innerHTML = '<div class="pub-empty" style="padding-top:80px;">' + esc(err.message || 'ไม่พบโต๊ะนี้') + '</div>';
+      }
+    }
+    load();
+  </script>
+</body>
+</html>

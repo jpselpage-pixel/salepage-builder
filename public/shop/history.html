@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประวัติออเดอร์ | ระบบสมาชิก</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/shop.css">
+  <script src="/js/theme.js"></script>
+  <style>
+    .hist-filter { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+    .hist-filter label { font-size: 13px; color: var(--muted); font-weight: 600; }
+    details.bill-card { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; }
+    details.bill-card > summary { list-style: none; cursor: pointer; padding: 14px; display: flex; align-items: center; gap: 12px; }
+    details.bill-card > summary::-webkit-details-marker { display: none; }
+    details.bill-card > summary::after { content: '▾'; margin-left: auto; color: var(--muted); transition: transform .15s ease; }
+    details.bill-card[open] > summary::after { transform: rotate(180deg); }
+    .hist-sub { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+    .hist-items { padding: 0 14px 14px; border-top: 1px solid var(--border); margin-top: 2px; padding-top: 12px; }
+  </style>
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="brand" href="/shop">
+      <div class="brand-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <span class="brand-name" id="shopName">ร้านของฉัน</span>
+    </a>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="theme-toggle" type="button" aria-label="สลับธีม" style="position:static;">
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" style="display:none"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4l1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <a class="btn btn-outline btn-small" href="/shop/orders.html">สั่งอาหาร</a>
+      <a class="btn btn-outline btn-small" href="/shop/kitchen.html">ครัว</a>
+      <a class="btn btn-outline btn-small" href="#" id="logoutBtn">ออกจากระบบ</a>
+    </div>
+  </nav>
+
+  <div class="shop-wrap">
+    <div class="shop-head">
+      <h1>ประวัติออเดอร์</h1>
+      <p>ดูย้อนหลังว่าบิลที่ปิดไปแล้วแต่ละโต๊ะมีอะไรบ้าง — กดที่บิลเพื่อดูรายละเอียดเป็นชุด ๆ</p>
+    </div>
+
+    <div class="hist-filter">
+      <label for="fTable">โต๊ะ</label>
+      <select class="mini-input" id="fTable"><option value="">ทุกโต๊ะ</option></select>
+      <label for="fLimit">จำนวนบิลล่าสุด</label>
+      <select class="mini-input" id="fLimit">
+        <option value="50">50</option>
+        <option value="100">100</option>
+        <option value="200">200</option>
+      </select>
+      <button class="mini-btn" id="exportBtn" type="button">ออกรายการล่าสุด (CSV)</button>
+    </div>
+
+    <div id="histList"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const money = (n) => '฿' + Number(n || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const billNoFmt = (n) => (n ? '#' + String(n).padStart(4, '0') : '—');
+    let toastTimer = null;
+    let lastOrders = [];
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      let data; try { data = await res.json(); } catch { const e = new Error('HTTP ' + res.status); e.status = res.status; throw e; }
+      if (!data.ok) { const e = new Error(data.message || 'เกิดข้อผิดพลาด'); e.status = res.status; throw e; }
+      return data;
+    }
+    function toast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2500); }
+    const dt = (iso) => { if (!iso) return '—'; const d = new Date(iso); if (isNaN(d)) return iso; const p = (n) => String(n).padStart(2, '0'); return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); };
+
+    async function loadTables() {
+      try {
+        const data = await api('/api/shop/tables');
+        const sel = document.getElementById('fTable');
+        const cur = sel.value;
+        sel.innerHTML = '<option value="">ทุกโต๊ะ</option>' + (data.tables || []).map((t) => `<option value="${t.id}">โต๊ะ ${esc(t.code)}</option>`).join('');
+        if (cur) sel.value = cur;
+      } catch (e) { /* ignore */ }
+    }
+
+    async function loadHistory() {
+      const tableId = document.getElementById('fTable').value;
+      const limit = document.getElementById('fLimit').value;
+      const qs = new URLSearchParams();
+      if (tableId) qs.set('tableId', tableId);
+      if (limit) qs.set('limit', limit);
+      const data = await api('/api/shop/orders/history' + (qs.toString() ? '?' + qs.toString() : ''));
+      lastOrders = data.orders || [];
+      const box = document.getElementById('histList');
+      if (!lastOrders.length) { box.innerHTML = '<div class="cat-empty">ยังไม่มีประวัติ (ยังไม่มีการเช็คบิล)</div>'; return; }
+      box.innerHTML = lastOrders.map((o) => `
+        <details class="bill-card">
+          <summary>
+            <div style="flex:1;min-width:0;">
+              <div class="table-code">บิล ${billNoFmt(o.bill_no)} · โต๊ะ ${esc(o.table_code)}</div>
+              <div class="hist-sub">เปิด ${dt(o.opened_at)} · ปิด ${dt(o.closed_at)} · ${o.item_count} รายการ</div>
+            </div>
+            <div class="bill-total">${money(o.total)}</div>
+          </summary>
+          <div class="hist-items">
+            ${o.items.length ? o.items.map((it) => {
+              let opts = []; try { opts = it.options_json ? JSON.parse(it.options_json) : []; } catch (e) {}
+              const cancelled = it.status === 'cancelled';
+              return `<div class="bill-item"${cancelled ? ' style="opacity:.6;"' : ''}>
+                <span>${it.quantity} × ${cancelled ? '<span style="text-decoration:line-through;">' + esc(it.menu_name) + '</span>' : esc(it.menu_name)}${opts.length ? ' <small>(' + esc(opts.join(', ')) + ')</small>' : ''}${cancelled ? ' <span class="st-badge st-cancelled">ยกเลิก' + (it.cancel_reason ? ': ' + esc(it.cancel_reason) : '') + '</span>' : ''}</span>
+                <span>${cancelled ? '—' : money(it.line_total)}</span>
+              </div>`;
+            }).join('') : '<div style="color:var(--muted);font-size:13px;">ไม่มีรายการ</div>'}
+          </div>
+        </details>`).join('');
+    }
+
+    document.getElementById('fTable').addEventListener('change', () => loadHistory().catch((e) => alert(e.message)));
+    document.getElementById('fLimit').addEventListener('change', () => loadHistory().catch((e) => alert(e.message)));
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      if (!lastOrders.length) { toast('ไม่มีข้อมูลให้ออก'); return; }
+      const rows = [['บิล', 'โต๊ะ', 'เปิด', 'ปิด', 'จำนวน', 'ยอดรวม', 'รายการ']];
+      lastOrders.forEach((o) => {
+        const names = o.items.map((it) => `${it.quantity}x ${it.menu_name}${(it.status === 'cancelled') ? '(ยกเลิก)' : ''}`).join(' | ');
+        rows.push([billNoFmt(o.bill_no), o.table_code, o.opened_at || '', o.closed_at || '', o.item_count, Number(o.total), names]);
+      });
+      const csv = '\ufeff' + rows.map((r) => r.map((c) => '"' + String(c == null ? '' : c).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'order-history.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+
+    (async () => {
+      try {
+        const me = await api('/api/shop/me');
+        if (!me.shop) { window.location.href = '/shop/setup.html'; return; }
+        document.getElementById('shopName').textContent = me.shop.name || 'ร้านของฉัน';
+        await loadTables();
+        await loadHistory();
+      } catch (e) {
+        if (e.status === 403) { window.location.href = '/shop'; return; }
+        document.getElementById('histList').innerHTML = '<div class="cat-empty">' + esc(e.message) + '</div>';
+      }
+    })();
+  </script>
+</body>
+</html>

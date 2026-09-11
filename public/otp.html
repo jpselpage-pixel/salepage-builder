@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ยืนยันเบอร์โทร | ร้านค้าออนไลน์</title>
+  <title>ยืนยันเบอร์โทร | ระบบสมาชิก</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="js/theme.js"></script>
 </head>
@@ -23,7 +23,7 @@
             <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <span class="brand-name">ร้านค้าออนไลน์</span>
+        <span class="brand-name">ระบบสมาชิก</span>
       </div>
 
       <div class="brand-content">
@@ -45,7 +45,7 @@
         </div>
       </div>
 
-      <div class="brand-footer">© 2026 ร้านค้าออนไลน์ — สงวนลิขสิทธิ์</div>
+      <div class="brand-footer">© 2026 ระบบสมาชิก — สงวนลิขสิทธิ์</div>
     </aside>
 
     <!-- พาเนลฟอร์ม (ขวา) -->
@@ -69,7 +69,7 @@
                 <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <span class="brand-name">ร้านค้าออนไลน์</span>
+            <span class="brand-name">ระบบสมาชิก</span>
           </div>
           <h1>ยืนยันเบอร์โทร</h1>
           <p>เราส่งรหัสยืนยัน (OTP) ไปยังเบอร์<br><strong id="phoneLabel" style="font-weight:700;">—</strong></p>
@@ -199,7 +199,7 @@
         if (data.dev && data.dev.devVerifyLink) {
           successBox.innerHTML += '<br><svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="vertical-align:-2px;margin-right:6px;"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M22 7l-10 6L2 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> <strong>ลิงก์ยืนยันอีเมล (โหมด dev):</strong><br><a href="' + data.dev.devVerifyLink + '" target="_blank">' + data.dev.devVerifyLink + '</a>';
         }
-        setTimeout(() => { window.location.href = data.redirect || '/dashboard/pages'; }, 2500);
+        setTimeout(() => { window.location.href = data.redirect || '/settings/profile'; }, 2500);
       } catch {
         showError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
         verifyBtn.disabled = false;
@@ -214,6 +214,11 @@
     let remaining = 0;
     let timerId = null; // ตัวนับเดียว — เคลียร์ตัวเก่าก่อนสร้างใหม่กันเลขซ้อน
 
+    // เก็บ pending ล่าสุดลง sessionStorage (รหัส dev + เวลาปลุกใช้ส่งรหัสใหม่)
+    function savePending() {
+      try { sessionStorage.setItem('pendingSignup', JSON.stringify(pending)); } catch { /* ignore */ }
+    }
+
     function tickTimer() {
       clearTimeout(timerId);
       if (remaining <= 0) {
@@ -227,9 +232,29 @@
       timerId = setTimeout(tickTimer, 1000);
     }
 
+    // เริ่มนับถอยหลังใหม่ (ใช้หลังส่งรหัสใหม่สำเร็จ) — จำเวลาปลุกไว้ให้รีเฟรชแล้วนับต่อ
     function startResendTimer() {
       clearTimeout(timerId);
+      pending.resendAvailableAt = Date.now() + RESEND_COOLDOWN * 1000;
+      savePending();
       remaining = RESEND_COOLDOWN;
+      tickTimer();
+    }
+
+    // เซิร์ฟเวอร์บอกว่าต้องรออีก N วินาที — ตั้งเวลาปลุกให้ตรงกับเซิร์ฟเวอร์
+    function setResendWait(seconds) {
+      clearTimeout(timerId);
+      pending.resendAvailableAt = Date.now() + Number(seconds) * 1000;
+      savePending();
+      remaining = Number(seconds);
+      tickTimer();
+    }
+
+    // ตอนเปิด/รีเฟรช: นับต่อจากเวลาที่เหลืออยู่ (ไม่เริ่ม 60 ใหม่ และไม่ส่งรหัสซ้ำ)
+    function resumeResendCooldown() {
+      clearTimeout(timerId);
+      const at = Number(pending && pending.resendAvailableAt) || 0;
+      remaining = at > Date.now() ? Math.ceil((at - Date.now()) / 1000) : 0;
       tickTimer();
     }
 
@@ -246,11 +271,13 @@
         if (data.ok) {
           if (data.dev && data.dev.devOtp) {
             document.getElementById('devOtpText').textContent = data.dev.devOtp;
+            // อัปเดตรหัสล่าสุดลง sessionStorage ด้วย ไม่งั้นรีเฟรชแล้วจะกลับไปโชว์รหัสเก่า
+            pending.devOtp = data.dev.devOtp;
+            savePending();
           }
           errorMsg.style.display = 'none';
-          // เริ่มนับถอยหลังใหม่ 60 วินาที
-          remaining = RESEND_COOLDOWN;
-          tickTimer();
+          // เริ่มนับถอยหลังใหม่ 60 วินาที (จำเวลาปลุกให้รีเฟรชแล้วนับต่อ)
+          startResendTimer();
           inputs.forEach((i) => { i.value = ''; });
           inputs[0].focus();
         } else {
@@ -258,8 +285,7 @@
           // แสดงเวลาที่ต้องรอ (ถ้ามาจาก cooldown)
           const wait = (data.message || '').match(/(\d+)\s*วินาที/);
           if (wait) {
-            remaining = Number(wait[1]);
-            tickTimer();
+            setResendWait(Number(wait[1]));
           } else {
             resendBtn.disabled = false;
           }
@@ -270,8 +296,8 @@
       }
     });
 
-    // เริ่มนับถอยหลัง 60 วินาทีเมื่อเปิดหน้า (กันขอรหัสซ้ำทันที)
-    startResendTimer();
+    // ตอนเปิด/รีเฟรช: นับถอยหลังต่อจากเวลาที่เหลือ (ไม่รีเซ็ตเป็น 60 และไม่ส่งรหัสซ้ำ)
+    resumeResendCooldown();
   </script>
 </body>
 </html>

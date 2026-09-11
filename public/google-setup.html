@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>สมัครสมาชิกให้ครบ | ร้านค้าออนไลน์</title>
+  <title>สมัครสมาชิกให้ครบ | ระบบสมาชิก</title>
   <link rel="stylesheet" href="css/style.css">
   <script src="js/theme.js"></script>
   <style>
@@ -35,7 +35,7 @@
             <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </div>
-        <span class="brand-name">ร้านค้าออนไลน์</span>
+        <span class="brand-name">ระบบสมาชิก</span>
       </div>
 
       <div class="brand-content">
@@ -57,7 +57,7 @@
         </div>
       </div>
 
-      <div class="brand-footer">© 2026 ร้านค้าออนไลน์ — สงวนลิขสิทธิ์</div>
+      <div class="brand-footer">© 2026 ระบบสมาชิก — สงวนลิขสิทธิ์</div>
     </aside>
 
     <main class="form-panel">
@@ -80,7 +80,7 @@
                 <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <span class="brand-name">ร้านค้าออนไลน์</span>
+            <span class="brand-name">ระบบสมาชิก</span>
           </div>
           <h1 id="stepTitle">ตั้งรหัสผ่าน</h1>
           <p id="stepSubtitle">สมัครสมาชิกด้วย Google ให้ครบขั้นตอน</p>
@@ -175,7 +175,7 @@
             <div class="icon"><svg viewBox="0 0 24 24" fill="none" width="52" height="52" style="color:var(--success);"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 12.5l2.5 2.5 4.5-4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
             <h2 style="margin-bottom:8px;">สมัครสมาชิกเสร็จสมบูรณ์!</h2>
             <p style="color:var(--muted);font-size:14px;line-height:1.7;">เข้าสู่ระบบด้วย Google ได้ทันที<br>หรือใช้อีเมล + รหัสผ่านที่ตั้งไว้ก็ได้</p>
-            <a class="btn btn-primary" href="/dashboard/pages">ไปที่บัญชีของฉัน</a>
+            <a class="btn btn-primary" href="/settings/profile">ไปที่บัญชีของฉัน</a>
           </div>
         </div>
       </div>
@@ -277,7 +277,7 @@
         const res = await fetch('/api/me');
         const data = await res.json();
         if (!data.ok) { window.location.href = '/login.html'; return; }
-        if (data.user.status === 'active') { window.location.href = '/dashboard/pages'; return; }
+        if (data.user.status === 'active') { window.location.href = '/settings/profile'; return; }
         document.getElementById('googleEmail').textContent = data.user.email;
         if (data.user.phone) {
           // ผู้ใช้ที่เคยกรอกเบอร์ไว้ (สมัครค้างจากวิธีอื่น) — เติมให้

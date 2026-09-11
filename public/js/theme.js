@@ -5,15 +5,15 @@
 (function () {
   'use strict';
 
-  var KEY = 'shop-theme';
+  var KEY = 'member-theme';
+  // ล้างคีย์ธีมเก่า (ยุคที่ยังตามระบบ) เพื่อให้เริ่มที่ธีมสว่างตามค่าเริ่มต้นใหม่
+  try { localStorage.removeItem('shop-theme'); } catch (e) { /* ignore */ }
 
   function currentTheme() {
     var saved = null;
     try { saved = localStorage.getItem(KEY); } catch (e) { /* ignore */ }
     if (saved === 'light' || saved === 'dark') return saved;
-    var prefersDark = window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches;
-    return prefersDark ? 'dark' : 'light';
+    return 'light'; // ค่าเริ่มต้น: ธีมสว่าง (ไม่ตามระบบ)
   }
 
   function applyTheme(theme) {

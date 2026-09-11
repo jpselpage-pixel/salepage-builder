@@ -35,7 +35,7 @@
         ผู้ใช้งาน
       </a>
       <div class="side-label">เว็บไซต์</div>
-      <a class="side-link" href="/dashboard/pages" title="เปิดหน้าเหมือนผู้ใช้">
+      <a class="side-link" href="/settings/profile" title="เปิดหน้าเหมือนผู้ใช้">
         <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         เปิดหน้าเหมือนผู้ใช้
       </a>
@@ -44,7 +44,7 @@
           <div class="avatar" id="adminAvatar">A</div>
           <div>
             <div class="u-email" id="adminEmail">—</div>
-            <div class="u-role">แอดมิน</div>
+            <div class="u-role" id="adminRoleLabel">—</div>
           </div>
         </a>
         <a class="side-link" href="#" id="logoutBtn">
@@ -126,6 +126,14 @@
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
+    // แปลงเวลา (ISO UTC) → เวลาท้องถิ่น อ่านง่าย เช่น 07/09/2026 14:30
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      const pad = (n) => String(n).padStart(2, '0');
+      return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
 
     async function loadProfile() {
       const res = await fetch('/api/me');
@@ -147,13 +155,14 @@
       const u = data.user;
 
       document.getElementById('adminEmail').textContent = u.email;
+      document.getElementById('adminRoleLabel').textContent = u.role === 'owner' ? 'เจ้าของระบบ' : 'แอดมิน';
       document.getElementById('adminAvatar').textContent = u.email.charAt(0).toUpperCase();
       document.getElementById('avatar').textContent = u.email.charAt(0).toUpperCase();
       document.getElementById('userEmail').textContent = u.email;
       document.getElementById('infoEmail').textContent = u.email;
       document.getElementById('infoPhone').textContent = u.phone;
       document.getElementById('infoProvider').textContent = u.provider === 'google' ? 'Google' : 'อีเมล';
-      document.getElementById('infoCreated').textContent = u.created_at || '—';
+      document.getElementById('infoCreated').textContent = fmtTime(u.created_at);
       document.getElementById('infoEmailVerified').innerHTML = u.is_email_verified ? ICON_CHECK + 'ยืนยันแล้ว' : ICON_X + 'ยังไม่ได้ยืนยัน';
       document.getElementById('infoStatus').textContent =
         u.status === 'active'

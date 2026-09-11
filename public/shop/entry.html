@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ร้านค้าของฉัน | ระบบสมาชิก</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <div style="min-height:100vh;display:grid;place-items:center;color:var(--muted);font-family:var(--font);">
+    กำลังพาไปยังหน้าจัดการร้านค้า...
+  </div>
+  <script>
+    // หน้ากลางสำหรับ /shop — ใช้ location.replace เพื่อไม่ทิ้งประวัติ กดย้อนกลับได้ตามปกติ
+    (async () => {
+      try {
+        const me = await (await fetch('/api/me')).json();
+        if (!me.ok) { location.replace('/login.html?next=/shop'); return; }
+        const role = me.user.role;
+        if (role === 'admin' || role === 'owner') { location.replace('/admin/'); return; }
+        if (role !== 'shop') { location.replace('/shop/purchase.html'); return; }
+        const s = await (await fetch('/api/shop/me')).json();
+        location.replace(s.ok && s.shop ? '/shop/menu.html' : '/shop/setup.html');
+      } catch {
+        location.replace('/shop/purchase.html');
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -44,7 +44,6 @@
 a.sidebar-user { cursor: pointer; text-decoration: none; transition: background-color 0.2s ease; }
 a.sidebar-user:hover { background: var(--surface-hover); }
 .sidebar-user .avatar { width: 36px; height: 36px; font-size: 15px; flex-shrink: 0; }
-.sidebar-user .avatar { width: 36px; height: 36px; font-size: 15px; }
 .sidebar-user .u-email { font-size: 13px; font-weight: 600; color: var(--text); word-break: break-all; }
 .sidebar-user .u-role { font-size: 11px; color: var(--accent); font-weight: 700; }
 
@@ -103,8 +102,6 @@ table.admin-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .pill-expired { background: var(--danger-bg); color: var(--danger); }
 .pill-warning { background: var(--warning-bg); color: var(--warning); }
 .pill-dev { background: var(--warning-bg); color: var(--warning); }
-.pill-prod { background: var(--success-bg); color: var(--success); }
-.pill-off { background: var(--surface-2); color: var(--muted); }
 
 /* ---------- ฟอร์มตั้งค่า ---------- */
 .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
@@ -253,4 +250,10 @@ table.admin-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   .sidebar-footer { margin: 0 0 0 auto; border: none; padding: 0; }
   .sidebar-user { display: none; }
   .admin-main { padding: 20px 16px 40px; }
+  /* แถวเครื่องมือ/ตัวกรอง ให้ตัดบรรทัดและย่อได้ ไม่ดันหน้ากว้างเกินจอ */
+  .admin-main .topbar { align-items: stretch; }
+  .admin-card > h2 { flex-wrap: wrap; }
+  .admin-card h2 select,
+  .admin-card h2 input,
+  .test-to-input { flex: 1 1 130px; min-width: 0; max-width: 100% !important; }
 }

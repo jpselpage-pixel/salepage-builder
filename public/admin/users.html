@@ -35,7 +35,7 @@
         ผู้ใช้งาน
       </a>
       <div class="side-label">เว็บไซต์</div>
-      <a class="side-link" href="/dashboard/pages" title="เปิดหน้าเหมือนผู้ใช้">
+      <a class="side-link" href="/settings/profile" title="เปิดหน้าเหมือนผู้ใช้">
         <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         เปิดหน้าเหมือนผู้ใช้
       </a>
@@ -44,7 +44,7 @@
           <div class="avatar" id="adminAvatar">A</div>
           <div>
             <div class="u-email" id="adminEmail">—</div>
-            <div class="u-role">แอดมิน</div>
+            <div class="u-role" id="adminRoleLabel">—</div>
           </div>
         </a>
         <a class="side-link" href="#" id="logoutBtn">
@@ -84,7 +84,7 @@
           <table class="admin-table">
             <thead>
               <tr>
-                <th>#</th>
+                <th>รหัสลูกค้า</th>
                 <th>อีเมล</th>
                 <th>เบอร์โทร</th>
                 <th>สมัครผ่าน</th>
@@ -127,11 +127,9 @@
         <span class="field-error" id="mPasswordErr"></span>
       </div>
       <div class="field">
-        <label for="mStatus">สถานะ</label>
-        <select id="mStatus">
-          <option value="pending">pending — รอการยืนยัน (สมัครไม่เสร็จ)</option>
-          <option value="active">active — ยืนยันแล้ว (ใช้งานได้)</option>
-        </select>
+        <label>สถานะ</label>
+        <div id="mStatusDisplay" style="min-height:34px;display:flex;align-items:center;">—</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">ระบบอัปเดตอัตโนมัติจากการยืนยันเบอร์/อีเมล (เลือกเองไม่ได้)</div>
       </div>
       <div class="field">
         <label for="mRole">บทบาท</label>
@@ -148,6 +146,25 @@
       <div class="modal-actions">
         <button class="icon-btn" id="cancelEditBtn" type="button">ยกเลิก</button>
         <button class="icon-btn primary" id="saveEditBtn" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> บันทึก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal ส่งของขวัญร้านค้า -->
+  <div class="modal-overlay" id="giftModal">
+    <div class="modal">
+      <h3>🎁 ส่งของขวัญร้านค้า</h3>
+      <p class="sub" id="giftSub">#—</p>
+      <div class="error-msg" id="giftError"></div>
+      <div class="field">
+        <label for="giftExpires">วันหมดอายุ</label>
+        <input type="date" id="giftExpires">
+        <span class="field-error" id="giftExpiresErr"></span>
+      </div>
+      <p style="font-size:12.5px;color:var(--muted);line-height:1.7;">ผู้ใช้จะได้เป็นเจ้าของร้าน (บทบาท shop) จนถึงสิ้นวันนี้ และระบบจะถอนสิทธิ์ให้อัตโนมัติเมื่อหมดอายุ (หน้าร้านจะถูกปิดชั่วคราว)</p>
+      <div class="modal-actions">
+        <button class="icon-btn" id="giftCancelBtn" type="button">ยกเลิก</button>
+        <button class="icon-btn primary" id="giftSaveBtn" type="button">มอบของขวัญ</button>
       </div>
     </div>
   </div>
@@ -186,8 +203,57 @@
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
+    // แปลงเวลา (ISO UTC) → เวลาท้องถิ่น อ่านง่าย เช่น 07/09/2026 14:30
+    function fmtTime(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      const pad = (n) => String(n).padStart(2, '0');
+      return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      const pad = (n) => String(n).padStart(2, '0');
+      return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
+    }
 
     let allUsers = [];
+    let viewerRole = 'user'; // บทบาทของผู้ที่ล็อกอินอยู่ (admin/owner)
+
+    const isPrivilegedRole = (role) => role === 'admin' || role === 'owner';
+    const roleLabel = (role) => (role === 'owner' ? 'เจ้าของระบบ' : role === 'admin' ? 'แอดมิน' : role === 'shop' ? 'เจ้าของร้าน' : 'ผู้ใช้ทั่วไป');
+    // owner จัดการได้ทุกคน; แอดมินจัดการได้เฉพาะบัญชีผู้ใช้ทั่วไป
+    function canManage(u) { return viewerRole === 'owner' || !isPrivilegedRole(u.role); }
+    function roleBadge(role) {
+      if (role === 'owner') return '<span class="badge badge-warning">เจ้าของระบบ</span>';
+      if (role === 'admin') return '<span class="badge badge-info">แอดมิน</span>';
+      if (role === 'shop') return '<span class="badge badge-success">เจ้าของร้าน</span>';
+      return 'ผู้ใช้';
+    }
+    function actionsHtml(u) {
+      if (!canManage(u)) return '<span style="color:var(--muted);font-size:12px;">—</span>';
+      const editSvg = '<svg viewBox="0 0 24 24" fill="none"><path d="M17 3a2.8 2.8 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const delSvg = '<svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const giftSvg = '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="8" width="18" height="4" rx="1" stroke="currentColor" stroke-width="2"/><path d="M12 8v13M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7M12 8S10.5 3 8 3a2.5 2.5 0 000 5h4zM12 8s1.5-5 4-5a2.5 2.5 0 010 5h-4z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      const giftBtn = (viewerRole === 'owner' && u.role === 'user')
+        ? '<button class="icon-btn" data-gift="' + u.id + '" style="padding:6px 11px;font-size:12px;">' + giftSvg + ' ของขวัญ</button> '
+        : '';
+      return giftBtn
+        + '<button class="icon-btn" data-edit="' + u.id + '" style="padding:6px 11px;font-size:12px;">' + editSvg + ' แก้ไข</button>'
+        + '<button class="icon-btn danger" data-del="' + u.id + '" style="padding:6px 11px;font-size:12px;">' + delSvg + ' ลบ</button>';
+    }
+    // ตัวเลือกบทบาทในโมดัล — เฉพาะ owner เท่านั้นที่เปลี่ยนได้
+    function setRoleOptions(currentRole) {
+      const sel = document.getElementById('mRole');
+      const opts = viewerRole === 'owner'
+        ? [['user', 'ผู้ใช้ทั่วไป'], ['shop', 'เจ้าของร้าน'], ['admin', 'แอดมิน'], ['owner', 'เจ้าของระบบ']]
+        : [[currentRole, roleLabel(currentRole)]];
+      sel.innerHTML = opts.map(([v, t]) => '<option value="' + v + '">' + t + '</option>').join('');
+      sel.value = currentRole;
+      sel.disabled = viewerRole !== 'owner';
+    }
 
     function providerCell(u) {
       return u.provider === 'google'
@@ -229,16 +295,14 @@
           <td>${providerCell(u)}</td>
           <td>${emailVerifiedCell(u)}</td>
           <td>${statusBadge(u.status)}</td>
-          <td>${u.role === 'admin' ? '<span class="badge badge-warning">แอดมิน</span>' : 'ผู้ใช้'}</td>
-          <td class="mono">${u.created_at}</td>
-          <td>
-            <button class="icon-btn" data-edit="${u.id}" style="padding:6px 11px;font-size:12px;"><svg viewBox="0 0 24 24" fill="none"><path d="M17 3a2.8 2.8 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> แก้ไข</button>
-            <button class="icon-btn danger" data-del="${u.id}" style="padding:6px 11px;font-size:12px;"><svg viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ลบ</button>
-          </td>
+          <td>${roleBadge(u.role)}${u.gift_expires_at ? '<div style="font-size:11px;color:var(--muted);margin-top:3px;">🎁 ถึง ' + fmtDate(u.gift_expires_at) + '</div>' : ''}</td>
+          <td class="mono">${fmtTime(u.created_at)}</td>
+          <td>${actionsHtml(u)}</td>
         </tr>`).join('');
 
       tbody.querySelectorAll('[data-edit]').forEach((btn) => btn.addEventListener('click', () => openEdit(Number(btn.dataset.edit))));
       tbody.querySelectorAll('[data-del]').forEach((btn) => btn.addEventListener('click', () => deleteUser(btn)));
+      tbody.querySelectorAll('[data-gift]').forEach((btn) => btn.addEventListener('click', () => openGift(Number(btn.dataset.gift))));
     }
 
     // ---------- แก้ไข ----------
@@ -253,8 +317,10 @@
       document.getElementById('mEmail').value = u.email;
       document.getElementById('mPhone').value = u.phone.replace(/[-\s]/g, '');
       document.getElementById('mPassword').value = '';
-      document.getElementById('mStatus').value = u.status;
-      document.getElementById('mRole').value = u.role;
+      document.getElementById('mStatusDisplay').innerHTML = u.status === 'active'
+        ? '<span class="pill pill-valid">ยืนยันแล้ว (active)</span>'
+        : '<span class="pill pill-expired">ยังไม่ยืนยัน (pending)</span>';
+      setRoleOptions(u.role);
       document.getElementById('mEmailVerified').checked = u.is_email_verified;
       document.getElementById('modalError').style.display = 'none';
       ['mEmailErr', 'mPhoneErr', 'mPasswordErr'].forEach((id) => document.getElementById(id).style.display = 'none');
@@ -270,7 +336,6 @@
       const payload = {
         email: document.getElementById('mEmail').value.trim(),
         phone: document.getElementById('mPhone').value.trim(),
-        status: document.getElementById('mStatus').value,
         role: document.getElementById('mRole').value,
         isEmailVerified: document.getElementById('mEmailVerified').checked,
       };
@@ -329,6 +394,49 @@
       }
     }
 
+    // ---------- ส่งของขวัญร้านค้า (owner) ----------
+    const giftModal = document.getElementById('giftModal');
+    let giftingId = null;
+    function openGift(id) {
+      const u = allUsers.find((x) => x.id === id);
+      if (!u) return;
+      giftingId = id;
+      document.getElementById('giftSub').textContent = '#' + u.id + ' · ' + u.email;
+      const d = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const pad = (n) => String(n).padStart(2, '0');
+      document.getElementById('giftExpires').value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+      document.getElementById('giftError').style.display = 'none';
+      document.getElementById('giftExpiresErr').style.display = 'none';
+      giftModal.classList.add('show');
+    }
+    function closeGift() { giftModal.classList.remove('show'); giftingId = null; }
+    document.getElementById('giftCancelBtn').addEventListener('click', closeGift);
+    giftModal.addEventListener('click', (e) => { if (e.target === giftModal) closeGift(); });
+    document.getElementById('giftSaveBtn').addEventListener('click', async (e) => {
+      const btn = e.target;
+      const errEl = document.getElementById('giftExpiresErr');
+      errEl.style.display = 'none';
+      const expiresAt = document.getElementById('giftExpires').value;
+      if (!expiresAt) { errEl.textContent = 'กรุณาเลือกวันหมดอายุ'; errEl.style.display = 'block'; return; }
+      btn.disabled = true;
+      try {
+        const data = await api('/api/admin/shop-gift', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: giftingId, expiresAt }),
+        });
+        showToast(ICON_CHECK + data.message);
+        closeGift();
+        await loadUsers();
+      } catch (err) {
+        showToast(ICON_ALERT + escapeHtml(err.message));
+        document.getElementById('giftError').textContent = err.message;
+        document.getElementById('giftError').style.display = 'block';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
     // ---------- เหตุการณ์ ----------
     document.getElementById('searchInput').addEventListener('input', () => {
       clearTimeout(window.__searchT);
@@ -350,9 +458,11 @@
     async function init() {
       try {
         const me = await api('/api/me');
-        if (me.user.role !== 'admin') { window.location.href = '/login.html'; return; }
+        if (me.user.role !== 'admin' && me.user.role !== 'owner') { window.location.href = '/login.html'; return; }
         document.getElementById('adminEmail').textContent = me.user.email;
+        document.getElementById('adminRoleLabel').textContent = me.user.role === 'owner' ? 'เจ้าของระบบ' : 'แอดมิน';
         document.getElementById('adminAvatar').textContent = me.user.email.charAt(0).toUpperCase();
+        viewerRole = me.user.role;
         await loadUsers();
       } catch (err) {
         // เตะไปหน้า login เฉพาะ session หมดอายุจริง (401) — error อื่น (DB/เครือข่าย) แจ้งเตือนไม่เตะออก

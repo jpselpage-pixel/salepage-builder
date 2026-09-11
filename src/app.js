@@ -1,0 +1,63 @@
+/**
+ * app.js — ประกอบ Express app: middleware → guard → static → router
+ */
+'use strict';
+
+const path = require('node:path');
+const express = require('express');
+const { devMode } = require('./lib/settings');
+const { adminGuard, accountGuard, shopGuard } = require('./middleware/guards');
+const authRoutes = require('./routes/auth');
+const passwordResetRoutes = require('./routes/password-reset');
+const googleRoutes = require('./routes/google');
+const accountRoutes = require('./routes/account');
+const adminRoutes = require('./routes/admin');
+const shopRoutes = require('./routes/shop');
+const orderRoutes = require('./routes/orders');
+const publicRoutes = require('./routes/public');
+
+const app = express();
+
+// เพดาน 4mb เผื่ออัปโหลดรูป (base64) จากพื้นที่ร้านค้า — route อื่นยังมี body เล็ก
+app.use(express.json({ limit: '4mb' }));
+
+// ดึงคุกกี้แบบง่าย (Express ยังไม่มี built-in cookie parser) — ต้องมาก่อนทุก middleware ที่ใช้ session
+app.use((req, res, next) => {
+  const header = req.headers.cookie || '';
+  req.cookies = {};
+  for (const part of header.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx > -1) req.cookies[part.slice(0, idx).trim()] = part.slice(idx + 1).trim();
+  }
+  next();
+});
+
+// guard หน้าเว็บ (ต้องมาก่อน static เพื่อกันไฟล์ใน /admin)
+app.use('/admin', adminGuard);
+app.use(['/dashboard', '/settings'], accountGuard);
+app.use('/shop', shopGuard);
+
+// หน้าบัญชี (page routes) — ต้องมาก่อน static เช่นเดียวกับต้นฉบับ
+app.use(accountRoutes);
+// พื้นที่ร้านค้า (/shop, /s/:code) + API ร้านค้าและ API สาธารณะ
+app.use(shopRoutes);
+// โต๊ะ/QR/บิล + หน้าสั่งอาหารลูกค้า (/order/:token)
+app.use(orderRoutes);
+app.use(publicRoutes);
+
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
+// config ให้หน้าเว็บใช้ (reCAPTCHA site key + โหมด dev)
+app.get('/api/config', (req, res) => {
+  res.json({
+    recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY || null,
+    devMode: devMode(),
+  });
+});
+
+app.use(authRoutes);
+app.use(passwordResetRoutes);
+app.use(googleRoutes);
+app.use(adminRoutes);
+
+module.exports = app;

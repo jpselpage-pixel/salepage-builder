@@ -35,7 +35,7 @@
         ผู้ใช้งาน
       </a>
       <div class="side-label">เว็บไซต์</div>
-      <a class="side-link" href="/dashboard/pages" title="เปิดหน้าเหมือนผู้ใช้">
+      <a class="side-link" href="/settings/profile" title="เปิดหน้าเหมือนผู้ใช้">
         <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         เปิดหน้าเหมือนผู้ใช้
       </a>
@@ -44,7 +44,7 @@
           <div class="avatar" id="adminAvatar">A</div>
           <div>
             <div class="u-email" id="adminEmail">—</div>
-            <div class="u-role">แอดมิน</div>
+            <div class="u-role" id="adminRoleLabel">—</div>
           </div>
         </a>
         <a class="side-link" href="#" id="logoutBtn">
@@ -338,6 +338,19 @@
       return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
 
+    // ช่องที่เป็นความลับ: เก็บ placeholder เดิมไว้ แล้วแสดงค่าที่บันทึกไว้แบบปิดบางส่วน
+    ['twToken', 'tbsKey', 'tbsSecret', 'smtpPass'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.dataset.ph = el.placeholder;
+    });
+    function setSecretField(id, hasValue, masked) {
+      const el = document.getElementById(id);
+      el.value = '';
+      el.placeholder = hasValue
+        ? 'บันทึกไว้แล้ว ' + (masked || '••••••') + ' — เว้นว่าง = ใช้ค่าเดิม'
+        : el.dataset.ph;
+    }
+
     let allLogs = [];
 
     async function loadStatus() {
@@ -377,15 +390,15 @@
         detail.textContent = 'กรอกค่าให้ครบตามฟอร์ม แล้วกดบันทึก';
         hint.textContent = '';
       }
-      // เติมค่าที่ไม่ใช่ secret กลับคืนในช่องกรอก / ล้างเฉพาะช่อง Secret (กันเห็น key/token)
+      // เติมค่าที่บันทึกไว้กลับในช่องกรอก — ค่าที่ไม่ใช่ secret แสดงเต็ม, ค่าความลับแสดงแบบปิดบางส่วน
       if (provider === 'thaibulksms') {
         document.getElementById('tbsSender').value = sms.senderFull || '';
-        document.getElementById('tbsKey').value = '';
-        document.getElementById('tbsSecret').value = '';
+        setSecretField('tbsKey', sms.hasKey, sms.keyMasked);
+        setSecretField('tbsSecret', sms.hasSecret, sms.secretMasked);
       } else {
         document.getElementById('twSid').value = sms.sidFull || '';
         document.getElementById('twPhone').value = sms.fromFull || '';
-        document.getElementById('twToken').value = '';
+        setSecretField('twToken', sms.hasToken, sms.tokenMasked);
       }
     }
 
@@ -562,6 +575,12 @@
       const btn = e.target;
       const provider = document.getElementById('smsProvider').value;
       const payload = { provider };
+      // จำค่าที่เพิ่งกรอกไว้ เพื่อคงให้เห็นในช่องหลังบันทึก (ค่าเดียวกันถูกเก็บแล้ว)
+      const typed = {
+        tbsKey: document.getElementById('tbsKey').value,
+        tbsSecret: document.getElementById('tbsSecret').value,
+        twToken: document.getElementById('twToken').value,
+      };
 
       if (provider === 'thaibulksms') {
         const k = document.getElementById('tbsKey').value;
@@ -592,8 +611,15 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        showToast(ICON_CHECK + data.message + ' — ล้างช่อง API Key/Secret เพื่อความปลอดภัย (ค่าเดิมยังถูกเก็บไว้ ดูสถานะด้านบน)');
+        showToast(ICON_CHECK + data.message + ' — ช่องกรอกแสดงค่าที่ใช้อยู่ (ช่องความลับปิดบางส่วน, เว้นว่าง = ใช้ค่าเดิม)');
         await loadStatus();
+        // คงค่าที่เพิ่งกรอกไว้ให้เห็นว่ากำลังใช้ชุดไหน
+        if (provider === 'thaibulksms') {
+          if (typed.tbsKey) document.getElementById('tbsKey').value = typed.tbsKey;
+          if (typed.tbsSecret) document.getElementById('tbsSecret').value = typed.tbsSecret;
+        } else if (typed.twToken) {
+          document.getElementById('twToken').value = typed.twToken;
+        }
       } catch (err) {
         showToast(ICON_ALERT + escapeHtml(err.message));
       } finally {
@@ -643,12 +669,12 @@
         detail.textContent = 'กรอก Host / Port / User / Password แล้วกดบันทึก';
         hint.textContent = '';
       }
-      // เติมค่าที่ไม่ใช่ secret กลับ / ล้างเฉพาะ password
+      // เติมค่าที่บันทึกไว้กลับในช่องกรอก — ค่าเต็มสำหรับช่องทั่วไป, ช่องรหัสผ่านแสดงแบบปิดบางส่วน
       document.getElementById('smtpHost').value = status.host || '';
       document.getElementById('smtpPort').value = status.port || 587;
-      document.getElementById('smtpUser').value = '';
-      document.getElementById('smtpPass').value = '';
-      document.getElementById('smtpFrom').value = '';
+      document.getElementById('smtpUser').value = status.userFull || '';
+      document.getElementById('smtpFrom').value = status.fromFull || '';
+      setSecretField('smtpPass', status.hasPass, status.passMasked);
     }
 
     document.getElementById('saveSmtpBtn').addEventListener('click', async (e) => {
@@ -677,8 +703,10 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        showToast(ICON_CHECK + data.message);
+        showToast(ICON_CHECK + data.message + ' — ช่องกรอกแสดงค่าที่ใช้อยู่ (ช่องรหัสผ่านปิดบางส่วน, เว้นว่าง = ใช้ค่าเดิม)');
         await loadSmtpStatus();
+        // คงรหัสผ่านที่เพิ่งกรอกไว้ให้เห็น (ค่าเดียวกันถูกบันทึกแล้ว)
+        if (pass) document.getElementById('smtpPass').value = pass;
       } catch (err) {
         showToast(ICON_ALERT + escapeHtml(err.message));
       } finally {
@@ -758,8 +786,9 @@
     async function init() {
       try {
         const me = await api('/api/me');
-        if (me.user.role !== 'admin') { window.location.href = '/login.html'; return; }
+        if (me.user.role !== 'admin' && me.user.role !== 'owner') { window.location.href = '/login.html'; return; }
         document.getElementById('adminEmail').textContent = me.user.email;
+        document.getElementById('adminRoleLabel').textContent = me.user.role === 'owner' ? 'เจ้าของระบบ' : 'แอดมิน';
         document.getElementById('adminAvatar').textContent = me.user.email.charAt(0).toUpperCase();
         await Promise.all([loadStatus(), loadLogs(), loadSmtpStatus()]);
       } catch (err) {
