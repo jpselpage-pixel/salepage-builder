@@ -99,7 +99,7 @@ async function requireShop(req, res, next) {
   // ของขวัญร้านค้าหมดอายุ → ถอนสิทธิ์ทันที
   if (user.gift_expires_at && new Date(user.gift_expires_at).getTime() <= Date.now()) {
     await db.expireShopGift(user.id);
-    return res.status(403).json({ ok: false, message: 'ของขวัญร้านค้าหมดอายุแล้ว กรุณาซื้อแพ็กเกจเพื่อใช้งานต่อ' });
+    return res.status(403).json({ ok: false, message: 'แพ็กเกจร้านค้าหมดอายุแล้ว กรุณาซื้อแพ็กเกจเพื่อใช้งานต่อ' });
   }
   req.user = user;
   next();

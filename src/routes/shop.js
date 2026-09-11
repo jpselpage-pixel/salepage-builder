@@ -11,6 +11,7 @@ const db = require('../db');
 const { getCurrentUser, requireLogin, requireShop } = require('../middleware/auth');
 const { isAdminRole, isShop } = require('../lib/roles');
 const { randomToken } = require('../lib/crypto');
+const { futureMonthsSql } = require('../lib/time');
 
 const router = express.Router();
 const PUBLIC_DIR = path.join(__dirname, '..', '..', 'public');
@@ -107,13 +108,16 @@ router.post('/api/shop/purchase', requireLogin, async (req, res) => {
   }
 
   const amount = Number(pkg.price) || 0;
+  const expiresAt = futureMonthsSql(pkg.duration_months); // อายุการใช้งานตามจำนวนเดือนของแพ็กเกจ
   await db.setUserRole(user.id, 'shop');
+  await db.setUserShopExpiry(user.id, expiresAt);
   await db.createShopPurchase({ userId: user.id, packageId: pkg.id, packageName: clip(pkg.name, 30), amount });
-  console.log(`🛒 ซื้อแพ็กเกจร้านค้า: ${user.email} (${pkg.name} · ${pkg.duration_months} เดือน · ฿${amount})`);
+  console.log(`🛒 ซื้อแพ็กเกจร้านค้า: ${user.email} (${pkg.name} · ${pkg.duration_months} เดือน · ฿${amount} · ถึง ${expiresAt})`);
   res.json({
     ok: true,
     message: `ซื้อแพ็กเกจ "${pkg.name}" สำเร็จ ตอนนี้คุณเป็นเจ้าของร้านแล้ว`,
     role: 'shop',
+    expiresAt,
     redirect: '/shop/setup.html',
   });
 });

@@ -92,7 +92,7 @@
           <div class="info-row"><span class="label">อีเมล</span><span class="value" id="infoEmail">—</span></div>
           <div class="info-row"><span class="label">เบอร์โทรศัพท์</span><span class="value" id="infoPhone">—</span></div>
           <div class="info-row"><span class="label">สถานะ</span><span class="value" id="infoStatus">—</span></div>
-          <div class="info-row" id="giftRow" style="display:none;"><span class="label">ของขวัญร้านค้า</span><span class="value" id="infoGift">—</span></div>
+          <div class="info-row" id="expiryRow" style="display:none;"><span class="label">วันหมดอายุ</span><span class="value" id="infoExpiry">—</span></div>
         </div>
 
         <div class="verify-banner" id="verifyBanner">
@@ -244,13 +244,16 @@
         document.getElementById('infoEmail').textContent = user.email;
         document.getElementById('infoPhone').textContent = user.phone;
 
-        // ของขวัญร้านค้า (ถ้ามี) — แสดงวันหมดอายุ
+        // วันหมดอายุการใช้งานร้าน (ของขวัญจากเจ้าของระบบ หรือแพ็กเกจที่ซื้อ)
         if (user.gift_expires_at) {
           const g = new Date(user.gift_expires_at);
           const pad = (n) => String(n).padStart(2, '0');
-          document.getElementById('infoGift').textContent =
-            'ใช้ได้ถึง ' + pad(g.getDate()) + '/' + pad(g.getMonth() + 1) + '/' + g.getFullYear();
-          document.getElementById('giftRow').style.display = '';
+          const dateText = pad(g.getDate()) + '/' + pad(g.getMonth() + 1) + '/' + g.getFullYear();
+          const days = Math.ceil((g.getTime() - Date.now()) / 86400000);
+          document.getElementById('infoExpiry').textContent = days > 0
+            ? 'ใช้ได้ถึง ' + dateText + ' (เหลือ ' + days + ' วัน)'
+            : 'หมดอายุแล้ว (ใช้ได้ถึง ' + dateText + ')';
+          document.getElementById('expiryRow').style.display = '';
         }
 
         const statusEl = document.getElementById('infoStatus');

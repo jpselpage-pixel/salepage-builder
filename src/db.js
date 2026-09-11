@@ -676,6 +676,11 @@ async function setShopGift({ userId, grantedBy = null, expiresAt }) {
   await pool.execute('INSERT INTO shop_gifts (user_id, granted_by, expires_at) VALUES (?, ?, ?)', [userId, grantedBy, expiresAt]);
 }
 
+/** กำหนดวันหมดอายุการใช้งานร้านให้ผู้ใช้ (ใช้ทั้งของขวัญจาก owner และการซื้อแพ็กเกจ) */
+async function setUserShopExpiry(userId, expiresAt) {
+  await pool.execute('UPDATE users SET gift_expires_at = ? WHERE id = ?', [expiresAt, userId]);
+}
+
 /** ถอนสิทธิ์ของขวัญของผู้ใช้คนหนึ่ง (คืนบทบาทเป็น user) */
 async function expireShopGift(userId) {
   await pool.execute("UPDATE users SET role = 'user', gift_expires_at = NULL WHERE id = ? AND role = 'shop'", [userId]);
@@ -1227,6 +1232,7 @@ module.exports = {
   deleteUser,
   setUserRole,
   setShopGift,
+  setUserShopExpiry,
   expireShopGift,
   clearExpiredGifts,
   findPublicShopByCode,
