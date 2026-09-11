@@ -269,3 +269,7 @@ button.cart-info strong { color: var(--text); }
   .pay-box { padding: 22px 18px; }
   .pay-amount { font-size: 34px; }
 }
+
+/* ปุ่มในขั้นยืนยัน (โหมดทดลอง) */
+.pay-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 6px; }
+.pay-actions .pkg-cta { width: auto; flex: 1 1 190px; }

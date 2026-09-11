@@ -63,6 +63,9 @@
 
     let payment = null;      // รายการที่รอชำระเงินอยู่
     let rejected = null;     // รายการล่าสุดที่ถูกยกเลิก (ถ้ามี)
+    let packages = [];       // แพ็กเกจที่เปิดขาย
+    let payEnabled = false;  // เปิดรับชำระเงินจริงหรือไม่ (ปิด = โหมดทดลอง)
+    let confirmPkg = null;   // แพ็กเกจที่รอลูกค้ายืนยันในโหมดทดลอง
 
     // ---------- การ์ดแพ็กเกจ ----------
     function renderCard(p) {
@@ -97,7 +100,6 @@
 
     async function loadPackages() {
       const grid = document.getElementById('pkgGrid');
-      let packages = [];
       try {
         const data = await api('/api/packages');
         packages = data.packages || [];
@@ -157,28 +159,67 @@
       }
     }
 
-    async function buy(btn) {
+    // เลือกแพ็กเกจ → เปิดรับเงินจริง = สร้างรายการรอโอน · โหมดทดลอง = ให้ยืนยันก่อน
+    function buy(btn) {
       const errEl = document.querySelector('[data-err="' + btn.dataset.buy + '"]');
-      errEl.style.display = 'none';
-      btn.disabled = true;
-      btn.classList.add('loading');
+      if (errEl) errEl.style.display = 'none';
+      const pkg = packages.find((p) => Number(p.id) === Number(btn.dataset.buy));
+      if (!pkg) return;
+      if (!payEnabled) {
+        confirmPkg = pkg;
+        renderMockConfirm();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      createPayment(pkg, btn);
+    }
+
+    async function createPayment(pkg, btn) {
+      if (btn) { btn.disabled = true; btn.classList.add('loading'); }
       try {
         const data = await api('/api/shop/purchase', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ packageId: Number(btn.dataset.buy) }),
+          body: JSON.stringify({ packageId: Number(pkg.id) }),
         });
         if (data.pending && data.payment) { payment = data.payment; renderPayment(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
         window.location.replace(data.redirect || '/shop/setup.html');
       } catch (err) {
-        errEl.textContent = err.message;
-        errEl.style.display = 'block';
-        btn.disabled = false;
-        btn.classList.remove('loading');
+        const errEl = document.querySelector('[data-err="' + pkg.id + '"]');
+        if (errEl) { errEl.textContent = err.message; errEl.style.display = 'block'; }
+        else alert(err.message);
+        if (btn) { btn.disabled = false; btn.classList.remove('loading'); }
       }
     }
 
+    // ขั้นยืนยันของโหมดทดลอง (ยังไม่เรียกเก็บเงิน) — ไม่กระโดดไปหน้าข้อมูลร้านทันที
+    function renderMockConfirm() {
+      const p = confirmPkg;
+      const details = (p.details || []).filter((d) => d.heading || d.text);
+      document.getElementById('notice').innerHTML = '';
+      document.getElementById('pkgGrid').innerHTML = `<div class="pay-box">
+        <div class="pay-head">
+          <span class="pill pill-warning">โหมดทดลอง — ยังไม่เรียกเก็บเงิน</span>
+          <h2>${esc(p.name)} · ${esc(p.duration_months)} เดือน</h2>
+          <div class="pay-amount">฿${money(p.price)}</div>
+          <div class="pay-ref">ระบบยังไม่เปิดรับชำระเงิน ยอดนี้จะไม่ถูกเรียกเก็บ</div>
+        </div>
+        ${details.length ? `<ul class="pkg-features">${details.map((d) => `<li><span class="pkg-check">${ICON_CHECK}</span><div><strong>${esc(d.heading)}</strong>${d.text ? '<span class="pkg-desc">' + esc(d.text) + '</span>' : ''}</div></li>`).join('')}</ul>` : ''}
+        <p class="pay-hint">กดยืนยันแล้วบัญชีของคุณจะกลายเป็น “เจ้าของร้าน” ทันที และใช้งานได้ ${esc(p.duration_months)} เดือน</p>
+        <div class="pay-actions">
+          <button class="pkg-cta" id="mockConfirmBtn" type="button">ยืนยันเปิดร้าน</button>
+          <button class="btn btn-outline" id="mockBackBtn" type="button">ย้อนกลับไปเลือกแพ็กเกจอื่น</button>
+        </div>
+      </div>`;
+      document.getElementById('mockConfirmBtn').addEventListener('click', (e) => createPayment(p, e.currentTarget));
+      document.getElementById('mockBackBtn').addEventListener('click', () => { confirmPkg = null; loadPackages(); });
+    }
+
     (async function init() {
+      try {
+        const info = await api('/api/payment-info');
+        payEnabled = Boolean(info.payment && info.payment.enabled);
+      } catch (err) { /* ถ้าอ่านไม่ได้ให้ถือว่าโหมดทดลอง */ }
       try {
         const mine = await api('/api/my-payments');
         const list = mine.payments || [];
