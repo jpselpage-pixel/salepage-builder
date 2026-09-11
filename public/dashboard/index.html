@@ -46,11 +46,7 @@
         <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="11" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         ความปลอดภัย
       </a>
-      <div class="menu-title" id="shopMenuTitle">ร้านค้า</div>
-      <a class="menu-item" id="shopMenuLink" href="/shop">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <span id="shopMenuLabel">ร้านค้าของฉัน</span>
-      </a>
+      <!--SHOP_MENU-->
       <div class="menu-divider"></div>
       <button class="menu-item" type="button" id="logoutBtn">
         <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -282,21 +278,6 @@
         const roleClass = { owner: 'badge-success', admin: 'badge-warning', shop: 'badge-info' };
         roleBadge.textContent = roleText[user.role] || 'ผู้ใช้งานทั่วไป';
         roleBadge.className = 'badge ' + (roleClass[user.role] || 'badge-info');
-
-        // เมนูร้านค้าตามบทบาท: user → หน้าซื้อแพ็กเกจ, shop → จัดการร้าน, admin/owner → ซ่อน
-        const shopLink = document.getElementById('shopMenuLink');
-        const shopLabel = document.getElementById('shopMenuLabel');
-        const shopTitle = document.getElementById('shopMenuTitle');
-        if (user.role === 'admin' || user.role === 'owner') {
-          shopLink.style.display = 'none';
-          shopTitle.style.display = 'none';
-        } else if (user.role === 'shop') {
-          shopLabel.textContent = 'ร้านค้าของฉัน';
-          shopLink.href = '/shop/menu.html';
-        } else {
-          shopLabel.textContent = 'ซื้อแพ็กเกจร้านค้า';
-          shopLink.href = '/shop/purchase.html';
-        }
 
         const verifiedBadge = document.getElementById('emailVerifiedBadge');
         const unverifiedBadge = document.getElementById('emailUnverifiedBadge');
