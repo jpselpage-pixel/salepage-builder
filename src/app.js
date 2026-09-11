@@ -11,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const passwordResetRoutes = require('./routes/password-reset');
 const googleRoutes = require('./routes/google');
 const accountRoutes = require('./routes/account');
+const adminPageRoutes = require('./routes/admin-pages');
 const adminRoutes = require('./routes/admin');
 const shopRoutes = require('./routes/shop');
 const orderRoutes = require('./routes/orders');
@@ -38,6 +39,9 @@ app.use('/admin/packages.html', ownerGuard);
 app.use('/admin', adminGuard);
 app.use(['/dashboard', '/settings'], accountGuard);
 app.use('/shop', shopGuard);
+
+// หน้า HTML หลังบ้าน — แทรกเมนูตามบทบาทฝั่งเซิร์ฟเวอร์ (ต้องมาก่อน express.static)
+app.use(adminPageRoutes);
 
 // หน้าบัญชี (page routes) — ต้องมาก่อน static เช่นเดียวกับต้นฉบับ
 app.use(accountRoutes);
