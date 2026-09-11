@@ -984,7 +984,7 @@ async function listPurchaseHistory({ q = null, from = null, to = null, limit = 2
   const n = Math.min(Math.max(Math.trunc(Number(limit)) || 200, 1), 500);
   const [rows] = await pool.execute(
     `SELECT sp.id, sp.user_id, sp.package AS package_name, sp.amount, sp.created_at,
-            u.email AS user_email,
+            u.email AS user_email, u.role AS user_role, u.gift_expires_at AS user_expires,
             pp.ref, pp.method, pp.status AS pay_status, pp.confirmed_at, pp.duration_months AS pay_months,
             p.duration_months AS pkg_months
        FROM shop_purchases sp
@@ -996,6 +996,15 @@ async function listPurchaseHistory({ q = null, from = null, to = null, limit = 2
     args
   );
   return rows;
+}
+
+/** ดึงสิทธิ์เจ้าของร้านคืน (owner ใช้เมื่อต้องการยกเลิกการใช้งาน) — ประวัติการซื้อไม่ถูกลบ */
+async function revokeShopAccess(userId) {
+  const [result] = await pool.execute(
+    "UPDATE users SET role = 'user', gift_expires_at = NULL WHERE id = ? AND role = 'shop'",
+    [userId]
+  );
+  return (result.affectedRows || 0) > 0;
 }
 
 /** สรุปยอดขายสำหรับหน้าประวัติ */
@@ -1388,6 +1397,7 @@ module.exports = {
   findLatestShopPurchase,
   listPurchaseHistory,
   summarizePurchases,
+  revokeShopAccess,
   listPackages,
   listActivePackages,
   findPackageById,

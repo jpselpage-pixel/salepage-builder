@@ -14,6 +14,7 @@ const QRCode = require('qrcode');
 const generatePromptPayPayload = require('promptpay-qr');
 const db = require('../db');
 const { requireLogin, requireOwner } = require('../middleware/auth');
+const { isAdminRole } = require('../lib/roles');
 const { futureMonthsSql } = require('../lib/time');
 const { getPaymentSettings, hasAnyChannel, paymentInstructions } = require('../lib/payments');
 
@@ -155,6 +156,7 @@ router.get('/api/owner/purchase-history', requireOwner, wrap(async (req, res) =>
     summary,
     purchases: rows.map((r) => ({
       id: r.id,
+      userId: r.user_id,
       userEmail: r.user_email,
       packageName: r.package_name,
       durationMonths: r.pay_months || r.pkg_months || null,
@@ -164,8 +166,29 @@ router.get('/api/owner/purchase-history', requireOwner, wrap(async (req, res) =>
       status: r.pay_status || 'paid',
       createdAt: r.created_at,
       confirmedAt: r.confirmed_at,
+      userRole: r.user_role,
+      userExpiresAt: r.user_expires,
     })),
   });
+}));
+
+// ดึงสิทธิ์เจ้าของร้านคืน (ยกเลิกการใช้งาน) — ประวัติการซื้อและการชำระเงินยังอยู่ครบ
+router.post('/api/owner/shop-access/:userId/revoke', requireOwner, wrap(async (req, res) => {
+  const userId = Number(req.params.userId);
+  const target = await db.findUserById(userId);
+  if (!target) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' });
+  if (isAdminRole(target.role)) {
+    return res.status(400).json({ ok: false, message: 'ดึงสิทธิ์บัญชีแอดมิน/เจ้าของระบบไม่ได้' });
+  }
+  if (target.role !== 'shop') {
+    return res.status(400).json({ ok: false, message: 'บัญชีนี้ไม่ได้เป็นเจ้าของร้านอยู่แล้ว' });
+  }
+
+  const done = await db.revokeShopAccess(userId);
+  if (!done) return res.status(400).json({ ok: false, message: 'ดึงสิทธิ์ไม่สำเร็จ กรุณาลองใหม่' });
+
+  console.log(`🚫 [owner] ดึงสิทธิ์เจ้าของร้านคืน: ${target.email}`);
+  res.json({ ok: true, message: `ดึงสิทธิ์เจ้าของร้านของ ${target.email} คืนแล้ว (กลับเป็นผู้ใช้งานทั่วไป)` });
 }));
 
 // ยืนยันยอด → ให้สิทธิ์เจ้าของร้านทันทีตามอายุแพ็กเกจ

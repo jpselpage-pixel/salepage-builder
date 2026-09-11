@@ -130,10 +130,12 @@
                 <th>ช่องทาง</th>
                 <th>รหัสอ้างอิง</th>
                 <th>ยืนยันเมื่อ</th>
+                <th>สิทธิ์ปัจจุบัน</th>
+                <th>จัดการ</th>
               </tr>
             </thead>
             <tbody id="historyBody">
-              <tr><td colspan="8" class="empty-state">กำลังโหลด...</td></tr>
+              <tr><td colspan="10" class="empty-state">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -199,10 +201,18 @@
       const body = document.getElementById('historyBody');
       document.getElementById('rowCount').textContent = rows.length ? '(' + rows.length + ')' : '';
       if (!rows.length) {
-        body.innerHTML = '<tr><td colspan="8" class="empty-state">ไม่พบรายการซื้อตามเงื่อนไขที่เลือก</td></tr>';
+        body.innerHTML = '<tr><td colspan="10" class="empty-state">ไม่พบรายการซื้อตามเงื่อนไขที่เลือก</td></tr>';
         return;
       }
-      body.innerHTML = rows.map((r) => `<tr>
+      body.innerHTML = rows.map((r) => {
+        const isShop = r.userRole === 'shop';
+        const access = isShop
+          ? (r.userExpiresAt ? 'เจ้าของร้าน · ถึง ' + fmt(r.userExpiresAt).slice(0, 10) : 'เจ้าของร้าน · ไม่กำหนดวันหมดอายุ')
+          : (r.userRole ? 'ผู้ใช้งานทั่วไป' : '—');
+        const action = isShop
+          ? `<button class="icon-btn danger" data-revoke="${r.userId}" data-email="${esc(r.userEmail)}" type="button">ดึงสิทธิ์คืน</button>`
+          : '<span style="color:var(--muted);font-size:12px;">—</span>';
+        return `<tr>
         <td>${fmt(r.createdAt)}</td>
         <td>${esc(r.userEmail)}</td>
         <td>${esc(r.packageName)}</td>
@@ -211,7 +221,26 @@
         <td>${esc(METHOD_LABEL[r.method] || r.method)}</td>
         <td>${r.ref ? '<span class="mono">' + esc(r.ref) + '</span>' : '—'}</td>
         <td>${fmt(r.confirmedAt)}</td>
-      </tr>`).join('');
+        <td>${esc(access)}</td>
+        <td>${action}</td>
+      </tr>`;
+      }).join('');
+
+      body.querySelectorAll('[data-revoke]').forEach((b) => b.addEventListener('click', () => revoke(b)));
+    }
+
+    async function revoke(btn) {
+      const email = btn.dataset.email;
+      if (!confirm('ดึงสิทธิ์เจ้าของร้านของ ' + email + ' คืน?\n\nผู้ใช้จะกลับเป็น “ผู้ใช้งานทั่วไป” และเข้าใช้ระบบร้านไม่ได้ (ข้อมูลร้าน/เมนูยังอยู่ แต่เข้าถึงไม่ได้จนกว่าจะซื้อใหม่)\nประวัติการซื้อและการชำระเงินจะยังคงอยู่')) return;
+      btn.disabled = true;
+      try {
+        const data = await api('/api/owner/shop-access/' + btn.dataset.revoke + '/revoke', { method: 'POST' });
+        showToast(ICON_CHECK + esc(data.message));
+        await load();
+      } catch (err) {
+        showToast(ICON_ALERT + esc(err.message));
+        btn.disabled = false;
+      }
     }
 
     async function load() {
@@ -226,14 +255,14 @@
       if (limit) params.set('limit', limit);
 
       const body = document.getElementById('historyBody');
-      body.innerHTML = '<tr><td colspan="8" class="empty-state">กำลังโหลด...</td></tr>';
+      body.innerHTML = '<tr><td colspan="10" class="empty-state">กำลังโหลด...</td></tr>';
       try {
         const data = await api('/api/owner/purchase-history?' + params.toString());
         rows = data.purchases || [];
         renderSummary(data.summary);
         renderRows();
       } catch (err) {
-        body.innerHTML = '<tr><td colspan="8" class="empty-state">' + esc(err.message) + '</td></tr>';
+        body.innerHTML = '<tr><td colspan="10" class="empty-state">' + esc(err.message) + '</td></tr>';
       }
     }
 
