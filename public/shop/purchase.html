@@ -37,18 +37,13 @@
   </header>
 
   <div class="shop-wrap pkg-wrap">
+    <div id="notice"></div>
     <div class="pkg-grid" id="pkgGrid">
-      <div class="pkg-loading">กำลังโหลดแพ็กเกจ...</div>
+      <div class="pkg-loading">กำลังโหลด...</div>
     </div>
-
-    <p class="pkg-note">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" style="flex-shrink:0;margin-top:1px;"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 8h.01M11 12h1v4h1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>หมายเหตุ: เฟสนี้เป็นการซื้อแบบจำลอง ยังไม่ตัดเงินจริง — กดยืนยันแล้วบัญชีของคุณจะกลายเป็น “เจ้าของร้าน” ทันที</span>
-    </p>
   </div>
 
   <script>
-    // ถ้ากด Back แล้วเบราว์เซอร์กู้หน้านี้จาก cache ให้โหลดใหม่ เพื่อให้เซิร์ฟเวอร์เช็คสิทธิ์ (ซื้อแล้วจะถูกพาไปหน้าอื่น)
     window.addEventListener('pageshow', (e) => { if (e.persisted) window.location.reload(); });
 
     async function api(path, opts) {
@@ -58,17 +53,18 @@
       if (!data.ok) { const e = new Error(data.message || 'เกิดข้อผิดพลาด'); e.status = res.status; throw e; }
       return data;
     }
-
     function esc(s) {
       return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     }
-    function money(v) {
-      return Number(v || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
-    }
+    function money(v) { return Number(v || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
 
     const ICON_CHECK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const ICON_ARROW = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+    let payment = null;      // รายการที่รอชำระเงินอยู่
+    let rejected = null;     // รายการล่าสุดที่ถูกยกเลิก (ถ้ามี)
+
+    // ---------- การ์ดแพ็กเกจ ----------
     function renderCard(p) {
       const details = (p.details || []).filter((d) => d.heading || d.text);
       const features = details.length
@@ -117,6 +113,50 @@
       grid.querySelectorAll('[data-buy]').forEach((btn) => btn.addEventListener('click', () => buy(btn)));
     }
 
+    // ---------- ขั้นตอนชำระเงิน ----------
+    function renderPayment() {
+      const p = payment;
+      document.getElementById('notice').innerHTML = '';
+      document.getElementById('pkgGrid').innerHTML = `<div class="pay-box">
+        <div class="pay-head">
+          <span class="pill ${p.notified ? 'pill-valid' : 'pill-warning'}">${p.notified ? 'แจ้งโอนแล้ว — รอตรวจสอบยอด' : 'รอชำระเงิน'}</span>
+          <h2>${esc(p.packageName)} · ${esc(p.durationMonths)} เดือน</h2>
+          <div class="pay-amount">฿${money(p.amount)}</div>
+          <div class="pay-ref">รหัสอ้างอิง <strong class="mono">${esc(p.ref)}</strong></div>
+        </div>
+        ${p.qrUrl ? `<div class="pay-qr">
+          <img src="${esc(p.qrUrl)}" alt="PromptPay QR" width="230" height="230">
+          <p>สแกนด้วยแอปธนาคาร — ยอดเงินถูกกรอกให้แล้ว</p>
+        </div>` : ''}
+        ${p.bank ? `<div class="pay-bank">
+          <div class="pay-bank-title">หรือโอนผ่านธนาคาร</div>
+          <div>ธนาคาร: <strong>${esc(p.bank.name)}</strong></div>
+          <div>เลขที่บัญชี: <strong class="mono">${esc(p.bank.account)}</strong></div>
+          ${p.bank.holder ? `<div>ชื่อบัญชี: <strong>${esc(p.bank.holder)}</strong></div>` : ''}
+          <div class="pay-bank-hint">ใส่รหัสอ้างอิง <strong class="mono">${esc(p.ref)}</strong> ในบันทึกโอนด้วย</div>
+        </div>` : ''}
+        ${p.payNote ? `<p class="pay-note">${esc(p.payNote)}</p>` : ''}
+        <button class="pkg-cta" id="notifyBtn" type="button" ${p.notified ? 'disabled' : ''}>${p.notified ? 'แจ้งชำระเงินแล้ว' : 'แจ้งว่าชำระเงินแล้ว'}</button>
+        <p class="pay-hint">หลังโอนเงินแล้วกดปุ่มด้านบน ผู้ดูแลระบบจะตรวจสอบยอดและเปิดสิทธิ์เจ้าของร้านให้ตามอายุแพ็กเกจ</p>
+      </div>`;
+
+      const btn = document.getElementById('notifyBtn');
+      if (btn && !p.notified) btn.addEventListener('click', notifyPaid);
+    }
+
+    async function notifyPaid() {
+      const btn = document.getElementById('notifyBtn');
+      btn.disabled = true;
+      try {
+        await api('/api/my-payments/' + payment.id + '/notify', { method: 'POST' });
+        payment.notified = true;
+        renderPayment();
+      } catch (err) {
+        alert(err.message);
+        btn.disabled = false;
+      }
+    }
+
     async function buy(btn) {
       const errEl = document.querySelector('[data-err="' + btn.dataset.buy + '"]');
       errEl.style.display = 'none';
@@ -128,7 +168,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ packageId: Number(btn.dataset.buy) }),
         });
-        // ใช้ replace เพื่อไม่ให้กด Back กลับมาหน้าเลือกแพ็กเกจหลังซื้อแล้ว
+        if (data.pending && data.payment) { payment = data.payment; renderPayment(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
         window.location.replace(data.redirect || '/shop/setup.html');
       } catch (err) {
         errEl.textContent = err.message;
@@ -138,7 +178,22 @@
       }
     }
 
-    loadPackages();
+    (async function init() {
+      try {
+        const mine = await api('/api/my-payments');
+        const list = mine.payments || [];
+        payment = list.find((p) => p.status === 'pending') || null;
+        rejected = list.find((p) => p.status === 'rejected') || null;
+      } catch (err) { /* การแจ้งเตือนไม่บล็อกการซื้อ */ }
+
+      if (rejected && !payment) {
+        document.getElementById('notice').innerHTML = `<div class="pkg-notice">
+          รายการก่อนหน้า (รหัส ${esc(rejected.ref)}) ถูกยกเลิก: ${esc(rejected.note || 'ไม่ระบุเหตุผล')} — เลือกแพ็กเกจใหม่ได้เลย
+        </div>`;
+      }
+      if (payment) renderPayment();
+      else await loadPackages();
+    })();
   </script>
 </body>
 </html>

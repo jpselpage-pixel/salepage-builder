@@ -252,6 +252,29 @@ async function initSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+  // ── การชำระเงินค่าแพ็กเกจ (ลูกค้าแจ้งโอน → owner ตรวจสอบยืนยัน) ────────
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS package_payments (
+      id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+      user_id         BIGINT NOT NULL,
+      package_id      BIGINT NULL,
+      package_name    VARCHAR(120) NOT NULL,
+      duration_months INT NOT NULL DEFAULT 1,
+      amount          DECIMAL(10,2) NOT NULL DEFAULT 0,
+      method          VARCHAR(20) NOT NULL DEFAULT 'promptpay',
+      ref             VARCHAR(20) NOT NULL UNIQUE,
+      status          VARCHAR(12) NOT NULL DEFAULT 'pending',
+      notified        TINYINT(1) NOT NULL DEFAULT 0,
+      note            VARCHAR(255) NOT NULL DEFAULT '',
+      created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      confirmed_at    DATETIME NULL,
+      confirmed_by    BIGINT NULL,
+      CONSTRAINT fk_ppay_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      CONSTRAINT fk_ppay_package FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE SET NULL,
+      CONSTRAINT fk_ppay_confirmer FOREIGN KEY (confirmed_by) REFERENCES users(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
   // ── โต๊ะ + ออเดอร์ (ระบบสั่งอาหาร) ─────────────────────────────────────
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS \`tables\` (
@@ -995,6 +1018,60 @@ async function deletePackage(id) {
 }
 
 // ---------------------------------------------------------------------------
+// Package payments (การชำระเงินค่าแพ็กเกจ)
+// ---------------------------------------------------------------------------
+async function createPackagePayment({ userId, packageId, packageName, durationMonths = 1, amount = 0, method = 'promptpay', ref, note = '' }) {
+  const [result] = await pool.execute(
+    `INSERT INTO package_payments (user_id, package_id, package_name, duration_months, amount, method, ref, note)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId, packageId, packageName, durationMonths, amount, method, ref, note]
+  );
+  return Number(result.insertId);
+}
+
+async function findPackagePaymentById(id) {
+  const [rows] = await pool.execute('SELECT * FROM package_payments WHERE id = ?', [id]);
+  return rows[0] || null;
+}
+
+/** รายการที่ยังรอตรวจสอบของผู้ใช้คนหนึ่ง (กันสร้างซ้ำ) */
+async function findPendingPackagePaymentByUser(userId) {
+  const [rows] = await pool.execute(
+    "SELECT * FROM package_payments WHERE user_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1",
+    [userId]
+  );
+  return rows[0] || null;
+}
+
+async function listPackagePayments({ status = null, userId = null, limit = 100 } = {}) {
+  const where = [];
+  const args = [];
+  if (status) { where.push('status = ?'); args.push(status); }
+  if (userId) { where.push('user_id = ?'); args.push(userId); }
+  // LIMIT ต้องใส่เป็นตัวเลขในสตริง — MySQL ไม่รับค่า ? ใน prepared statement (ER_WRONG_ARGUMENTS)
+  const n = Math.min(Math.max(Math.trunc(Number(limit)) || 100, 1), 500);
+  const [rows] = await pool.execute(
+    `SELECT * FROM package_payments ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id DESC LIMIT ${n}`,
+    args
+  );
+  return rows;
+}
+
+async function markPackagePaymentNotified(id) {
+  await pool.execute('UPDATE package_payments SET notified = 1 WHERE id = ? AND status = \'pending\'', [id]);
+}
+
+async function setPackagePaymentStatus(id, status, { confirmedBy = null, note = null } = {}) {
+  const sets = ['status = ?'];
+  const args = [status];
+  if (confirmedBy) { sets.push('confirmed_by = ?'); args.push(confirmedBy); }
+  if (confirmedBy) sets.push('confirmed_at = CURRENT_TIMESTAMP');
+  if (note !== null) { sets.push('note = ?'); args.push(note); }
+  args.push(id);
+  await pool.execute(`UPDATE package_payments SET ${sets.join(', ')} WHERE id = ?`, args);
+}
+
+// ---------------------------------------------------------------------------
 // Tables (โต๊ะ) + Orders (บิล/ออเดอร์) — ระบบสั่งอาหาร
 // ---------------------------------------------------------------------------
 async function listTables(shopId) {
@@ -1270,6 +1347,12 @@ module.exports = {
   createPackage,
   updatePackage,
   deletePackage,
+  createPackagePayment,
+  findPackagePaymentById,
+  findPendingPackagePaymentByUser,
+  listPackagePayments,
+  markPackagePaymentNotified,
+  setPackagePaymentStatus,
   listTables,
   findTableById,
   findTableByCode,

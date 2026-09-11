@@ -15,6 +15,15 @@ const db = require('./src/db');
 const { PORT } = require('./src/config');
 const { DEV_MODE } = require('./src/lib/settings');
 
+// ตาข่ายกันเซิร์ฟเวอร์ล่มจากข้อผิดพลาดที่หลุดมา (เช่น async handler ที่ไม่ได้ try/catch)
+// — บันทึกไว้ให้ตรวจ แล้วให้คำขออื่นทำงานต่อได้ (pm2 ยังรีสตาร์ทให้ถ้าจำเป็น)
+process.on('unhandledRejection', (err) => {
+  console.error('❌ Unhandled promise rejection:', err && err.stack ? err.stack : err);
+});
+process.on('uncaughtException', (err) => {
+  console.error('❌ Uncaught exception:', err && err.stack ? err.stack : err);
+});
+
 (async () => {
   try {
     await db.initDb();

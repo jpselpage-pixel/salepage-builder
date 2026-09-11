@@ -13,6 +13,7 @@ const googleRoutes = require('./routes/google');
 const accountRoutes = require('./routes/account');
 const adminPageRoutes = require('./routes/admin-pages');
 const adminRoutes = require('./routes/admin');
+const paymentRoutes = require('./routes/payments');
 const shopRoutes = require('./routes/shop');
 const orderRoutes = require('./routes/orders');
 const publicRoutes = require('./routes/public');
@@ -36,12 +37,15 @@ app.use((req, res, next) => {
 // guard หน้าเว็บ (ต้องมาก่อน static เพื่อกันไฟล์ใน /admin)
 // หน้าจัดการแพ็กเกจเป็นของเจ้าของระบบเท่านั้น — ต้องประกาศก่อน adminGuard
 app.use('/admin/packages.html', ownerGuard);
+app.use('/admin/payments.html', ownerGuard);
 app.use('/admin', adminGuard);
 app.use(['/dashboard', '/settings'], accountGuard);
 app.use('/shop', shopGuard);
 
 // หน้า HTML หลังบ้าน — แทรกเมนูตามบทบาทฝั่งเซิร์ฟเวอร์ (ต้องมาก่อน express.static)
 app.use(adminPageRoutes);
+// ระบบรับชำระเงิน (ตั้งค่าช่องทางรับเงิน + คิวตรวจสอบยอด + QR PromptPay)
+app.use(paymentRoutes);
 
 // หน้าบัญชี (page routes) — ต้องมาก่อน static เช่นเดียวกับต้นฉบับ
 app.use(accountRoutes);

@@ -15,12 +15,30 @@ const { isAdminRole, isOwner } = require('../lib/roles');
 
 const router = express.Router();
 const ADMIN_DIR = path.join(__dirname, '..', '..', 'public', 'admin');
-const PAGES = ['index.html', 'otp.html', 'users.html', 'profile.html', 'packages.html'];
+const PAGES = ['index.html', 'otp.html', 'users.html', 'profile.html', 'packages.html', 'payments.html'];
 
-const OWNER_MENU = `      <a class="side-link{{ACTIVE}}" href="/admin/packages.html">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.7l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.7l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3.3 7L12 12l8.7-5M12 22V12" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
-        แพ็กเกจร้านค้า
-      </a>`;
+/** เมนูที่เห็นเฉพาะเจ้าของระบบ — เรียงตามลำดับที่แสดงในแถบข้าง */
+const OWNER_MENUS = [
+  {
+    file: 'packages.html',
+    href: '/admin/packages.html',
+    label: 'แพ็กเกจร้านค้า',
+    icon: '<path d="M21 16V8a2 2 0 00-1-1.7l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.7l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3.3 7L12 12l8.7-5M12 22V12" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>',
+  },
+  {
+    file: 'payments.html',
+    href: '/admin/payments.html',
+    label: 'การชำระเงิน',
+    icon: '<rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20M6 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  },
+];
+
+function ownerMenuHtml(currentFile) {
+  return OWNER_MENUS.map((m) => `      <a class="side-link${m.file === currentFile ? ' active' : ''}" href="${m.href}">
+        <svg viewBox="0 0 24 24" fill="none">${m.icon}</svg>
+        ${m.label}
+      </a>`).join('\n');
+}
 
 router.get(['/admin/', '/admin/:file'], async (req, res, next) => {
   const file = req.params.file || 'index.html';
@@ -36,10 +54,8 @@ router.get(['/admin/', '/admin/:file'], async (req, res, next) => {
     return next(); // ไม่มีไฟล์ → ปล่อยให้ static ตอบ 404
   }
 
-  const menu = isOwner(user.role)
-    ? OWNER_MENU.replace('{{ACTIVE}}', file === 'packages.html' ? ' active' : '')
-    : '';
-  html = html.replace(/^[ \t]*<!--MENU_PACKAGES-->[ \t]*\r?\n/m, menu ? menu + '\n' : '');
+  const menu = isOwner(user.role) ? ownerMenuHtml(file) : '';
+  html = html.replace(/^[ \t]*<!--MENU_OWNER-->[ \t]*\r?\n/m, menu ? menu + '\n' : '');
 
   res.set('Cache-Control', 'no-store'); // HTML ขึ้นกับบทบาทผู้ใช้ — ห้ามแคช
   res.type('html').send(html);

@@ -244,3 +244,28 @@ button.cart-info strong { color: var(--text); }
 .sw .sw-slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s ease; box-shadow: var(--shadow-sm); }
 .sw input:checked + .sw-slider { background: var(--accent-gradient); }
 .sw input:checked + .sw-slider::before { transform: translateX(18px); }
+
+/* ---------- ขั้นตอนชำระเงิน (หน้าซื้อแพ็กเกจ) ---------- */
+.pay-box { grid-column: 1 / -1; max-width: 560px; margin: 0 auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-md); padding: 28px 24px; text-align: center; }
+.pay-head h2 { font-size: 17px; font-weight: 800; margin: 12px 0 4px; }
+.pay-amount { font-size: 40px; font-weight: 800; letter-spacing: -1.5px; margin: 4px 0 8px; background: var(--accent-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .pay-amount { -webkit-text-fill-color: var(--accent); color: var(--accent); }
+}
+.pay-ref { font-size: 13.5px; color: var(--muted); }
+.pay-ref strong { color: var(--text); font-size: 15px; letter-spacing: .5px; }
+.pay-qr { margin: 20px 0 6px; }
+.pay-qr img { width: 230px; height: 230px; max-width: 100%; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; }
+.pay-qr p { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+.pay-bank { text-align: left; margin: 16px 0; padding: 16px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); font-size: 13.5px; line-height: 2; }
+.pay-bank-title { font-weight: 700; margin-bottom: 6px; }
+.pay-bank-hint { color: var(--muted); font-size: 12.5px; line-height: 1.7; margin-top: 6px; }
+.pay-note { font-size: 13px; color: var(--muted); line-height: 1.7; margin: 12px 0; }
+.pay-hint { font-size: 12.5px; color: var(--muted); line-height: 1.7; margin-top: 14px; }
+.pay-box .pkg-cta { margin-top: 6px; }
+.pkg-notice { background: var(--warning-bg); border: 1px solid var(--warning-border); color: var(--warning); border-radius: var(--radius); padding: 12px 14px; font-size: 13px; line-height: 1.7; margin-bottom: 18px; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+@media (max-width: 640px) {
+  .pay-box { padding: 22px 18px; }
+  .pay-amount { font-size: 34px; }
+}

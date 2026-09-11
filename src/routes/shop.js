@@ -12,6 +12,7 @@ const { getCurrentUser, requireLogin, requireShop } = require('../middleware/aut
 const { isAdminRole, isShop } = require('../lib/roles');
 const { randomToken } = require('../lib/crypto');
 const { futureMonthsSql } = require('../lib/time');
+const { getPaymentSettings, hasAnyChannel, paymentInstructions, generateRef } = require('../lib/payments');
 
 const router = express.Router();
 const PUBLIC_DIR = path.join(__dirname, '..', '..', 'public');
@@ -108,6 +109,36 @@ router.post('/api/shop/purchase', requireLogin, async (req, res) => {
   }
 
   const amount = Number(pkg.price) || 0;
+
+  // เปิดรับชำระเงินจริง → สร้างรายการรอโอน แล้วให้เจ้าของระบบกดยืนยันยอด (ยังไม่ให้สิทธิ์ทันที)
+  const pay = getPaymentSettings();
+  if (pay.enabled && hasAnyChannel(pay)) {
+    const existing = await db.findPendingPackagePaymentByUser(user.id);
+    if (existing) {
+      return res.json({ ok: true, pending: true, message: 'คุณมีรายการที่รอตรวจสอบยอดอยู่แล้ว', payment: paymentInstructions(existing) });
+    }
+    let paymentId = null;
+    for (let i = 0; i < 5 && !paymentId; i++) {
+      try {
+        paymentId = await db.createPackagePayment({
+          userId: user.id,
+          packageId: pkg.id,
+          packageName: pkg.name,
+          durationMonths: pkg.duration_months,
+          amount,
+          method: pay.promptpayId ? 'promptpay' : 'bank',
+          ref: generateRef(),
+        });
+      } catch (err) {
+        if (err.code !== 'ER_DUP_ENTRY') throw err; // รหัสอ้างอิงชนกัน → สุ่มใหม่
+      }
+    }
+    if (!paymentId) return res.status(500).json({ ok: false, message: 'สร้างรายการชำระเงินไม่สำเร็จ กรุณาลองใหม่' });
+    const rec = await db.findPackagePaymentById(paymentId);
+    console.log(`💳 เปิดรายการชำระเงิน #${rec.id} (${rec.ref}) ${user.email} · ${pkg.name} · ฿${amount}`);
+    return res.json({ ok: true, pending: true, message: 'สร้างรายการชำระเงินแล้ว (รหัส ' + rec.ref + ')', payment: paymentInstructions(rec) });
+  }
+
   const expiresAt = futureMonthsSql(pkg.duration_months); // อายุการใช้งานตามจำนวนเดือนของแพ็กเกจ
   await db.setUserRole(user.id, 'shop');
   await db.setUserShopExpiry(user.id, expiresAt);
