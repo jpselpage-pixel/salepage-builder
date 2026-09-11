@@ -99,8 +99,9 @@ router.post('/api/admin/smtp-test', requireAdmin, async (req, res) => {
   }
   const result = await mailer.sendEmail({
     to,
-    subject: 'ทดสอบการตั้งค่า SMTP — ระบบสมาชิก',
-    htmlBody: '<p>✅ ทดสอบการตั้งค่า SMTP สำเร็จ ถ้าคุณได้รับอีเมลนี้ แสดงว่าระบบพร้อมใช้งานจริงแล้ว</p>',
+    // หัวข้ออังกฤษ ASCII — Gmail กรองเมลหัวข้อไทยจากผู้ส่งรายใหม่ (ทดสอบแล้วฉบับ EN ถึง)
+    subject: 'SMTP test - Member System',
+    htmlBody: '<p>ทดสอบการตั้งค่า SMTP สำเร็จ ถ้าคุณได้รับอีเมลนี้ แสดงว่าระบบพร้อมใช้งานจริงแล้ว</p>',
   });
   if (!result.ok) {
     return res.status(400).json({ ok: false, message: result.error || 'ส่งอีเมลทดสอบไม่สำเร็จ' });

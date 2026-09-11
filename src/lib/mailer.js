@@ -93,8 +93,8 @@ async function sendEmail({ to, subject, htmlBody }) {
  */
 function sendVerificationEmail({ email, token, baseUrl }) {
   const link = `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
-  // หัวข้อเป็นอังกฤษ (ASCII) — Gmail กรองเมลหัวข้อภาษาไทยจาก sender นี้ (เทสต์แล้วฉบับ EN ถึง)
-  const subject = 'Verify your email — Member System';
+  // หัวข้อเป็นอังกฤษ ASCII ล้วน (ห้ามอักขระพิเศษ/ไทย) — Gmail กรองเมลหัวข้อภาษาไทยจาก sender นี้ (เทสต์แล้วฉบับ EN ถึง)
+  const subject = 'Verify your email - Member System';
   // เนื้อหาธรรมดา ไม่มีปุ่ม/สีเยอะ — Gmail กรองเมลแบบมีปุ่มตกแต่ง (เทสต์แล้วฉบับธรรมดาส่งถึง)
   const htmlBody = `
     <p>สวัสดีครับ/ค่ะ</p>
@@ -117,12 +117,12 @@ function sendVerificationEmail({ email, token, baseUrl }) {
  * โหมด dev: แสดงรหัสที่ console + server.js แนบ devOtp กลับให้ทดสอบ
  */
 function sendOtpEmail({ email, code }) {
-  const subject = 'รหัสยืนยัน (OTP) — ระบบสมาชิก';
+  // หัวข้ออังกฤษ ASCII + เนื้อหาธรรมดาไม่มีสี/ตัวใหญ่ — Gmail กรองเมลหัวข้อไทยและเมลตกแต่งจากผู้ส่งรายใหม่
+  const subject = 'Verification code (OTP) - Member System';
   const htmlBody = `
     <p>สวัสดีครับ/ค่ะ,</p>
     <p>คุณได้ขอรหัสยืนยันเพื่อกู้รหัสผ่านบัญชีของคุณ</p>
-    <p>รหัสยืนยันของคุณคือ:</p>
-    <p style="font-size:28px;font-weight:bold;letter-spacing:6px;color:#4f46e5;">${code}</p>
+    <p>รหัสยืนยันของคุณคือ: ${code}</p>
     <p>รหัสนี้มีอายุ 5 นาที หากคุณไม่ได้เป็นผู้ขอ กรุณาเพิกเฉยอีเมลนี้</p>
   `;
   sendEmail({ to: email, subject, htmlBody }).then((r) => {
