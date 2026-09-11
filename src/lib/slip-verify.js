@@ -56,6 +56,21 @@ function pickAccount(account) {
   return '';
 }
 
+/**
+ * เทียบบัญชีผู้รับ — EasySlip มักส่งเลขบัญชีแบบปิดบางหลัก (เช่น xxx-x-x5678-x)
+ * จึงเทียบแบบเข้มก่อน และถ้าไม่ตรงให้เทียบ 4 หลักท้าย (ใช้คู่กับยอดเงิน + การกันสลิปซ้ำ)
+ */
+function accountMatches(wantRaw, gotRaw) {
+  const digits = (v) => String(v == null ? '' : v).replace(/\D/g, '');
+  const want = digits(wantRaw);
+  const got = digits(gotRaw);
+  if (!want || !got) return false;
+  if (want === got) return true;
+  const tail = 4;
+  if (want.length >= tail && got.length >= tail) return want.slice(-tail) === got.slice(-tail);
+  return false;
+}
+
 /** เรียก EasySlip ตรวจสลิปธนาคาร (ส่งรูปเป็น base64) → ผลลัพธ์รูปแบบเดียว */
 async function verifySlip(buffer, expectedAmount) {
   const s = getSlipSettings();
@@ -136,21 +151,19 @@ function decideAutoApprove({ settings, record, result }) {
   // ยืนยันบัญชีผู้รับ: ผู้ให้บริการจับคู่กับบัญชีที่ลงทะเบียนไว้ให้ ถ้าไม่ได้ให้เทียบกับเลขที่ตั้งค่าเอง
   let receiverOk = Boolean(result.matchedAccount);
   let extra = receiverOk ? 'บัญชีผู้รับตรงกับที่ลงทะเบียนใน EasySlip' : '';
-  if (!receiverOk && settings.receiverAccount) {
-    const norm = (v) => String(v == null ? '' : v).replace(/\D/g, '');
-    const want = norm(settings.receiverAccount);
-    const got = norm(result.receiverAccount);
-    if (want && got && want === got) { receiverOk = true; extra = 'บัญชีผู้รับตรงกับที่ตั้งค่าไว้'; }
+  if (!receiverOk && settings.receiverAccount && accountMatches(settings.receiverAccount, result.receiverAccount)) {
+    receiverOk = true;
+    extra = 'บัญชีผู้รับตรงกับที่ตั้งค่าไว้ (เทียบ 4 หลักท้าย)';
   }
   if (!receiverOk) {
     return {
       approve: false,
       status: 'receiver_unverified',
-      detail: 'ยืนยันบัญชีผู้รับไม่ได้ — ลงทะเบียนบัญชีรับเงินในหน้า EasySlip หรือใส่เลขบัญชีผู้รับในการตั้งค่า แล้วระบบจะอนุมัติอัตโนมัติได้',
+      detail: 'ยืนยันบัญชีผู้รับไม่ได้ — ลงทะเบียนบัญชีรับเงินในหน้า EasySlip (แม่นยำสุด) หรือใส่เลขบัญชีผู้รับในช่องตั้งค่า แล้วระบบจะอนุมัติอัตโนมัติได้',
     };
   }
 
   return { approve: true, status: 'verified', detail: 'ตรวจสลิปผ่าน · ยอดตรง · ' + extra };
 }
 
-module.exports = { getSlipSettings, verifySlip, decideAutoApprove };
+module.exports = { getSlipSettings, verifySlip, decideAutoApprove, accountMatches };
