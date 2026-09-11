@@ -15,7 +15,7 @@ const { isAdminRole, isOwner } = require('../lib/roles');
 
 const router = express.Router();
 const ADMIN_DIR = path.join(__dirname, '..', '..', 'public', 'admin');
-const PAGES = ['index.html', 'otp.html', 'users.html', 'profile.html', 'packages.html', 'payments.html'];
+const PAGES = ['index.html', 'otp.html', 'users.html', 'profile.html', 'packages.html', 'payments.html', 'purchase-history.html'];
 
 /** เมนูที่เห็นเฉพาะเจ้าของระบบ — เรียงตามลำดับที่แสดงในแถบข้าง */
 const OWNER_MENUS = [
@@ -30,6 +30,12 @@ const OWNER_MENUS = [
     href: '/admin/payments.html',
     label: 'การชำระเงิน',
     icon: '<rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20M6 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+  },
+  {
+    file: 'purchase-history.html',
+    href: '/admin/purchase-history.html',
+    label: 'ประวัติการซื้อ',
+    icon: '<path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l3.5-4 3 2.5L19 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
   },
 ];
 

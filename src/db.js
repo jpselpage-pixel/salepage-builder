@@ -236,6 +236,7 @@ async function initSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
   await ensureColumn('shop_purchases', 'package_id', 'package_id BIGINT NULL');
+  await ensureColumn('shop_purchases', 'payment_id', 'payment_id BIGINT NULL');
 
   // ── แพ็กเกจ (owner ตั้งขาย — ผู้ใช้ซื้อแล้วเปิดร้านได้) ─────────────────
   await pool.execute(`
@@ -954,10 +955,10 @@ async function setMenuOptionGroups(menuId, groupIds) {
 // ---------------------------------------------------------------------------
 // Shop purchases (บันทึกการซื้อแพ็กเกจ — จำลอง)
 // ---------------------------------------------------------------------------
-async function createShopPurchase({ userId, packageName = 'basic', packageId = null, amount = 0, status = 'paid' }) {
+async function createShopPurchase({ userId, packageName = 'basic', packageId = null, paymentId = null, amount = 0, status = 'paid' }) {
   const [result] = await pool.execute(
-    'INSERT INTO shop_purchases (user_id, package, package_id, amount, status) VALUES (?, ?, ?, ?, ?)',
-    [userId, packageName, packageId, amount, status]
+    'INSERT INTO shop_purchases (user_id, package, package_id, payment_id, amount, status) VALUES (?, ?, ?, ?, ?, ?)',
+    [userId, packageName, packageId, paymentId, amount, status]
   );
   return Number(result.insertId);
 }
@@ -968,6 +969,50 @@ async function findLatestShopPurchase(userId) {
     [userId]
   );
   return rows[0] || null;
+}
+
+/**
+ * ประวัติการซื้อแพ็กเกจของลูกค้า (เฉพาะรายการที่ได้สิทธิ์แล้ว)
+ * รองรับรายการเก่าที่ซื้อตอนยังไม่เปิดระบบชำระเงิน (ไม่มี payment_id → ถือเป็นโหมดทดลอง)
+ */
+async function listPurchaseHistory({ q = null, from = null, to = null, limit = 200 } = {}) {
+  const where = [];
+  const args = [];
+  if (q) { where.push('u.email LIKE ?'); args.push('%' + q + '%'); }
+  if (from) { where.push('sp.created_at >= ?'); args.push(from); }
+  if (to) { where.push('sp.created_at <= ?'); args.push(to); }
+  const n = Math.min(Math.max(Math.trunc(Number(limit)) || 200, 1), 500);
+  const [rows] = await pool.execute(
+    `SELECT sp.id, sp.user_id, sp.package AS package_name, sp.amount, sp.created_at,
+            u.email AS user_email,
+            pp.ref, pp.method, pp.status AS pay_status, pp.confirmed_at, pp.duration_months AS pay_months,
+            p.duration_months AS pkg_months
+       FROM shop_purchases sp
+       JOIN users u ON u.id = sp.user_id
+       LEFT JOIN package_payments pp ON pp.id = sp.payment_id
+       LEFT JOIN packages p ON p.id = sp.package_id
+      ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+      ORDER BY sp.id DESC LIMIT ${n}`,
+    args
+  );
+  return rows;
+}
+
+/** สรุปยอดขายสำหรับหน้าประวัติ */
+async function summarizePurchases() {
+  const [all] = await pool.execute(
+    'SELECT COUNT(id) AS count, COALESCE(SUM(amount), 0) AS total, COUNT(DISTINCT user_id) AS customers FROM shop_purchases'
+  );
+  const [month] = await pool.execute(
+    "SELECT COUNT(id) AS count, COALESCE(SUM(amount), 0) AS total FROM shop_purchases WHERE created_at >= DATE_FORMAT(NOW(), '%Y-%m-01')"
+  );
+  return {
+    count: Number(all[0].count),
+    total: Number(all[0].total),
+    customers: Number(all[0].customers),
+    monthCount: Number(month[0].count),
+    monthTotal: Number(month[0].total),
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1341,6 +1386,8 @@ module.exports = {
   setMenuOptionGroups,
   createShopPurchase,
   findLatestShopPurchase,
+  listPurchaseHistory,
+  summarizePurchases,
   listPackages,
   listActivePackages,
   findPackageById,

@@ -138,6 +138,36 @@ router.get('/api/owner/package-payments', requireOwner, wrap(async (req, res) =>
   });
 }));
 
+// ประวัติการซื้อแพ็กเกจของลูกค้า (รายการที่ได้สิทธิ์แล้ว) + สรุปยอดขาย
+router.get('/api/owner/purchase-history', requireOwner, wrap(async (req, res) => {
+  const q = clip(req.query.q, 100) || null;
+  const isDate = (v) => /^\d{4}-\d{2}-\d{2}$/.test(String(v || ''));
+  const from = isDate(req.query.from) ? req.query.from + ' 00:00:00' : null;
+  const to = isDate(req.query.to) ? req.query.to + ' 23:59:59' : null;
+  const limit = Number(req.query.limit) || 200;
+
+  const [rows, summary] = await Promise.all([
+    db.listPurchaseHistory({ q, from, to, limit }),
+    db.summarizePurchases(),
+  ]);
+  res.json({
+    ok: true,
+    summary,
+    purchases: rows.map((r) => ({
+      id: r.id,
+      userEmail: r.user_email,
+      packageName: r.package_name,
+      durationMonths: r.pay_months || r.pkg_months || null,
+      amount: Number(r.amount),
+      ref: r.ref || null,
+      method: r.method || 'mock',
+      status: r.pay_status || 'paid',
+      createdAt: r.created_at,
+      confirmedAt: r.confirmed_at,
+    })),
+  });
+}));
+
 // ยืนยันยอด → ให้สิทธิ์เจ้าของร้านทันทีตามอายุแพ็กเกจ
 router.post('/api/owner/package-payments/:id/confirm', requireOwner, wrap(async (req, res) => {
   const rec = await db.findPackagePaymentById(Number(req.params.id));
@@ -153,6 +183,7 @@ router.post('/api/owner/package-payments/:id/confirm', requireOwner, wrap(async 
   await db.createShopPurchase({
     userId: user.id,
     packageId: rec.package_id,
+    paymentId: rec.id,
     packageName: clip(rec.package_name, 30),
     amount: Number(rec.amount),
   });

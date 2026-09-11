@@ -38,6 +38,7 @@ app.use((req, res, next) => {
 // หน้าจัดการแพ็กเกจเป็นของเจ้าของระบบเท่านั้น — ต้องประกาศก่อน adminGuard
 app.use('/admin/packages.html', ownerGuard);
 app.use('/admin/payments.html', ownerGuard);
+app.use('/admin/purchase-history.html', ownerGuard);
 app.use('/admin', adminGuard);
 app.use(['/dashboard', '/settings'], accountGuard);
 app.use('/shop', shopGuard);

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ประวัติการซื้อแพ็กเกจ | ระบบหลังบ้าน</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="brand-name">หลังบ้าน</span>
+      </div>
+
+      <div class="side-label">เมนู</div>
+      <a class="side-link" href="/admin/">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        ภาพรวม
+      </a>
+      <a class="side-link" href="/admin/otp.html">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M6 9h4M6 13h8M15 9l2 2m0 0l2-2m-2 2v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        จัดการ SMS-OTP
+      </a>
+      <a class="side-link" href="/admin/users.html">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ผู้ใช้งาน
+      </a>
+      <!--MENU_OWNER-->
+      <div class="side-label">เว็บไซต์</div>
+      <a class="side-link" href="/settings/profile" title="เปิดหน้าเหมือนผู้ใช้">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        เปิดหน้าเหมือนผู้ใช้
+      </a>
+      <div class="sidebar-footer">
+        <a class="sidebar-user" href="/admin/profile.html" title="ข้อมูลส่วนตัว">
+          <div class="avatar" id="adminAvatar">O</div>
+          <div>
+            <div class="u-email" id="adminEmail">—</div>
+            <div class="u-role" id="adminRoleLabel">—</div>
+          </div>
+        </a>
+        <a class="side-link" href="#" id="logoutBtn">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ออกจากระบบ
+        </a>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <div class="topbar">
+        <div>
+          <h1>ประวัติการซื้อแพ็กเกจ</h1>
+          <p>ลูกค้าคนไหนซื้อแพ็กเกจอะไร เมื่อไร ยอดเท่าไร — ดูย้อนหลังและส่งออกเป็นไฟล์ได้</p>
+        </div>
+        <button class="icon-btn" id="reloadBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          รีเฟรช
+        </button>
+      </div>
+
+      <div class="stat-grid">
+        <div class="stat-card accent"><div class="stat-value" id="sumTotal">–</div><div class="stat-label">ยอดขายรวม (บาท)</div></div>
+        <div class="stat-card"><div class="stat-value" id="sumCount">–</div><div class="stat-label">รายการที่ซื้อสำเร็จ</div></div>
+        <div class="stat-card"><div class="stat-value" id="sumCustomers">–</div><div class="stat-label">ลูกค้าที่ซื้อ</div></div>
+        <div class="stat-card"><div class="stat-value" id="sumMonth">–</div><div class="stat-label">ยอดขายเดือนนี้</div></div>
+      </div>
+
+      <div class="admin-card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M3 5h18l-7 8v6l-4-2v-4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          ค้นหา / กรองรายการ
+        </h2>
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label for="fEmail">อีเมลลูกค้า</label>
+            <input type="text" id="fEmail" maxlength="100" placeholder="พิมพ์บางส่วนของอีเมล">
+          </div>
+          <div class="settings-field">
+            <label for="fFrom">ตั้งแต่วันที่</label>
+            <input type="text" id="fFrom" placeholder="วว/ดด/ปปปป" inputmode="numeric" autocomplete="off">
+          </div>
+          <div class="settings-field">
+            <label for="fTo">ถึงวันที่</label>
+            <input type="text" id="fTo" placeholder="วว/ดด/ปปปป" inputmode="numeric" autocomplete="off">
+          </div>
+          <div class="settings-field">
+            <label for="fLimit">แสดงสูงสุด (รายการ)</label>
+            <input type="number" id="fLimit" min="10" max="500" value="100">
+          </div>
+        </div>
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="icon-btn primary" id="searchBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            ค้นหา
+          </button>
+          <button class="icon-btn" id="clearBtn" type="button">ล้างตัวกรอง</button>
+          <button class="icon-btn" id="csvBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            ส่งออก CSV
+          </button>
+        </div>
+        <p style="font-size:12.5px;color:var(--muted);margin-top:12px;line-height:1.7;">
+          หน้านี้แสดงเฉพาะรายการที่ลูกค้าได้รับสิทธิ์แล้ว — รายการที่ยังรอตรวจสอบหรือถูกยกเลิก ดูได้ที่หน้า “การชำระเงิน”
+        </p>
+      </div>
+
+      <div class="admin-card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4zM4 9h16M9 9v11" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          รายการซื้อ <span id="rowCount" style="color:var(--muted);font-weight:600;"></span>
+        </h2>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>วันที่ซื้อ</th>
+                <th>ลูกค้า</th>
+                <th>แพ็กเกจ</th>
+                <th>อายุ</th>
+                <th>ยอดเงิน</th>
+                <th>ช่องทาง</th>
+                <th>รหัสอ้างอิง</th>
+                <th>ยืนยันเมื่อ</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody">
+              <tr><td colspan="8" class="empty-state">กำลังโหลด...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const toast = document.getElementById('toast');
+    const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const ICON_ALERT = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    let toastTimer = null;
+    function showToast(msg) {
+      toast.innerHTML = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 4200);
+    }
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      let data;
+      try { data = await res.json(); }
+      catch { const e = new Error('เซิร์ฟเวอร์ตอบสนองไม่ถูกต้อง (HTTP ' + res.status + ')'); e.status = res.status; throw e; }
+      if (!data.ok) { const e = new Error(data.message || 'เกิดข้อผิดพลาด'); e.status = res.status; throw e; }
+      return data;
+    }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function money(v) { return Number(v || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+    function fmt(v) {
+      if (!v) return '—';
+      const d = new Date(v);
+      const pad = (n) => String(n).padStart(2, '0');
+      return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+    }
+
+    const METHOD_LABEL = { promptpay: 'PromptPay', bank: 'โอนธนาคาร', mock: 'ทดลอง (ไม่เก็บเงิน)' };
+    let rows = [];
+
+    // ช่องวันที่แบบ พ.ศ./ค.ศ. พิมพ์เป็น วว/ดด/ปปปป → แปลงเป็น YYYY-MM-DD ให้ API
+    function toIsoDate(text) {
+      const t = String(text || '').trim();
+      if (!t) return null;
+      const m = t.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+      if (!m) return null;
+      let [, d, mo, y] = m;
+      let year = Number(y);
+      if (year > 2400) year -= 543; // พ.ศ. → ค.ศ.
+      return year + '-' + String(mo).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+    }
+
+    function renderSummary(s) {
+      document.getElementById('sumTotal').textContent = '฿' + money(s.total);
+      document.getElementById('sumCount').textContent = s.count;
+      document.getElementById('sumCustomers').textContent = s.customers;
+      document.getElementById('sumMonth').textContent = '฿' + money(s.monthTotal) + ' (' + s.monthCount + ')';
+    }
+
+    function renderRows() {
+      const body = document.getElementById('historyBody');
+      document.getElementById('rowCount').textContent = rows.length ? '(' + rows.length + ')' : '';
+      if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="8" class="empty-state">ไม่พบรายการซื้อตามเงื่อนไขที่เลือก</td></tr>';
+        return;
+      }
+      body.innerHTML = rows.map((r) => `<tr>
+        <td>${fmt(r.createdAt)}</td>
+        <td>${esc(r.userEmail)}</td>
+        <td>${esc(r.packageName)}</td>
+        <td>${r.durationMonths ? esc(r.durationMonths) + ' เดือน' : '—'}</td>
+        <td><strong>฿${money(r.amount)}</strong></td>
+        <td>${esc(METHOD_LABEL[r.method] || r.method)}</td>
+        <td>${r.ref ? '<span class="mono">' + esc(r.ref) + '</span>' : '—'}</td>
+        <td>${fmt(r.confirmedAt)}</td>
+      </tr>`).join('');
+    }
+
+    async function load() {
+      const params = new URLSearchParams();
+      const email = document.getElementById('fEmail').value.trim();
+      const from = toIsoDate(document.getElementById('fFrom').value);
+      const to = toIsoDate(document.getElementById('fTo').value);
+      const limit = document.getElementById('fLimit').value;
+      if (email) params.set('q', email);
+      if (from) params.set('from', from);
+      if (to) params.set('to', to);
+      if (limit) params.set('limit', limit);
+
+      const body = document.getElementById('historyBody');
+      body.innerHTML = '<tr><td colspan="8" class="empty-state">กำลังโหลด...</td></tr>';
+      try {
+        const data = await api('/api/owner/purchase-history?' + params.toString());
+        rows = data.purchases || [];
+        renderSummary(data.summary);
+        renderRows();
+      } catch (err) {
+        body.innerHTML = '<tr><td colspan="8" class="empty-state">' + esc(err.message) + '</td></tr>';
+      }
+    }
+
+    function exportCsv() {
+      if (!rows.length) { showToast(ICON_ALERT + 'ไม่มีข้อมูลให้ส่งออก'); return; }
+      const head = ['วันที่ซื้อ', 'ลูกค้า', 'แพ็กเกจ', 'อายุ (เดือน)', 'ยอดเงิน', 'ช่องทาง', 'รหัสอ้างอิง', 'ยืนยันเมื่อ'];
+      const esc2 = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+      const lines = [head.map(esc2).join(',')];
+      for (const r of rows) {
+        lines.push([
+          fmt(r.createdAt), r.userEmail, r.packageName, r.durationMonths || '',
+          Number(r.amount || 0).toFixed(2), METHOD_LABEL[r.method] || r.method, r.ref || '', fmt(r.confirmedAt),
+        ].map(esc2).join(','));
+      }
+      // ใส่ BOM เพื่อให้ Excel อ่านภาษาไทยถูกต้อง
+      const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'purchase-history-' + new Date().toISOString().slice(0, 10) + '.csv';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      showToast(ICON_CHECK + 'ส่งออก ' + rows.length + ' รายการแล้ว');
+    }
+
+    document.getElementById('searchBtn').addEventListener('click', load);
+    document.getElementById('csvBtn').addEventListener('click', exportCsv);
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      document.getElementById('fEmail').value = '';
+      document.getElementById('fFrom').value = '';
+      document.getElementById('fTo').value = '';
+      document.getElementById('fLimit').value = 100;
+      load();
+    });
+    document.getElementById('fEmail').addEventListener('keydown', (e) => { if (e.key === 'Enter') load(); });
+    document.getElementById('reloadBtn').addEventListener('click', async () => {
+      await load();
+      showToast(ICON_CHECK + 'โหลดข้อมูลล่าสุดแล้ว');
+    });
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    (async function init() {
+      try {
+        const { user } = await api('/api/me');
+        document.getElementById('adminEmail').textContent = user.email;
+        document.getElementById('adminRoleLabel').textContent = user.role === 'owner' ? 'เจ้าของระบบ' : 'แอดมิน';
+        document.getElementById('adminAvatar').textContent = (user.email || 'O')[0].toUpperCase();
+      } catch (err) { /* guard จัดการสิทธิ์แล้ว */ }
+      load();
+    })();
+  </script>
+</body>
+</html>
