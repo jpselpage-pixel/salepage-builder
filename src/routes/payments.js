@@ -9,6 +9,8 @@
  */
 'use strict';
 
+const fs = require('node:fs');
+const path = require('node:path');
 const express = require('express');
 const QRCode = require('qrcode');
 const generatePromptPayPayload = require('promptpay-qr');
@@ -17,6 +19,7 @@ const { requireLogin, requireOwner } = require('../middleware/auth');
 const { isAdminRole } = require('../lib/roles');
 const { futureMonthsSql } = require('../lib/time');
 const { getPaymentSettings, hasAnyChannel, paymentInstructions } = require('../lib/payments');
+const { getSlipSettings, verifySlip, decideAutoApprove } = require('../lib/slip-verify');
 
 const router = express.Router();
 const clip = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
@@ -24,6 +27,49 @@ const digitsOnly = (v) => String(v == null ? '' : v).replace(/\D/g, '');
 
 // Express 4 ไม่ดัก error จาก async handler ให้เอง — ถ้าไม่ดักไว้ ข้อผิดพลาดจะทำให้โปรเซสล่ม
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+// ---------------------------------------------------------------------------
+// สลิปโอนเงิน (เก็บไฟล์ใน public/uploads/slips)
+// ---------------------------------------------------------------------------
+const SLIP_DIR = path.join(__dirname, '..', '..', 'public', 'uploads', 'slips');
+const SLIP_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+// เพดาน 2MB (base64 จะบวม ~33% ต้องไม่เกินเพดาน JSON 4mb ของ express)
+const MAX_SLIP_BYTES = 2 * 1024 * 1024;
+
+/** แปลง data URL ของสลิป → buffer + นามสกุล */
+function parseSlip(dataUrl) {
+  const m = /^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
+  if (!m) throw new Error('ไฟล์สลิปไม่ถูกต้อง (รองรับ png/jpeg/webp)');
+  const buf = Buffer.from(m[2], 'base64');
+  if (!buf.length) throw new Error('ไฟล์สลิปว่างเปล่า');
+  if (buf.length > MAX_SLIP_BYTES) throw new Error('ไฟล์สลิปใหญ่เกิน 2MB');
+  return { buf, ext: SLIP_TYPES[m[1]] };
+}
+
+function saveSlipBuffer(buf, ext, ref) {
+  fs.mkdirSync(SLIP_DIR, { recursive: true });
+  const name = String(ref || 'slip') + '-' + Date.now().toString(36) + '.' + ext;
+  fs.writeFileSync(path.join(SLIP_DIR, name), buf);
+  return '/uploads/slips/' + name;
+}
+
+/** ให้สิทธิ์เจ้าของร้านตามแพ็กเกจ — ใช้ทั้งการกดยืนยันเองและการอนุมัติอัตโนมัติจากสลิป */
+async function grantPackage(rec, confirmedBy = null) {
+  const user = await db.findUserById(rec.user_id);
+  if (!user) return null;
+  const expiresAt = futureMonthsSql(rec.duration_months);
+  await db.setUserRole(user.id, 'shop');
+  await db.setUserShopExpiry(user.id, expiresAt);
+  await db.createShopPurchase({
+    userId: user.id,
+    packageId: rec.package_id,
+    paymentId: rec.id,
+    packageName: clip(rec.package_name, 30),
+    amount: Number(rec.amount),
+  });
+  await db.setPackagePaymentStatus(rec.id, 'paid', { confirmedBy });
+  return { user, expiresAt };
+}
 
 // ---------------------------------------------------------------------------
 // ลูกค้า
@@ -70,7 +116,7 @@ router.get('/api/my-payments', requireLogin, wrap(async (req, res) => {
   res.json({ ok: true, payments: rows.map((r) => paymentInstructions(r)) });
 }));
 
-// แจ้งว่าโอนเงินแล้ว (ลูกค้ากดเอง — ไม่ได้ยืนยันยอดอัตโนมัติ)
+// แจ้งว่าโอนเงินแล้ว (แนบสลิปได้) — ถ้าตั้งค่าตรวจสลิปไว้ ระบบจะตรวจและอนุมัติให้อัตโนมัติ
 router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) => {
   const rec = await db.findPackagePaymentById(Number(req.params.id));
   if (!rec || Number(rec.user_id) !== Number(req.user.id)) {
@@ -79,9 +125,52 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
   if (rec.status !== 'pending') {
     return res.status(400).json({ ok: false, message: 'รายการนี้ถูกตรวจสอบไปแล้ว' });
   }
-  await db.markPackagePaymentNotified(rec.id);
-  console.log(`💸 ลูกค้าแจ้งชำระเงิน #${rec.id} (${rec.ref}) ยอด ฿${rec.amount}`);
-  res.json({ ok: true, message: 'แจ้งชำระเงินแล้ว รอผู้ดูแลระบบตรวจสอบยอด' });
+
+  const slipData = String(req.body?.slip || '');
+  let slipUrl = '';
+  let slipStatus = 'manual';
+  let slipDetail = 'ลูกค้าแจ้งโอน (ไม่มีสลิป) — รอผู้ดูแลระบบตรวจสอบ';
+
+  if (slipData) {
+    let parsed;
+    try {
+      parsed = parseSlip(slipData);
+    } catch (err) {
+      return res.status(400).json({ ok: false, message: err.message });
+    }
+    slipUrl = saveSlipBuffer(parsed.buf, parsed.ext, rec.ref);
+
+    const settings = getSlipSettings();
+    if (settings.configured) {
+      const result = await verifySlip(parsed.buf);
+      const decision = decideAutoApprove({ settings, record: rec, result });
+      slipStatus = decision.status;
+      slipDetail = decision.detail;
+
+      if (decision.approve) {
+        await db.markPackagePaymentNotified(rec.id, { slipUrl, slipStatus, slipDetail });
+        const granted = await grantPackage(rec, null);
+        console.log(`✅ ตรวจสลิปผ่าน — อนุมัติอัตโนมัติ #${rec.id} (${rec.ref})${granted ? ' → ' + granted.user.email : ''}`);
+        return res.json({
+          ok: true,
+          autoApproved: true,
+          message: 'ตรวจสลิปผ่าน — เปิดสิทธิ์เจ้าของร้านให้คุณแล้ว เริ่มใช้งานได้ทันที',
+        });
+      }
+      console.log(`🔎 ตรวจสลิป #${rec.id} (${rec.ref}) → ${slipStatus}: ${slipDetail}`);
+    } else {
+      slipStatus = 'not_configured';
+      slipDetail = 'ยังไม่ได้ตั้งค่าตรวจสลิปอัตโนมัติ — รอผู้ดูแลระบบตรวจสอบ';
+    }
+  }
+
+  await db.markPackagePaymentNotified(rec.id, { slipUrl, slipStatus, slipDetail });
+  console.log(`💸 ลูกค้าแจ้งชำระเงิน #${rec.id} (${rec.ref}) ยอด ฿${rec.amount} [${slipStatus}]`);
+  res.json({
+    ok: true,
+    autoApproved: false,
+    message: 'แจ้งชำระเงินแล้ว รอผู้ดูแลระบบตรวจสอบยอด',
+  });
 }));
 
 // ---------------------------------------------------------------------------
@@ -89,7 +178,19 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
 // ---------------------------------------------------------------------------
 router.get('/api/owner/payment-settings', requireOwner, (req, res) => {
   const s = getPaymentSettings();
-  res.json({ ok: true, settings: s, ready: hasAnyChannel(s) });
+  const slip = getSlipSettings();
+  res.json({
+    ok: true,
+    settings: s,
+    ready: hasAnyChannel(s),
+    slip: {
+      configured: slip.configured,
+      hasKey: Boolean(slip.apiKey),
+      keyMasked: slip.apiKey ? '••••' + slip.apiKey.slice(-4) : null,
+      receiverAccount: slip.receiverAccount,
+      autoApprove: slip.autoApprove,
+    },
+  });
 });
 
 router.post('/api/owner/payment-settings', requireOwner, wrap(async (req, res) => {
@@ -111,14 +212,27 @@ router.post('/api/owner/payment-settings', requireOwner, wrap(async (req, res) =
     return res.status(400).json({ ok: false, field: 'enabled', message: 'เปิดใช้งานไม่ได้ — ต้องตั้งค่า PromptPay หรือบัญชีธนาคารอย่างน้อย 1 อย่าง' });
   }
 
+  // ---- ตรวจสลิปอัตโนมัติ (EasySlip) ----
+  const slipApiKey = String(body.slipApiKey || '').trim();
+  const slipReceiverAccount = clip(String(body.slipReceiverAccount || '').replace(/[^\d-]/g, ''), 25);
+  const slipAutoApprove = Boolean(body.slipAutoApprove);
+  const currentSlip = getSlipSettings();
+  if (slipAutoApprove && !currentSlip.apiKey && !slipApiKey) {
+    return res.status(400).json({ ok: false, field: 'slipApiKey', message: 'เปิดอนุมัติอัตโนมัติไม่ได้ — ต้องใส่ API key ของ EasySlip ก่อน' });
+  }
+
   await db.setSetting('pay_promptpay_id', promptpayId);
   await db.setSetting('pay_bank_name', bankName);
   await db.setSetting('pay_bank_account', bankAccount);
   await db.setSetting('pay_bank_holder', bankHolder);
   await db.setSetting('pay_note', note);
   await db.setSetting('pay_enabled', String(enabled));
+  await db.setSetting('slip_provider', 'easyslip');
+  if (slipApiKey) await db.setSetting('slip_api_key', slipApiKey); // เว้นว่าง = ใช้ค่าเดิม
+  await db.setSetting('slip_receiver_account', slipReceiverAccount);
+  await db.setSetting('slip_auto_approve', String(slipAutoApprove));
 
-  console.log(`💳 [owner] บันทึกการตั้งค่ารับเงิน (เปิดใช้=${enabled}${promptpayId ? ' · PromptPay' : ''}${bankAccount ? ' · โอนธนาคาร' : ''})`);
+  console.log(`💳 [owner] บันทึกการตั้งค่ารับเงิน (เปิดใช้=${enabled}${promptpayId ? ' · PromptPay' : ''}${bankAccount ? ' · โอนธนาคาร' : ''} · ตรวจสลิปอัตโนมัติ=${slipAutoApprove})`);
   res.json({ ok: true, message: enabled ? 'บันทึกแล้ว — เปิดรับชำระเงินจริง' : 'บันทึกแล้ว — ยังปิดรับชำระเงิน (ใช้โหมดจำลอง)' });
 }));
 
@@ -197,23 +311,11 @@ router.post('/api/owner/package-payments/:id/confirm', requireOwner, wrap(async 
   if (!rec) return res.status(404).json({ ok: false, message: 'ไม่พบรายการชำระเงิน' });
   if (rec.status !== 'pending') return res.status(400).json({ ok: false, message: 'รายการนี้ถูกตรวจสอบไปแล้ว' });
 
-  const user = await db.findUserById(rec.user_id);
-  if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้ของรายการนี้' });
+  const granted = await grantPackage(rec, req.owner.id);
+  if (!granted) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้ของรายการนี้' });
 
-  const expiresAt = futureMonthsSql(rec.duration_months);
-  await db.setUserRole(user.id, 'shop');
-  await db.setUserShopExpiry(user.id, expiresAt);
-  await db.createShopPurchase({
-    userId: user.id,
-    packageId: rec.package_id,
-    paymentId: rec.id,
-    packageName: clip(rec.package_name, 30),
-    amount: Number(rec.amount),
-  });
-  await db.setPackagePaymentStatus(rec.id, 'paid', { confirmedBy: req.owner.id });
-
-  console.log(`✅ [owner] ยืนยันชำระเงิน #${rec.id} (${rec.ref}) → ให้สิทธิ์ ${user.email} ถึง ${expiresAt}`);
-  res.json({ ok: true, message: `ยืนยันยอดแล้ว — ${user.email} เป็นเจ้าของร้านถึง ${expiresAt.slice(0, 10)}` });
+  console.log(`✅ [owner] ยืนยันชำระเงิน #${rec.id} (${rec.ref}) → ให้สิทธิ์ ${granted.user.email} ถึง ${granted.expiresAt}`);
+  res.json({ ok: true, message: `ยืนยันยอดแล้ว — ${granted.user.email} เป็นเจ้าของร้านถึง ${granted.expiresAt.slice(0, 10)}` });
 }));
 
 // ยกเลิกรายการ (เช่น ตรวจแล้วไม่พบยอดโอน)

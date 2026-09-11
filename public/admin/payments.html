@@ -124,6 +124,32 @@
           <input type="text" id="payNote" maxlength="255" placeholder="เช่น โอนแล้วแจ้งใน LINE @ร้าน ภายใน 24 ชม.">
         </div>
 
+        <div class="switch-row" style="margin:24px 0 14px;border-top:1px solid var(--border);padding-top:20px;">
+          <div>
+            <div style="font-weight:600;font-size:14px;">ตรวจสลิปอัตโนมัติ (EasySlip)</div>
+            <div class="switch-desc">เปิด = ลูกค้าแนบสลิป แล้วระบบตรวจกับ EasySlip ให้เอง ถ้าเป็นสลิปจริงและยอดตรง จะเปิดสิทธิ์เจ้าของร้านให้ทันทีโดยไม่ต้องกดยืนยัน</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="slipAutoApprove">
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label for="slipApiKey">EasySlip API Key</label>
+            <input type="password" id="slipApiKey" placeholder="วาง API key ที่นี่ (เว้นว่าง = ใช้ค่าเดิม)" autocomplete="new-password">
+          </div>
+          <div class="settings-field">
+            <label for="slipReceiverAccount">บัญชีผู้รับที่ต้องตรง (พร้อมเพย์/เลขบัญชี)</label>
+            <input type="text" id="slipReceiverAccount" maxlength="25" placeholder="เช่น 0613242012">
+          </div>
+        </div>
+        <p class="switch-desc" style="margin-top:10px;line-height:1.8;">
+          สถานะ API key: <span id="slipKeyStatus">—</span><br>
+          ต้องเพิ่ม IP ของเซิร์ฟเวอร์ <span class="mono">118.27.151.243</span> ใน whitelist ของ EasySlip ด้วย (ถ้าไม่ใส่ จะเรียก API ไม่ได้)
+          · สมัครและดูเอกสารที่ <a href="https://developer.easyslip.com" target="_blank" rel="noopener">developer.easyslip.com</a>
+        </p>
+
         <div style="margin-top:18px;">
           <button class="icon-btn primary" id="saveBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -152,11 +178,12 @@
                 <th>ยอด</th>
                 <th>รหัสอ้างอิง</th>
                 <th>สถานะ</th>
+                <th>สลิป</th>
                 <th>จัดการ</th>
               </tr>
             </thead>
             <tbody id="queueBody">
-              <tr><td colspan="7" class="empty-state">กำลังโหลด...</td></tr>
+              <tr><td colspan="8" class="empty-state">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -198,7 +225,18 @@
 
     const STATUS_LABEL = { pending: 'รอตรวจสอบ', paid: 'ยืนยันแล้ว', rejected: 'ยกเลิก' };
     const STATUS_CLASS = { pending: 'pill-warning', paid: 'pill-valid', rejected: 'pill-expired' };
+    // ผลตรวจสลิปอัตโนมัติ
+    const SLIP_CLASS = { verified: 'pill-valid', duplicate: 'pill-expired', amount_mismatch: 'pill-warning', receiver_mismatch: 'pill-warning', verify_failed: 'pill-warning', error: 'pill-warning', not_configured: '', manual: '' };
+    const SLIP_LABEL = { verified: 'สลิปผ่าน', duplicate: 'สลิปซ้ำ', amount_mismatch: 'ยอดไม่ตรง', receiver_mismatch: 'บัญชีไม่ตรง', verify_failed: 'ตรวจไม่สำเร็จ', error: 'ตรวจไม่สำเร็จ', not_configured: 'ยังไม่ตั้งค่าตรวจ', manual: 'ไม่มีสลิป' };
     let currentTab = 'pending';
+
+    function renderSlip(slip) {
+      document.getElementById('slipReceiverAccount').value = slip.receiverAccount || '';
+      document.getElementById('slipAutoApprove').checked = Boolean(slip.autoApprove);
+      document.getElementById('slipKeyStatus').innerHTML = slip.hasKey
+        ? '<span class="pill pill-valid">ตั้งค่าแล้ว</span> <span class="mono">' + esc(slip.keyMasked || '') + '</span>'
+        : '<span class="pill pill-expired">ยังไม่ได้ใส่ API key</span>';
+    }
 
     function renderSettings(s, ready) {
       document.getElementById('payEnabled').checked = Boolean(s.enabled);
@@ -228,6 +266,7 @@
     async function loadSettings() {
       const data = await api('/api/owner/payment-settings');
       renderSettings(data.settings, data.ready);
+      if (data.slip) renderSlip(data.slip);
     }
 
     document.getElementById('helpBtn').addEventListener('click', () => {
@@ -249,8 +288,12 @@
             bankAccount: document.getElementById('bankAccount').value.trim(),
             bankHolder: document.getElementById('bankHolder').value.trim(),
             note: document.getElementById('payNote').value.trim(),
+            slipApiKey: document.getElementById('slipApiKey').value.trim(),
+            slipReceiverAccount: document.getElementById('slipReceiverAccount').value.trim(),
+            slipAutoApprove: document.getElementById('slipAutoApprove').checked,
           }),
         });
+        document.getElementById('slipApiKey').value = ''; // ไม่เก็บ key ไว้ในช่องหลังบันทึก
         showToast(ICON_CHECK + esc(data.message));
         await loadSettings();
       } catch (err) {
@@ -262,18 +305,18 @@
 
     async function loadQueue() {
       const body = document.getElementById('queueBody');
-      body.innerHTML = '<tr><td colspan="7" class="empty-state">กำลังโหลด...</td></tr>';
+      body.innerHTML = '<tr><td colspan="8" class="empty-state">กำลังโหลด...</td></tr>';
       let rows = [];
       try {
         const data = await api('/api/owner/package-payments?status=' + currentTab);
         rows = data.payments || [];
       } catch (err) {
-        body.innerHTML = '<tr><td colspan="7" class="empty-state">' + esc(err.message) + '</td></tr>';
+        body.innerHTML = '<tr><td colspan="8" class="empty-state">' + esc(err.message) + '</td></tr>';
         return;
       }
       document.getElementById('queueCount').textContent = rows.length ? '(' + rows.length + ')' : '';
       if (!rows.length) {
-        body.innerHTML = '<tr><td colspan="7" class="empty-state">ไม่มีรายการในสถานะนี้</td></tr>';
+        body.innerHTML = '<tr><td colspan="8" class="empty-state">ไม่มีรายการในสถานะนี้</td></tr>';
         return;
       }
       body.innerHTML = rows.map((p) => `<tr>
@@ -283,6 +326,9 @@
         <td><strong>฿${money(p.amount)}</strong></td>
         <td><span class="mono">${esc(p.ref)}</span></td>
         <td><span class="pill ${STATUS_CLASS[p.status] || ''}">${STATUS_LABEL[p.status] || esc(p.status)}</span></td>
+        <td>${p.slipUrl
+          ? `<a href="${esc(p.slipUrl)}" target="_blank" rel="noopener" class="icon-btn" style="padding:5px 10px;">ดูสลิป</a>${p.slipStatus ? `<div class="pill ${SLIP_CLASS[p.slipStatus] || ''}" style="margin-top:5px;">${esc(SLIP_LABEL[p.slipStatus] || p.slipStatus)}</div>` : ''}`
+          : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
         <td>${p.status === 'pending'
           ? `<div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="icon-btn primary" data-confirm="${p.id}" type="button">ยืนยันยอด</button><button class="icon-btn danger" data-reject="${p.id}" type="button">ยกเลิก</button></div>`
           : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>

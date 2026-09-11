@@ -275,6 +275,10 @@ async function initSchema() {
       CONSTRAINT fk_ppay_confirmer FOREIGN KEY (confirmed_by) REFERENCES users(id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  // สลิปโอนเงิน + ผลการตรวจสลิปอัตโนมัติ (EasySlip)
+  await ensureColumn('package_payments', 'slip_url', "slip_url VARCHAR(255) NOT NULL DEFAULT ''");
+  await ensureColumn('package_payments', 'slip_status', "slip_status VARCHAR(24) NOT NULL DEFAULT ''");
+  await ensureColumn('package_payments', 'slip_detail', "slip_detail VARCHAR(255) NOT NULL DEFAULT ''");
 
   // ── โต๊ะ + ออเดอร์ (ระบบสั่งอาหาร) ─────────────────────────────────────
   await pool.execute(`
@@ -1111,8 +1115,15 @@ async function listPackagePayments({ status = null, userId = null, limit = 100 }
   return rows;
 }
 
-async function markPackagePaymentNotified(id) {
-  await pool.execute('UPDATE package_payments SET notified = 1 WHERE id = ? AND status = \'pending\'', [id]);
+async function markPackagePaymentNotified(id, { slipUrl = '', slipStatus = '', slipDetail = '' } = {}) {
+  await pool.execute(
+    `UPDATE package_payments
+        SET notified = 1,
+            slip_url = COALESCE(NULLIF(?, ''), slip_url),
+            slip_status = ?, slip_detail = ?
+      WHERE id = ? AND status = 'pending'`,
+    [slipUrl, slipStatus, slipDetail, id]
+  );
 }
 
 async function setPackagePaymentStatus(id, status, { confirmedBy = null, note = null } = {}) {

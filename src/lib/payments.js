@@ -42,6 +42,9 @@ function paymentInstructions(rec) {
     bank: s.bankAccount ? { name: s.bankName, account: s.bankAccount, holder: s.bankHolder } : null,
     note: rec.note || '',      // หมายเหตุของรายการนั้น ๆ (เช่น เหตุผลที่ถูกยกเลิก)
     payNote: s.note || '',     // ข้อความถึงลูกค้าจากการตั้งค่าช่องทางรับเงิน
+    slipUrl: rec.slip_url || null,       // รูปสลิปที่ลูกค้าแนบ
+    slipStatus: rec.slip_status || '',   // ผลตรวจสลิปอัตโนมัติ
+    slipDetail: rec.slip_detail || '',
   };
 }
 

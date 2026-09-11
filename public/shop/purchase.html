@@ -116,8 +116,9 @@
     }
 
     // ---------- ขั้นตอนชำระเงิน ----------
-    function renderPayment() {
+    function renderPayment(msg) {
       const p = payment;
+      const activeMsg = msg || '';
       document.getElementById('notice').innerHTML = '';
       document.getElementById('pkgGrid').innerHTML = `<div class="pay-box">
         <div class="pay-head">
@@ -138,21 +139,53 @@
           <div class="pay-bank-hint">ใส่รหัสอ้างอิง <strong class="mono">${esc(p.ref)}</strong> ในบันทึกโอนด้วย</div>
         </div>` : ''}
         ${p.payNote ? `<p class="pay-note">${esc(p.payNote)}</p>` : ''}
+        ${activeMsg ? `<p class="pay-msg">${esc(activeMsg)}</p>` : ''}
+        ${p.slipDetail && !p.notified ? '' : (p.slipDetail ? `<p class="pay-msg">${esc(p.slipDetail)}</p>` : '')}
+        ${p.slipUrl && p.notified ? `<div class="pay-qr"><img src="${esc(p.slipUrl)}" alt="สลิป" style="width:auto;max-height:220px;"></div>` : ''}
+        ${p.notified ? '' : `<div class="pay-slip">
+          <label for="slipFile">แนบสลิปโอนเงิน (แนะนำ — ระบบจะตรวจให้อัตโนมัติ)</label>
+          <input type="file" id="slipFile" accept="image/png,image/jpeg,image/webp">
+          <div class="pay-slip-name" id="slipName"></div>
+        </div>`}
         <button class="pkg-cta" id="notifyBtn" type="button" ${p.notified ? 'disabled' : ''}>${p.notified ? 'แจ้งชำระเงินแล้ว' : 'แจ้งว่าชำระเงินแล้ว'}</button>
-        <p class="pay-hint">หลังโอนเงินแล้วกดปุ่มด้านบน ผู้ดูแลระบบจะตรวจสอบยอดและเปิดสิทธิ์เจ้าของร้านให้ตามอายุแพ็กเกจ</p>
+        <p class="pay-hint">หลังโอนเงินแล้วแนบสลิปและกดปุ่มด้านบน — ถ้าแนบสลิป ระบบจะตรวจและเปิดสิทธิ์ให้อัตโนมัติ ถ้าไม่แนบ ผู้ดูแลระบบจะตรวจสอบยอดให้</p>
       </div>`;
 
+      const fileInput = document.getElementById('slipFile');
+      if (fileInput) fileInput.addEventListener('change', () => {
+        const f = fileInput.files && fileInput.files[0];
+        document.getElementById('slipName').textContent = f ? 'เลือกไฟล์: ' + f.name : '';
+      });
       const btn = document.getElementById('notifyBtn');
       if (btn && !p.notified) btn.addEventListener('click', notifyPaid);
     }
 
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ''));
+        r.onerror = () => reject(new Error('อ่านไฟล์สลิปไม่สำเร็จ'));
+        r.readAsDataURL(file);
+      });
+    }
+
     async function notifyPaid() {
       const btn = document.getElementById('notifyBtn');
+      const input = document.getElementById('slipFile');
+      const file = input && input.files && input.files[0];
+      if (file && file.size > 2 * 1024 * 1024) { alert('ไฟล์สลิปใหญ่เกิน 2MB กรุณาย่อรูปก่อน'); return; }
       btn.disabled = true;
       try {
-        await api('/api/my-payments/' + payment.id + '/notify', { method: 'POST' });
+        const body = {};
+        if (file) body.slip = await readFileAsDataUrl(file);
+        const data = await api('/api/my-payments/' + payment.id + '/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (data.autoApproved) { window.location.replace('/shop/setup.html'); return; }
         payment.notified = true;
-        renderPayment();
+        renderPayment(data.message);
       } catch (err) {
         alert(err.message);
         btn.disabled = false;
