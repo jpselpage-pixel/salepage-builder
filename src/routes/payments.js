@@ -142,7 +142,7 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
 
     const settings = getSlipSettings();
     if (settings.configured) {
-      const result = await verifySlip(parsed.buf);
+      const result = await verifySlip(parsed.buf, rec.amount);
       const decision = decideAutoApprove({ settings, record: rec, result });
       slipStatus = decision.status;
       slipDetail = decision.detail;
