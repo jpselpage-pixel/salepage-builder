@@ -28,23 +28,14 @@
   <div class="shop-wrap">
     <div class="shop-head">
       <h1>เปิดร้านค้าของคุณ</h1>
-      <p>ซื้อแพ็กเกจเพื่อเริ่มสร้างร้านอาหาร จัดการเมนู และแชร์หน้าร้านให้ลูกค้าดูได้ทันที</p>
+      <p>เลือกแพ็กเกจเพื่อเริ่มสร้างร้านอาหาร จัดการเมนู และแชร์หน้าร้านให้ลูกค้าดูได้ทันที</p>
     </div>
 
-    <div class="shop-card pkg-card">
-      <h2>แพ็กเกจเปิดร้าน</h2>
-      <div class="pkg-price">฿0 <small>/ เดือน (ช่วงทดลอง)</small></div>
-      <ul class="pkg-list">
-        <li>✅ สร้างร้านได้ 1 ร้าน (ชื่อ/เบอร์/LINE/โลโก้/แผนที่)</li>
-        <li>✅ จัดการหมวดหมู่ + หมวดหมู่ย่อย</li>
-        <li>✅ เพิ่มเมนูพร้อมรูปและราคา</li>
-        <li>✅ ตั้งตัวเลือกในเมนู (เช่น ระดับความเผด็, ทานที่ร้าน/ห่อกลับบ้าน)</li>
-        <li>✅ หน้าร้านสาธารณะให้ลูกค้าดูเมนู</li>
-      </ul>
-      <div class="error-msg" id="errMsg"></div>
-      <button class="btn btn-primary" id="buyBtn" type="button">ยืนยันซื้อแพ็กเกจ (จำลอง)</button>
-      <p style="font-size:12.5px;color:var(--muted);margin-top:12px;">หมายเหตุ: เฟสนี้เป็นการซื้อแบบจำลอง ยังไม่ตัดเงินจริง — กดยืนยันแล้วบัญชีของคุณจะกลายเป็น “เจ้าของร้าน” ทันที</p>
+    <div class="pkg-grid" id="pkgGrid">
+      <div class="pkg-empty">กำลังโหลดแพ็กเกจ...</div>
     </div>
+
+    <p style="font-size:12.5px;color:var(--muted);margin-top:18px;">หมายเหตุ: เฟสนี้เป็นการซื้อแบบจำลอง ยังไม่ตัดเงินจริง — กดยืนยันแล้วบัญชีของคุณจะกลายเป็น “เจ้าของร้าน” ทันที</p>
   </div>
 
   <script>
@@ -59,9 +50,47 @@
       return data;
     }
 
-    document.getElementById('buyBtn').addEventListener('click', async (e) => {
-      const btn = e.target;
-      const errEl = document.getElementById('errMsg');
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function money(v) {
+      return Number(v || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    function renderCard(p) {
+      const details = (p.details || []).filter((d) => d.heading || d.text);
+      const list = details.length
+        ? `<ul class="pkg-list">${details.map((d) => `<li><span class="pkg-ico">✓</span><span><strong>${esc(d.heading)}</strong>${d.text ? '<br>' + esc(d.text) : ''}</span></li>`).join('')}</ul>`
+        : '';
+      return `<div class="shop-card pkg-card">
+        <h2>${esc(p.name)}</h2>
+        <div class="pkg-price">฿${money(p.price)} <small>/ ${esc(p.duration_months)} เดือน</small></div>
+        ${list}
+        <div class="error-msg" data-err="${p.id}"></div>
+        <button class="btn btn-primary" data-buy="${p.id}" type="button">เลือกแพ็กเกจนี้</button>
+      </div>`;
+    }
+
+    async function loadPackages() {
+      const grid = document.getElementById('pkgGrid');
+      let packages = [];
+      try {
+        const data = await api('/api/packages');
+        packages = data.packages || [];
+      } catch (err) {
+        grid.innerHTML = '<div class="pkg-empty">โหลดแพ็กเกจไม่สำเร็จ: ' + esc(err.message) + '</div>';
+        return;
+      }
+      if (!packages.length) {
+        grid.innerHTML = '<div class="pkg-empty">ยังไม่มีแพ็กเกจที่เปิดขายในขณะนี้<br>กรุณาติดต่อผู้ดูแลระบบ</div>';
+        return;
+      }
+      grid.innerHTML = packages.map(renderCard).join('');
+      grid.querySelectorAll('[data-buy]').forEach((btn) => btn.addEventListener('click', () => buy(btn)));
+    }
+
+    async function buy(btn) {
+      const errEl = document.querySelector('[data-err="' + btn.dataset.buy + '"]');
       errEl.style.display = 'none';
       btn.disabled = true;
       btn.classList.add('loading');
@@ -69,7 +98,7 @@
         const data = await api('/api/shop/purchase', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ package: 'basic', amount: 0 }),
+          body: JSON.stringify({ packageId: Number(btn.dataset.buy) }),
         });
         // ใช้ replace เพื่อไม่ให้กด Back กลับมาหน้าเลือกแพ็กเกจหลังซื้อแล้ว
         window.location.replace(data.redirect || '/shop/setup.html');
@@ -79,7 +108,9 @@
         btn.disabled = false;
         btn.classList.remove('loading');
       }
-    });
+    }
+
+    loadPackages();
   </script>
 </body>
 </html>

@@ -81,7 +81,13 @@ async function myShop(req, res) {
   return shop;
 }
 
-// ซื้อแพ็กเกจ (จำลอง) — ผู้ใช้ที่ล็อกอินแล้วและยังไม่เป็นเจ้าของร้าน
+// รายการแพ็กเกจที่เปิดขาย (owner ตั้งไว้ที่ /admin/packages.html) — ใช้แสดงในหน้าซื้อแพ็กเกจ
+router.get('/api/packages', async (req, res) => {
+  res.json({ ok: true, packages: await db.listActivePackages() });
+});
+
+// ซื้อแพ็กเกจ (จำลองการชำระเงิน) — ผู้ใช้ที่ล็อกอินแล้วและยังไม่เป็นเจ้าของร้าน
+// ราคา/ชื่อแพ็กเกจคิดจากฝั่งเซิร์ฟเวอร์เสมอ (ไม่เชื่อค่าที่ client ส่งมา)
 router.post('/api/shop/purchase', requireLogin, async (req, res) => {
   const user = req.user;
   if (isShop(user.role)) {
@@ -90,13 +96,26 @@ router.post('/api/shop/purchase', requireLogin, async (req, res) => {
   if (isAdminRole(user.role)) {
     return res.status(400).json({ ok: false, message: 'บัญชีผู้ดูแลระบบไม่ต้องซื้อแพ็กเกจ' });
   }
-  const packageName = clip(req.body?.package, 30) || 'basic';
-  const amount = Number(req.body?.amount) || 0;
 
+  const packageId = Number(req.body?.packageId);
+  if (!Number.isInteger(packageId) || packageId <= 0) {
+    return res.status(400).json({ ok: false, message: 'กรุณาเลือกแพ็กเกจที่ต้องการซื้อ' });
+  }
+  const pkg = await db.findPackageById(packageId);
+  if (!pkg || Number(pkg.active) !== 1) {
+    return res.status(400).json({ ok: false, message: 'แพ็กเกจนี้ไม่พร้อมขายหรือถูกปิดไปแล้ว' });
+  }
+
+  const amount = Number(pkg.price) || 0;
   await db.setUserRole(user.id, 'shop');
-  await db.createShopPurchase({ userId: user.id, packageName, amount });
-  console.log(`🛒 ซื้อแพ็กเกจร้านค้า: ${user.email} (${packageName})`);
-  res.json({ ok: true, message: 'ซื้อแพ็กเกจสำเร็จ ตอนนี้คุณเป็นเจ้าของร้านแล้ว', role: 'shop', redirect: '/shop/setup.html' });
+  await db.createShopPurchase({ userId: user.id, packageId: pkg.id, packageName: clip(pkg.name, 30), amount });
+  console.log(`🛒 ซื้อแพ็กเกจร้านค้า: ${user.email} (${pkg.name} · ${pkg.duration_months} เดือน · ฿${amount})`);
+  res.json({
+    ok: true,
+    message: `ซื้อแพ็กเกจ "${pkg.name}" สำเร็จ ตอนนี้คุณเป็นเจ้าของร้านแล้ว`,
+    role: 'shop',
+    redirect: '/shop/setup.html',
+  });
 });
 
 // ข้อมูลร้านของฉัน + ข้อมูลเมนูทั้งหมด (ใช้ในหน้าจัดการ)

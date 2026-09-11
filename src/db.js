@@ -235,6 +235,7 @@ async function initSchema() {
       CONSTRAINT fk_purchase_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
+  await ensureColumn('shop_purchases', 'package_id', 'package_id BIGINT NULL');
 
   // ── แพ็กเกจ (owner ตั้งขาย — ผู้ใช้ซื้อแล้วเปิดร้านได้) ─────────────────
   await pool.execute(`
@@ -925,10 +926,10 @@ async function setMenuOptionGroups(menuId, groupIds) {
 // ---------------------------------------------------------------------------
 // Shop purchases (บันทึกการซื้อแพ็กเกจ — จำลอง)
 // ---------------------------------------------------------------------------
-async function createShopPurchase({ userId, packageName = 'basic', amount = 0, status = 'paid' }) {
+async function createShopPurchase({ userId, packageName = 'basic', packageId = null, amount = 0, status = 'paid' }) {
   const [result] = await pool.execute(
-    'INSERT INTO shop_purchases (user_id, package, amount, status) VALUES (?, ?, ?, ?)',
-    [userId, packageName, amount, status]
+    'INSERT INTO shop_purchases (user_id, package, package_id, amount, status) VALUES (?, ?, ?, ?, ?)',
+    [userId, packageName, packageId, amount, status]
   );
   return Number(result.insertId);
 }
@@ -954,6 +955,12 @@ function mapPackage(row) {
 
 async function listPackages() {
   const [rows] = await pool.execute('SELECT * FROM packages ORDER BY sort_order ASC, id ASC');
+  return rows.map(mapPackage);
+}
+
+/** แพ็กเกจที่เปิดขาย (ใช้แสดงในหน้าซื้อแพ็กเกจของผู้ใช้) */
+async function listActivePackages() {
+  const [rows] = await pool.execute('SELECT * FROM packages WHERE active = 1 ORDER BY sort_order ASC, id ASC');
   return rows.map(mapPackage);
 }
 
@@ -1252,6 +1259,7 @@ module.exports = {
   createShopPurchase,
   findLatestShopPurchase,
   listPackages,
+  listActivePackages,
   findPackageById,
   createPackage,
   updatePackage,
