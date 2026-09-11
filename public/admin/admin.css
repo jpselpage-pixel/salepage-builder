@@ -257,3 +257,23 @@ table.admin-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
   .admin-card h2 input,
   .test-to-input { flex: 1 1 130px; min-width: 0; max-width: 100% !important; }
 }
+
+/* ---------- หน้าแพ็กเกจ (owner) ---------- */
+.pkg-detail-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 18px 0 10px; }
+.pkg-detail-row { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(200px, 2fr) auto; gap: 10px; align-items: start; margin-bottom: 10px; }
+.pkg-detail-row input, .pkg-detail-row textarea {
+  width: 100%; padding: 10px 12px; font-size: 14px; font-family: var(--font);
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius); outline: none;
+}
+.pkg-detail-row input:focus, .pkg-detail-row textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--ring); }
+.pkg-detail-row textarea { resize: vertical; min-height: 42px; }
+.pkg-empty { color: var(--muted); font-size: 14px; padding: 6px 0; }
+.pkg-item { border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+.pkg-item-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pkg-item-name { font-weight: 700; font-size: 15px; }
+.pkg-item-meta { color: var(--muted); font-size: 13px; }
+.pkg-item-details { margin: 10px 0 0; padding: 0; list-style: none; font-size: 13.5px; }
+.pkg-item-details li { margin-bottom: 7px; }
+.pkg-item-details strong { display: block; }
+@media (max-width: 640px) { .pkg-detail-row { grid-template-columns: 1fr; } }

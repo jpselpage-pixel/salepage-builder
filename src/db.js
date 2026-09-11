@@ -236,6 +236,21 @@ async function initSchema() {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
 
+  // ── แพ็กเกจ (owner ตั้งขาย — ผู้ใช้ซื้อแล้วเปิดร้านได้) ─────────────────
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS packages (
+      id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+      name            VARCHAR(120) NOT NULL,
+      duration_months INT NOT NULL DEFAULT 1,
+      price           DECIMAL(10,2) NOT NULL DEFAULT 0,
+      details_json    TEXT NULL,
+      active          TINYINT(1) NOT NULL DEFAULT 1,
+      sort_order      INT NOT NULL DEFAULT 0,
+      created_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `);
+
   // ── โต๊ะ + ออเดอร์ (ระบบสั่งอาหาร) ─────────────────────────────────────
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS \`tables\` (
@@ -927,6 +942,47 @@ async function findLatestShopPurchase(userId) {
 }
 
 // ---------------------------------------------------------------------------
+// Packages (แพ็กเกจร้านค้า) — owner สร้าง/แก้ไข แล้วผู้ใช้ทั่วไปซื้อเพื่อเปิดร้าน
+// ---------------------------------------------------------------------------
+function mapPackage(row) {
+  if (!row) return null;
+  let details = [];
+  try { details = row.details_json ? JSON.parse(row.details_json) : []; } catch (err) { details = []; }
+  if (!Array.isArray(details)) details = [];
+  return { ...row, details };
+}
+
+async function listPackages() {
+  const [rows] = await pool.execute('SELECT * FROM packages ORDER BY sort_order ASC, id ASC');
+  return rows.map(mapPackage);
+}
+
+async function findPackageById(id) {
+  const [rows] = await pool.execute('SELECT * FROM packages WHERE id = ?', [id]);
+  return mapPackage(rows[0]);
+}
+
+async function createPackage({ name, durationMonths = 1, price = 0, details = [], active = true, sortOrder = 0 }) {
+  const [result] = await pool.execute(
+    'INSERT INTO packages (name, duration_months, price, details_json, active, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+    [name, durationMonths, price, JSON.stringify(details), active ? 1 : 0, sortOrder]
+  );
+  return Number(result.insertId);
+}
+
+async function updatePackage(id, { name, durationMonths, price, details, active, sortOrder }) {
+  await pool.execute(
+    `UPDATE packages SET name = ?, duration_months = ?, price = ?, details_json = ?, active = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?`,
+    [name, durationMonths, price, JSON.stringify(details), active ? 1 : 0, sortOrder, id]
+  );
+}
+
+async function deletePackage(id) {
+  await pool.execute('DELETE FROM packages WHERE id = ?', [id]);
+}
+
+// ---------------------------------------------------------------------------
 // Tables (โต๊ะ) + Orders (บิล/ออเดอร์) — ระบบสั่งอาหาร
 // ---------------------------------------------------------------------------
 async function listTables(shopId) {
@@ -1195,6 +1251,11 @@ module.exports = {
   setMenuOptionGroups,
   createShopPurchase,
   findLatestShopPurchase,
+  listPackages,
+  findPackageById,
+  createPackage,
+  updatePackage,
+  deletePackage,
   listTables,
   findTableById,
   findTableByCode,

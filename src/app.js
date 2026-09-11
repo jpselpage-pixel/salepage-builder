@@ -6,7 +6,7 @@
 const path = require('node:path');
 const express = require('express');
 const { devMode } = require('./lib/settings');
-const { adminGuard, accountGuard, shopGuard } = require('./middleware/guards');
+const { adminGuard, accountGuard, shopGuard, ownerGuard } = require('./middleware/guards');
 const authRoutes = require('./routes/auth');
 const passwordResetRoutes = require('./routes/password-reset');
 const googleRoutes = require('./routes/google');
@@ -33,6 +33,8 @@ app.use((req, res, next) => {
 });
 
 // guard หน้าเว็บ (ต้องมาก่อน static เพื่อกันไฟล์ใน /admin)
+// หน้าจัดการแพ็กเกจเป็นของเจ้าของระบบเท่านั้น — ต้องประกาศก่อน adminGuard
+app.use('/admin/packages.html', ownerGuard);
 app.use('/admin', adminGuard);
 app.use(['/dashboard', '/settings'], accountGuard);
 app.use('/shop', shopGuard);

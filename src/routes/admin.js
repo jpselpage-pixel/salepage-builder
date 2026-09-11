@@ -457,4 +457,87 @@ router.post('/api/admin/settings', requireAdmin, (req, res) => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// Owner — จัดการแพ็กเกจร้านค้า (ชื่อ / อายุการใช้งาน / รายละเอียดแบบมีหัวข้อ)
+// ---------------------------------------------------------------------------
+const PKG_MAX_DETAILS = 20;
+
+/** ตรวจ + ทำความสะอาดรายละเอียด [{ heading, text }] จาก body */
+function normalizePackageDetails(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const item of raw.slice(0, PKG_MAX_DETAILS)) {
+    const heading = String(item?.heading || '').trim().slice(0, 120);
+    const text = String(item?.text || '').trim().slice(0, 500);
+    if (heading || text) out.push({ heading, text });
+  }
+  return out;
+}
+
+/** อ่าน + ตรวจค่าฟอร์มแพ็กเกจ → { value } หรือ { error } */
+function readPackageBody(body) {
+  const name = String(body?.name || '').trim().slice(0, 120);
+  if (!name) return { error: { field: 'name', message: 'กรุณากรอกชื่อแพ็กเกจ' } };
+
+  const durationMonths = Math.trunc(Number(body?.durationMonths));
+  if (!Number.isFinite(durationMonths) || durationMonths < 1 || durationMonths > 120) {
+    return { error: { field: 'durationMonths', message: 'อายุการใช้งานต้องเป็นจำนวนเดือน 1-120' } };
+  }
+
+  const price = Number(body?.price);
+  if (!Number.isFinite(price) || price < 0 || price > 1000000) {
+    return { error: { field: 'price', message: 'ราคาต้องเป็นตัวเลข 0 ขึ้นไป' } };
+  }
+
+  const sortOrder = Number.isFinite(Number(body?.sortOrder)) ? Math.trunc(Number(body.sortOrder)) : 0;
+  const active = body?.active === undefined ? true : Boolean(body.active);
+
+  return {
+    value: {
+      name,
+      durationMonths,
+      price: Math.round(price * 100) / 100,
+      details: normalizePackageDetails(body?.details),
+      active,
+      sortOrder,
+    },
+  };
+}
+
+// รายการแพ็กเกจทั้งหมด (รวมที่ปิดขาย)
+router.get('/api/owner/packages', requireOwner, async (req, res) => {
+  res.json({ ok: true, packages: await db.listPackages() });
+});
+
+// สร้างแพ็กเกจใหม่
+router.post('/api/owner/packages', requireOwner, async (req, res) => {
+  const { value, error } = readPackageBody(req.body);
+  if (error) return res.status(400).json({ ok: false, ...error });
+  const id = await db.createPackage(value);
+  console.log(`📦 [owner] สร้างแพ็กเกจ #${id} "${value.name}" (${value.durationMonths} เดือน)`);
+  res.json({ ok: true, id, message: 'สร้างแพ็กเกจแล้ว' });
+});
+
+// แก้ไขแพ็กเกจ
+router.put('/api/owner/packages/:id', requireOwner, async (req, res) => {
+  const id = Number(req.params.id);
+  const pkg = await db.findPackageById(id);
+  if (!pkg) return res.status(404).json({ ok: false, message: 'ไม่พบแพ็กเกจ' });
+  const { value, error } = readPackageBody(req.body);
+  if (error) return res.status(400).json({ ok: false, ...error });
+  await db.updatePackage(id, value);
+  console.log(`📦 [owner] แก้ไขแพ็กเกจ #${id} "${value.name}"`);
+  res.json({ ok: true, message: 'บันทึกการแก้ไขแล้ว' });
+});
+
+// ลบแพ็กเกจ
+router.delete('/api/owner/packages/:id', requireOwner, async (req, res) => {
+  const id = Number(req.params.id);
+  const pkg = await db.findPackageById(id);
+  if (!pkg) return res.status(404).json({ ok: false, message: 'ไม่พบแพ็กเกจ' });
+  await db.deletePackage(id);
+  console.log(`📦 [owner] ลบแพ็กเกจ #${id} "${pkg.name}"`);
+  res.json({ ok: true, message: 'ลบแพ็กเกจแล้ว' });
+});
+
 module.exports = router;

@@ -6,7 +6,7 @@
 'use strict';
 
 const { getCurrentUser } = require('./auth');
-const { isAdminRole } = require('../lib/roles');
+const { isAdminRole, isOwner } = require('../lib/roles');
 
 async function adminGuard(req, res, next) {
   const user = await getCurrentUser(req);
@@ -20,6 +20,24 @@ async function adminGuard(req, res, next) {
       '<div style="text-align:center"><h1 style="font-size:56px;margin:0">🔒 403</h1>' +
       '<p style="color:#667085">คุณไม่มีสิทธิ์เข้าถึงหน้านี้ (ต้องเป็นแอดมิน)</p>' +
       '<a href="/" style="color:#6366f1">← กลับหน้าแรก</a></div></body></html>'
+    );
+  }
+  next();
+}
+
+// เฉพาะเจ้าของระบบ (owner) — ใช้กับหน้าที่ผู้ดูแลระบบทั่วไป (admin) เข้าไม่ได้
+async function ownerGuard(req, res, next) {
+  const user = await getCurrentUser(req);
+  if (!user) {
+    return res.redirect('/login.html?next=' + encodeURIComponent(req.originalUrl || '/admin/packages.html'));
+  }
+  if (!isOwner(user.role)) {
+    return res.status(403).send(
+      '<!DOCTYPE html><html lang="th"><head><meta charset="utf-8"><title>403</title></head>' +
+      '<body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f5fb;color:#333">' +
+      '<div style="text-align:center"><h1 style="font-size:56px;margin:0">🔒 403</h1>' +
+      '<p style="color:#667085">หน้านี้สำหรับเจ้าของระบบเท่านั้น</p>' +
+      '<a href="/admin/" style="color:#6366f1">← กลับหน้าหลังบ้าน</a></div></body></html>'
     );
   }
   next();
@@ -51,4 +69,4 @@ async function shopGuard(req, res, next) {
   next();
 }
 
-module.exports = { adminGuard, accountGuard, shopGuard };
+module.exports = { adminGuard, accountGuard, shopGuard, ownerGuard };

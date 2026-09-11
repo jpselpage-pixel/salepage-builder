@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>แพ็กเกจร้านค้า | ระบบหลังบ้าน</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/admin/admin.css">
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="brand">
+        <div class="brand-logo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="brand-name">หลังบ้าน</span>
+      </div>
+
+      <div class="side-label">เมนู</div>
+      <a class="side-link" href="/admin/">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        ภาพรวม
+      </a>
+      <a class="side-link active" href="/admin/packages.html">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.7l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.7l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3.3 7L12 12l8.7-5M12 22V12" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        แพ็กเกจร้านค้า
+      </a>
+      <a class="side-link" href="/admin/otp.html">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M6 9h4M6 13h8M15 9l2 2m0 0l2-2m-2 2v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        จัดการ SMS-OTP
+      </a>
+      <a class="side-link" href="/admin/users.html">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.9M16 3.1a4 4 0 010 7.8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ผู้ใช้งาน
+      </a>
+      <div class="side-label">เว็บไซต์</div>
+      <a class="side-link" href="/settings/profile" title="เปิดหน้าเหมือนผู้ใช้">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 9h18" stroke="currentColor" stroke-width="1.8"/><path d="M8 14h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        เปิดหน้าเหมือนผู้ใช้
+      </a>
+      <div class="sidebar-footer">
+        <a class="sidebar-user" href="/admin/profile.html" title="ข้อมูลส่วนตัว">
+          <div class="avatar" id="adminAvatar">O</div>
+          <div>
+            <div class="u-email" id="adminEmail">—</div>
+            <div class="u-role" id="adminRoleLabel">—</div>
+          </div>
+        </a>
+        <a class="side-link" href="#" id="logoutBtn">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ออกจากระบบ
+        </a>
+      </div>
+    </aside>
+
+    <main class="admin-main">
+      <div class="topbar">
+        <div>
+          <h1>แพ็กเกจร้านค้า</h1>
+          <p>สร้างและแก้ไขแพ็กเกจที่ผู้ใช้ทั่วไปซื้อเพื่อเปิดร้าน — ตั้งชื่อ อายุการใช้งาน และรายละเอียดเป็นหัวข้อ</p>
+        </div>
+        <button class="icon-btn" id="reloadBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          รีเฟรช
+        </button>
+      </div>
+
+      <div class="admin-card">
+        <h2 id="formTitle">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          เพิ่มแพ็กเกจใหม่
+        </h2>
+
+        <form id="pkgForm" novalidate>
+          <div class="settings-grid">
+            <div class="settings-field">
+              <label for="pkgName">ชื่อแพ็กเกจ</label>
+              <input type="text" id="pkgName" maxlength="120" placeholder="เช่น แพ็กเกจเปิดร้านรายเดือน">
+            </div>
+            <div class="settings-field">
+              <label for="pkgMonths">อายุการใช้งาน (เดือน)</label>
+              <input type="number" id="pkgMonths" min="1" max="120" value="1">
+            </div>
+            <div class="settings-field">
+              <label for="pkgPrice">ราคา (บาท)</label>
+              <input type="number" id="pkgPrice" min="0" step="0.01" value="0">
+            </div>
+            <div class="settings-field">
+              <label for="pkgSort">ลำดับการแสดง</label>
+              <input type="number" id="pkgSort" value="0">
+            </div>
+          </div>
+
+          <div class="switch-row" style="margin-top:16px;">
+            <div>
+              <div style="font-weight:600;font-size:14px;">เปิดขายแพ็กเกจนี้</div>
+              <div class="switch-desc">ปิดไว้ = ผู้ใช้ทั่วไปยังไม่เห็นแพ็กเกจนี้ (ซ่อนไว้ก่อนได้)</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="pkgActive" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="pkg-detail-head">
+            <div style="flex:1;min-width:200px;">
+              <div style="font-weight:600;font-size:14px;">รายละเอียดแพ็กเกจ</div>
+              <div class="switch-desc">เพิ่มได้หลายหัวข้อ เช่น จุดเด่น / สิ่งที่ลูกค้าจะได้รับ</div>
+            </div>
+            <button class="icon-btn" id="suggestBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 2l2.4 5.6L20 9.6l-4.2 4 1 5.8L12 16.6 7.2 19.4l1-5.8L4 9.6l5.6-2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              ใส่ข้อความแนะนำการตลาด
+            </button>
+            <button class="icon-btn" id="addDetailBtn" type="button">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              เพิ่มหัวข้อ
+            </button>
+          </div>
+          <div id="detailRows"></div>
+
+          <div style="margin-top:18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <button class="icon-btn primary" id="saveBtn" type="submit">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              บันทึกแพ็กเกจ
+            </button>
+            <button class="icon-btn" id="cancelEditBtn" type="button" style="display:none;">ยกเลิกแก้ไข</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="admin-card">
+        <h2>
+          <svg viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.7l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.7l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3.3 7L12 12l8.7-5M12 22V12" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          แพ็กเกจทั้งหมด <span id="pkgCount" style="color:var(--muted);font-weight:600;"></span>
+        </h2>
+        <div id="pkgList"><div class="pkg-empty">กำลังโหลด...</div></div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const toast = document.getElementById('toast');
+    const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const ICON_ALERT = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    let toastTimer = null;
+    function showToast(msg) {
+      toast.innerHTML = msg;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+
+    async function api(path, opts) {
+      const res = await fetch(path, opts);
+      let data;
+      try { data = await res.json(); }
+      catch { const e = new Error('เซิร์ฟเวอร์ตอบสนองไม่ถูกต้อง (HTTP ' + res.status + ')'); e.status = res.status; throw e; }
+      if (!data.ok) { const e = new Error(data.message || 'เกิดข้อผิดพลาด'); e.status = res.status; throw e; }
+      return data;
+    }
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function money(v) {
+      return Number(v || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    // ข้อความการตลาดแนะนำ — ใช้เติมในหัวข้อรายละเอียดได้ทันที (ปรับแก้ได้ตามต้องการ)
+    const SUGGESTIONS = [
+      { heading: 'ลูกค้าสแกน QR สั่งเองได้ทันที', text: 'ไม่ต้องรอเรียกพนักงาน ลูกค้าสแกนคิวอาร์ที่โต๊ะแล้วเลือกสั่งอาหารได้เองจากมือถือ' },
+      { heading: 'ออเดอร์เข้าครัวทันที พร้อมจับเวลา', text: 'ครัวเห็นรายการทันที แยกสถานะ รอทำ / กำลังทำ / เสร็จแล้ว พร้อมตัวจับเวลาต่อจาน' },
+      { heading: 'เช็คบิลแม่นยำ ไม่มีตกหล่น', text: 'รวมทุกรายการของโต๊ะเป็นบิลเดียว ระบบล็อกไม่ให้เช็คบิลหากอาหารยังทำไม่ครบ' },
+      { heading: 'ดูประวัติย้อนหลังได้ทุกบิล', text: 'ตรวจสอบยอดขายและรายการที่ขายได้ย้อนหลัง แยกตามโต๊ะหรือบิล และส่งออกเป็นไฟล์ได้' },
+      { heading: 'จัดการเมนูได้เอง ไม่จำกัด', text: 'เพิ่ม/แก้เมนู หมวดหมู่ และตัวเลือก เช่น ระดับความเผ็ด ทานที่ร้าน/ห่อกลับบ้าน' },
+      { heading: 'ใช้ผ่านมือถือ ไม่ต้องติดตั้งแอป', text: 'เจ้าของร้านและลูกค้าใช้งานผ่านเบราว์เซอร์ได้ทันที รองรับมือถือทุกรุ่น' },
+    ];
+
+    let editingId = null;
+    let packages = [];
+
+    // ---------- แถวรายละเอียด (หัวข้อ + ข้อความ) ----------
+    function addDetailRow(heading = '', text = '') {
+      const row = document.createElement('div');
+      row.className = 'pkg-detail-row';
+      row.innerHTML = `
+        <input type="text" maxlength="120" placeholder="หัวข้อ เช่น ลูกค้าสแกน QR สั่งเองได้" value="${esc(heading)}">
+        <textarea maxlength="500" rows="2" placeholder="คำอธิบายสั้น ๆ ที่ดึงดูดใจ">${esc(text)}</textarea>
+        <button class="icon-btn danger" type="button" title="ลบหัวข้อนี้">ลบ</button>`;
+      row.querySelector('button').addEventListener('click', () => {
+        row.remove();
+        if (!document.querySelector('#detailRows .pkg-detail-row')) addDetailRow();
+      });
+      document.getElementById('detailRows').appendChild(row);
+    }
+
+    function setDetailRows(list) {
+      document.getElementById('detailRows').innerHTML = '';
+      (list.length ? list : [{}]).forEach((d) => addDetailRow(d.heading || '', d.text || ''));
+    }
+
+    function collectDetails() {
+      return Array.from(document.querySelectorAll('#detailRows .pkg-detail-row'))
+        .map((row) => ({ heading: row.querySelector('input').value.trim(), text: row.querySelector('textarea').value.trim() }))
+        .filter((d) => d.heading || d.text);
+    }
+
+    // ---------- ฟอร์ม ----------
+    function resetForm() {
+      editingId = null;
+      document.getElementById('pkgForm').reset();
+      document.getElementById('pkgMonths').value = 1;
+      document.getElementById('pkgPrice').value = 0;
+      document.getElementById('pkgSort').value = 0;
+      document.getElementById('pkgActive').checked = true;
+      setDetailRows([]);
+      document.getElementById('formTitle').lastChild.textContent = ' เพิ่มแพ็กเกจใหม่';
+      document.getElementById('cancelEditBtn').style.display = 'none';
+    }
+
+    function startEdit(id) {
+      const p = packages.find((x) => Number(x.id) === Number(id));
+      if (!p) return;
+      editingId = p.id;
+      document.getElementById('pkgName').value = p.name;
+      document.getElementById('pkgMonths').value = p.duration_months;
+      document.getElementById('pkgPrice').value = Number(p.price);
+      document.getElementById('pkgSort').value = p.sort_order;
+      document.getElementById('pkgActive').checked = Boolean(p.active);
+      setDetailRows(p.details || []);
+      document.getElementById('formTitle').lastChild.textContent = ' แก้ไขแพ็กเกจ #' + p.id;
+      document.getElementById('cancelEditBtn').style.display = '';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    document.getElementById('addDetailBtn').addEventListener('click', () => {
+      if (document.querySelectorAll('#detailRows .pkg-detail-row').length >= 20) {
+        showToast(ICON_ALERT + 'เพิ่มได้สูงสุด 20 หัวข้อ');
+        return;
+      }
+      addDetailRow();
+    });
+
+    document.getElementById('suggestBtn').addEventListener('click', () => {
+      const hasContent = collectDetails().some((d) => d.heading || d.text);
+      if (hasContent && !confirm('แทนที่รายละเอียดปัจจุบันด้วยข้อความแนะนำการตลาด?')) return;
+      setDetailRows(SUGGESTIONS);
+      showToast(ICON_CHECK + 'ใส่ข้อความแนะนำแล้ว — แก้ไข/ลบหัวข้อได้ตามต้องการ');
+    });
+
+    document.getElementById('cancelEditBtn').addEventListener('click', resetForm);
+
+    document.getElementById('pkgForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('saveBtn');
+      const body = {
+        name: document.getElementById('pkgName').value.trim(),
+        durationMonths: Number(document.getElementById('pkgMonths').value),
+        price: Number(document.getElementById('pkgPrice').value),
+        sortOrder: Number(document.getElementById('pkgSort').value),
+        active: document.getElementById('pkgActive').checked,
+        details: collectDetails(),
+      };
+      if (!body.name) { showToast(ICON_ALERT + 'กรุณากรอกชื่อแพ็กเกจ'); return; }
+      btn.disabled = true;
+      try {
+        if (editingId) {
+          await api('/api/owner/packages/' + editingId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+          showToast(ICON_CHECK + 'บันทึกการแก้ไขแล้ว');
+        } else {
+          await api('/api/owner/packages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+          showToast(ICON_CHECK + 'สร้างแพ็กเกจแล้ว');
+        }
+        resetForm();
+        await loadPackages();
+      } catch (err) {
+        showToast(ICON_ALERT + esc(err.message));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // ---------- รายการแพ็กเกจ ----------
+    function renderList() {
+      const box = document.getElementById('pkgList');
+      document.getElementById('pkgCount').textContent = packages.length ? '(' + packages.length + ')' : '';
+      if (!packages.length) {
+        box.innerHTML = '<div class="pkg-empty">ยังไม่มีแพ็กเกจ — เพิ่มจากฟอร์มด้านบนได้เลย</div>';
+        return;
+      }
+      box.innerHTML = packages.map((p) => `
+        <div class="pkg-item">
+          <div class="pkg-item-head">
+            <span class="pkg-item-name">${esc(p.name)}</span>
+            <span class="pill ${p.active ? 'pill-valid' : 'pill-expired'}">${p.active ? 'เปิดขาย' : 'ปิดขาย'}</span>
+            <span class="pkg-item-meta">${esc(p.duration_months)} เดือน · ฿${money(p.price)}</span>
+            <span style="margin-left:auto;display:flex;gap:8px;">
+              <button class="icon-btn" data-edit="${p.id}" type="button">แก้ไข</button>
+              <button class="icon-btn danger" data-del="${p.id}" type="button">ลบ</button>
+            </span>
+          </div>
+          ${(p.details && p.details.length) ? `<ul class="pkg-item-details">${p.details.map((d) => `<li><strong>${esc(d.heading)}</strong>${esc(d.text)}</li>`).join('')}</ul>` : ''}
+        </div>`).join('');
+
+      box.querySelectorAll('[data-edit]').forEach((b) => b.addEventListener('click', () => startEdit(b.dataset.edit)));
+      box.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', async () => {
+        const p = packages.find((x) => Number(x.id) === Number(b.dataset.del));
+        if (!confirm('ลบแพ็กเกจ "' + (p ? p.name : '') + '" ?')) return;
+        try {
+          await api('/api/owner/packages/' + b.dataset.del, { method: 'DELETE' });
+          showToast(ICON_CHECK + 'ลบแพ็กเกจแล้ว');
+          if (editingId && Number(editingId) === Number(b.dataset.del)) resetForm();
+          await loadPackages();
+        } catch (err) { showToast(ICON_ALERT + esc(err.message)); }
+      }));
+    }
+
+    async function loadPackages() {
+      const data = await api('/api/owner/packages');
+      packages = data.packages || [];
+      renderList();
+    }
+
+    document.getElementById('reloadBtn').addEventListener('click', async () => {
+      try { await loadPackages(); showToast(ICON_CHECK + 'โหลดข้อมูลล่าสุดแล้ว'); }
+      catch (err) { showToast(ICON_ALERT + esc(err.message)); }
+    });
+
+    // ---------- ข้อมูลผู้ใช้ใน sidebar ----------
+    async function loadMe() {
+      try {
+        const { user } = await api('/api/me');
+        document.getElementById('adminEmail').textContent = user.email;
+        document.getElementById('adminRoleLabel').textContent = user.role === 'owner' ? 'เจ้าของระบบ' : 'แอดมิน';
+        document.getElementById('adminAvatar').textContent = (user.email || 'O')[0].toUpperCase();
+      } catch (err) { /* เงียบไว้ — guard จัดการสิทธิ์แล้ว */ }
+    }
+
+    document.getElementById('logoutBtn').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await fetch('/api/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+
+    setDetailRows([]);
+    loadMe();
+    loadPackages().catch((err) => showToast(ICON_ALERT + esc(err.message)));
+  </script>
+</body>
+</html>
