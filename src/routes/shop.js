@@ -47,7 +47,7 @@ router.get('/shop/purchase.html', async (req, res) => {
   const user = await getCurrentUser(req);
   if (!user) return res.redirect('/login.html?next=/shop/purchase.html');
   if (isAdminRole(user.role)) return res.redirect('/admin/');
-  if (isShop(user.role)) return res.redirect('/shop');
+  // เจ้าของร้านเข้าหน้านี้ได้ด้วย เพื่อ "ซื้อเพิ่ม/ต่ออายุ" (ไม่เริ่มนับใหม่)
   res.set('Cache-Control', 'no-store'); // กัน bfcache กด Back แล้วเจอหน้าเดิมหลังซื้อ
   res.sendFile(path.join(PUBLIC_DIR, 'shop', 'purchase.html'));
 });
@@ -92,9 +92,6 @@ router.get('/api/packages', async (req, res) => {
 // ราคา/ชื่อแพ็กเกจคิดจากฝั่งเซิร์ฟเวอร์เสมอ (ไม่เชื่อค่าที่ client ส่งมา)
 router.post('/api/shop/purchase', requireLogin, async (req, res) => {
   const user = req.user;
-  if (isShop(user.role)) {
-    return res.json({ ok: true, message: 'คุณเป็นเจ้าของร้านอยู่แล้ว', role: 'shop', redirect: '/shop' });
-  }
   if (isAdminRole(user.role)) {
     return res.status(400).json({ ok: false, message: 'บัญชีผู้ดูแลระบบไม่ต้องซื้อแพ็กเกจ' });
   }

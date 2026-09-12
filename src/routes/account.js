@@ -20,16 +20,19 @@ const DASHBOARD_FILE = path.join(__dirname, '..', '..', 'public', 'dashboard', '
  * เมนู "ร้านค้า" ในแถบข้าง ต่างกันตามบทบาท — เรนเดอร์จากเซิร์ฟเวอร์ตั้งแต่แรก
  * (เดิมใช้ JS สลับข้อความ/ซ่อน ทำให้เมนูกะพริบทุกครั้งที่เปลี่ยนหน้า)
  */
-function shopMenuHtml(role) {
-  if (!role || role === 'admin' || role === 'owner') return '';
-  const shop = isShop(role);
-  const href = shop ? '/shop/menu.html' : '/shop/purchase.html';
-  const label = shop ? 'ร้านค้าของฉัน' : 'ซื้อแพ็กเกจร้านค้า';
-  return `      <div class="menu-title">ร้านค้า</div>
-      <a class="menu-item" href="${href}">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+const SHOP_ICON = '<svg viewBox="0 0 24 24" fill="none"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4H6z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const item = (href, label) => `      <a class="menu-item" href="${href}">
+        ${SHOP_ICON}
         <span>${label}</span>
       </a>`;
+
+function shopMenuHtml(role) {
+  if (!role || role === 'admin' || role === 'owner') return '';
+  // เจ้าของร้านเห็น 2 เมนู: จัดการร้าน + ซื้อเพิ่ม/ต่ออายุแพ็กเกจ
+  const links = isShop(role)
+    ? item('/shop/menu.html', 'ร้านค้าของฉัน') + '\n' + item('/shop/purchase.html', 'ต่ออายุแพ็กเกจ')
+    : item('/shop/purchase.html', 'ซื้อแพ็กเกจร้านค้า');
+  return `      <div class="menu-title">ร้านค้า</div>\n${links}`;
 }
 
 // หน้าบัญชี — ใช้ไฟล์เดียว เลือก panel จาก URL (/settings/profile, /settings/security)

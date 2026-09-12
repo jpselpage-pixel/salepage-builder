@@ -237,6 +237,11 @@ async function initSchema() {
   `);
   await ensureColumn('shop_purchases', 'package_id', 'package_id BIGINT NULL');
   await ensureColumn('shop_purchases', 'payment_id', 'payment_id BIGINT NULL');
+  // สิทธิ์เป็น "รายรายการซื้อ" — แต่ละรายการมีช่วงเวลาของตัวเอง และถูกดึงสิทธิ์กลับเป็นรายรายการได้
+  await ensureColumn('shop_purchases', 'start_at', 'start_at DATETIME NULL');
+  await ensureColumn('shop_purchases', 'expires_at', 'expires_at DATETIME NULL');
+  await ensureColumn('shop_purchases', 'revoked_at', 'revoked_at DATETIME NULL');
+  await ensureColumn('shop_purchases', 'revoked_by', 'revoked_by BIGINT NULL');
 
   // ── แพ็กเกจ (owner ตั้งขาย — ผู้ใช้ซื้อแล้วเปิดร้านได้) ─────────────────
   await pool.execute(`
@@ -363,6 +368,18 @@ async function initDb() {
     await setSetting('legacy_pages_dropped', 'true');
     console.log('🧹 ลบตาราง pages (ฟีเจอร์ SalePage เดิม) เรียบร้อย');
   }
+  // เติมช่วงสิทธิ์ให้รายการซื้อเดิม (ครั้งเดียว) — ใช้สิทธิ์ที่ผู้ใช้มีอยู่จริงเป็นวันสิ้นสุด เพื่อไม่ให้สิทธิ์เปลี่ยน
+  if (getSetting('legacy_purchases_backfilled') !== 'true') {
+    const [r] = await pool.execute(
+      `UPDATE shop_purchases sp JOIN users u ON u.id = sp.user_id
+          SET sp.start_at = COALESCE(sp.start_at, sp.created_at),
+              sp.expires_at = COALESCE(sp.expires_at, u.gift_expires_at, DATE_ADD(sp.created_at, INTERVAL 1 MONTH))
+        WHERE sp.expires_at IS NULL`
+    );
+    await setSetting('legacy_purchases_backfilled', 'true');
+    console.log(`🧾 เติมช่วงสิทธิ์ให้รายการซื้อเดิม ${r.affectedRows || 0} รายการ`);
+  }
+
   // ยกระดับแอดมินคนแรกเป็นเจ้าของระบบ (ครั้งเดียว) — สำหรับฐานข้อมูลเดิมที่ยังไม่มีบทบาท owner
   if (getSetting('legacy_owner_promoted') !== 'true') {
     const [owners] = await pool.execute("SELECT id FROM users WHERE role = 'owner' LIMIT 1");
@@ -961,12 +978,36 @@ async function setMenuOptionGroups(menuId, groupIds) {
 // ---------------------------------------------------------------------------
 // Shop purchases (บันทึกการซื้อแพ็กเกจ — จำลอง)
 // ---------------------------------------------------------------------------
-async function createShopPurchase({ userId, packageName = 'basic', packageId = null, paymentId = null, amount = 0, status = 'paid' }) {
+async function createShopPurchase({ userId, packageName = 'basic', packageId = null, paymentId = null, amount = 0, status = 'paid', startAt = null, expiresAt = null }) {
   const [result] = await pool.execute(
-    'INSERT INTO shop_purchases (user_id, package, package_id, payment_id, amount, status) VALUES (?, ?, ?, ?, ?, ?)',
-    [userId, packageName, packageId, paymentId, amount, status]
+    'INSERT INTO shop_purchases (user_id, package, package_id, payment_id, amount, status, start_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [userId, packageName, packageId, paymentId, amount, status, startAt, expiresAt]
   );
   return Number(result.insertId);
+}
+
+async function findShopPurchaseById(id) {
+  const [rows] = await pool.execute('SELECT * FROM shop_purchases WHERE id = ?', [id]);
+  return rows[0] || null;
+}
+
+/** วันสิ้นสุดสิทธิ์ที่ยังใช้งานได้ล่าสุดของผู้ใช้ (ไม่นับรายการที่ถูกดึงสิทธิ์กลับ/หมดอายุแล้ว) */
+async function maxActiveEntitlement(userId) {
+  const [rows] = await pool.execute(
+    `SELECT MAX(expires_at) AS max_exp FROM shop_purchases
+      WHERE user_id = ? AND revoked_at IS NULL AND expires_at IS NOT NULL AND expires_at > UTC_TIMESTAMP()`,
+    [userId]
+  );
+  return rows[0] && rows[0].max_exp ? rows[0].max_exp : null;
+}
+
+/** ดึงสิทธิ์กลับเฉพาะรายการซื้อนั้น (ไม่กระทบสิทธิ์จากรายการอื่น) */
+async function revokeShopPurchase(id, revokedBy = null) {
+  const [res] = await pool.execute(
+    'UPDATE shop_purchases SET revoked_at = UTC_TIMESTAMP(), revoked_by = ? WHERE id = ? AND revoked_at IS NULL',
+    [revokedBy, id]
+  );
+  return (res.affectedRows || 0) > 0;
 }
 
 async function findLatestShopPurchase(userId) {
@@ -989,7 +1030,8 @@ async function listPurchaseHistory({ q = null, from = null, to = null, limit = 2
   if (to) { where.push('sp.created_at <= ?'); args.push(to); }
   const n = Math.min(Math.max(Math.trunc(Number(limit)) || 200, 1), 500);
   const [rows] = await pool.execute(
-    `SELECT sp.id, sp.user_id, sp.package AS package_name, sp.amount, sp.created_at,
+    `SELECT sp.id, sp.user_id, sp.payment_id, sp.package AS package_name, sp.amount, sp.created_at,
+            sp.start_at, sp.expires_at, sp.revoked_at,
             u.email AS user_email, u.role AS user_role, u.gift_expires_at AS user_expires,
             pp.ref, pp.method, pp.status AS pay_status, pp.confirmed_at, pp.duration_months AS pay_months,
             pp.slip_status, pp.notified,
@@ -1003,15 +1045,6 @@ async function listPurchaseHistory({ q = null, from = null, to = null, limit = 2
     args
   );
   return rows;
-}
-
-/** ดึงสิทธิ์เจ้าของร้านคืน (owner ใช้เมื่อต้องการยกเลิกการใช้งาน) — ประวัติการซื้อไม่ถูกลบ */
-async function revokeShopAccess(userId) {
-  const [result] = await pool.execute(
-    "UPDATE users SET role = 'user', gift_expires_at = NULL WHERE id = ? AND role = 'shop'",
-    [userId]
-  );
-  return (result.affectedRows || 0) > 0;
 }
 
 /** สรุปยอดขายสำหรับหน้าประวัติ */
@@ -1469,9 +1502,11 @@ module.exports = {
   setMenuOptionGroups,
   createShopPurchase,
   findLatestShopPurchase,
+  findShopPurchaseById,
+  maxActiveEntitlement,
+  revokeShopPurchase,
   listPurchaseHistory,
   summarizePurchases,
-  revokeShopAccess,
   listPackages,
   listActivePackages,
   findPackageById,

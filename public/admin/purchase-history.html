@@ -126,7 +126,7 @@
                 <th>ช่องทาง</th>
                 <th>รหัสอ้างอิง</th>
                 <th>ยืนยันเมื่อ</th>
-                <th>สิทธิ์ปัจจุบัน</th>
+                <th>สิทธิ์ของรายการนี้</th>
                 <th>จัดการ</th>
               </tr>
             </thead>
@@ -144,12 +144,13 @@
   <!-- ป๊อปอัพยืนยันดึงสิทธิ์คืน -->
   <div class="modal-overlay" id="revokeModal">
     <div class="modal">
-      <h3>ดึงสิทธิ์เจ้าของร้านคืน</h3>
+      <h3>ดึงสิทธิ์แพ็กเกจรายการนี้คืน</h3>
       <p class="sub" id="revokeSub">—</p>
       <div style="font-size:13.5px;line-height:1.9;">
         <div style="color:var(--danger);background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:var(--radius);padding:11px 13px;">
-          ลูกค้าจะกลับเป็น <strong>“ผู้ใช้งานทั่วไป”</strong> และเข้าใช้ระบบร้านไม่ได้ทันที<br>
-          ข้อมูลร้าน/เมนูและประวัติการซื้อจะยังอยู่ครบ (ซื้อใหม่แล้วกลับมาใช้ได้)
+          ดึงสิทธิ์กลับ<strong>เฉพาะรายการซื้อนี้</strong> — อายุการใช้งานที่เหลือจากแพ็กเกจรายการอื่น<b>ยังมีผลตามปกติ</b><br>
+          ถ้าไม่มีรายการอื่นเหลือ ลูกค้าจะกลับเป็น “ผู้ใช้งานทั่วไป” และเข้าใช้ระบบร้านไม่ได้<br>
+          ข้อมูลร้าน/เมนูและประวัติการซื้อจะยังอยู่ครบ
         </div>
       </div>
       <div class="modal-actions">
@@ -218,31 +219,26 @@
         body.innerHTML = '<tr><td colspan="10" class="empty-state">ไม่พบรายการซื้อตามเงื่อนไขที่เลือก</td></tr>';
         return;
       }
-      // สิทธิ์ปัจจุบันเป็นสถานะ "ต่อผู้ใช้" ไม่ใช่ต่อรายการ → แสดงเฉพาะรายการซื้อล่าสุดของลูกค้าแต่ละคน
-      const latestByUser = new Map();
-      for (const r of rows) {
-        const cur = latestByUser.get(r.userId);
-        if (cur == null || r.id > cur) latestByUser.set(r.userId, r.id);
-      }
-
+      const nowMs = Date.now();
       body.innerHTML = rows.map((r) => {
-        const isLatest = latestByUser.get(r.userId) === r.id;
-        const isShop = r.userRole === 'shop';
-        const access = !isLatest
-          ? '—'
-          : isShop
-            ? (r.userExpiresAt ? 'เจ้าของร้าน · ถึง ' + fmt(r.userExpiresAt).slice(0, 10) : 'เจ้าของร้าน · ไม่กำหนดวันหมดอายุ')
-            : (r.userRole ? 'ผู้ใช้งานทั่วไป' : '—');
-        // คอลัมน์จัดการ: ต้องมีข้อมูลทุกแถว
-        //  - แถวล่าสุดที่ลูกค้ายังเป็นเจ้าของร้าน → ปุ่มดึงสิทธิ์คืน
-        //  - ลูกค้าไม่ได้เป็นเจ้าของร้านแล้ว (ถูกดึงสิทธิ์กลับ หรือหมดอายุ) → แจ้งว่าถูกดึงสิทธิ์กลับ
-        //  - แถวก่อนหน้าของลูกค้าที่ยังเป็นเจ้าของร้าน → ชี้ไปดูสิทธิ์ที่แถวล่าสุด
-        const accessGone = isShop === false;
-        const action = (isLatest && isShop)
-          ? `<button class="icon-btn danger" data-revoke="${r.userId}" data-email="${esc(r.userEmail)}" type="button">ดึงสิทธิ์คืน</button>`
-          : accessGone
-            ? '<span style="color:var(--danger);font-size:12px;">ถูกดึงสิทธิ์กลับ</span>'
-            : '<span style="color:var(--muted);font-size:12px;">รายการก่อนหน้า — สิทธิ์ปัจจุบันดูที่แถวล่าสุด</span>';
+        // สิทธิ์เป็น "รายรายการซื้อ" — แต่ละแถวมีช่วงเวลาของตัวเอง
+        const exp = r.expiresAt ? new Date(r.expiresAt) : null;
+        const expired = exp ? exp.getTime() <= nowMs : false;
+        const daysLeft = exp ? Math.max(0, Math.ceil((exp.getTime() - nowMs) / 86400000)) : null;
+        const access = r.revokedAt
+          ? '<span style="color:var(--danger);">ถูกดึงสิทธิ์กลับ</span>'
+          : !exp
+            ? '<span style="color:var(--muted);">—</span>'
+            : expired
+              ? '<span style="color:var(--muted);">หมดอายุแล้ว</span>'
+              : 'ใช้ได้ถึง ' + fmt(r.expiresAt).slice(0, 10) + ' <span style="color:var(--muted);">(เหลือ ' + daysLeft + ' วัน)</span>';
+        // ดึงสิทธิ์ได้เฉพาะรายการที่ยังใช้งานได้ (ยังไม่ถูกดึงสิทธิ์ และยังไม่หมดอายุ)
+        const canRevoke = !r.revokedAt && exp && !expired;
+        const action = canRevoke
+          ? `<button class="icon-btn danger" data-revoke="${r.id}" data-label="${esc(r.packageName)}" type="button">ดึงสิทธิ์คืน</button>`
+          : r.revokedAt
+            ? '<span style="color:var(--muted);font-size:12px;">ดึงสิทธิ์แล้ว</span>'
+            : '<span style="color:var(--muted);font-size:12px;">—</span>';
         // วิธีที่รายการนี้ถูกยืนยัน
         const verify = r.slipStatus === 'verified'
           ? 'สลิปผ่าน (อัตโนมัติ)'
@@ -258,7 +254,7 @@
         <td>${esc(METHOD_LABEL[r.method] || r.method)}${verify ? '<br><span style="color:var(--muted);font-size:12px;">' + verify + '</span>' : ''}</td>
         <td>${r.ref ? '<span class="mono">' + esc(r.ref) + '</span>' : '—'}</td>
         <td>${fmt(r.confirmedAt)}</td>
-        <td>${esc(access)}</td>
+        <td>${access}</td>
         <td>${action}</td>
       </tr>`;
       }).join('');
@@ -271,8 +267,8 @@
     const revokeModal = document.getElementById('revokeModal');
 
     function openRevokeModal(btn) {
-      revokeTarget = { userId: btn.dataset.revoke, email: btn.dataset.email };
-      document.getElementById('revokeSub').textContent = revokeTarget.email;
+      revokeTarget = { purchaseId: btn.dataset.revoke, label: btn.dataset.label };
+      document.getElementById('revokeSub').textContent = 'แพ็กเกจ: ' + revokeTarget.label;
       revokeModal.classList.add('show');
     }
     function closeRevokeModal() { revokeModal.classList.remove('show'); revokeTarget = null; }
@@ -286,7 +282,7 @@
       const btn = e.currentTarget;
       btn.disabled = true;
       try {
-        const data = await api('/api/owner/shop-access/' + revokeTarget.userId + '/revoke', { method: 'POST' });
+        const data = await api('/api/owner/purchases/' + revokeTarget.purchaseId + '/revoke', { method: 'POST' });
         closeRevokeModal();
         showToast(ICON_CHECK + esc(data.message));
         await load();

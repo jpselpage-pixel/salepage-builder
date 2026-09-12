@@ -286,9 +286,12 @@
       document.getElementById('mockBackBtn').addEventListener('click', () => { confirmPkg = null; loadPackages(); });
     }
 
+    let renewBanner = ''; // แถบแจ้งสิทธิ์ปัจจุบัน (สำหรับเจ้าของร้านที่ซื้อเพิ่ม/ต่ออายุ)
+
     // โหลดสถานะการชำระเงินของฉันแล้ววาดหน้าตามสถานะ (ใช้ซ้ำได้ เช่นตอนหมดเวลา)
     async function loadMineAndRender() {
-      document.getElementById('notice').innerHTML = '';
+      const noticeEl = document.getElementById('notice');
+      noticeEl.innerHTML = renewBanner;
       try {
         const mine = await api('/api/my-payments');
         const list = mine.payments || [];
@@ -300,7 +303,7 @@
         const msg = cancelled.status === 'expired'
           ? `รายการก่อนหน้า (รหัส ${esc(cancelled.ref)}) <b>หมดเวลาชำระเงิน</b> — ถ้าโอนไปแล้ว กรุณาแจ้งผู้ดูแลระบบพร้อมรูปสลิป ผู้ดูแลระบบจะตรวจสอบและเปิดสิทธิ์ให้ครับ`
           : `รายการก่อนหน้า (รหัส ${esc(cancelled.ref)}) ถูกยกเลิก: ${esc(cancelled.note || 'ไม่ระบุเหตุผล')} — เลือกแพ็กเกจใหม่ได้เลย`;
-        document.getElementById('notice').innerHTML = `<div class="pkg-notice">${msg}</div>`;
+        noticeEl.innerHTML = renewBanner + `<div class="pkg-notice">${msg}</div>`;
       }
       if (payment) renderPayment();
       else await loadPackages();
@@ -342,6 +345,19 @@
         const info = await api('/api/payment-info');
         payEnabled = Boolean(info.payment && info.payment.enabled);
       } catch (err) { /* ถ้าอ่านไม่ได้ให้ถือว่าโหมดทดลอง */ }
+      // ถ้าเป็นเจ้าของร้านอยู่แล้ว → แจ้งสิทธิ์ปัจจุบัน และบอกว่าซื้อเพิ่ม = ต่ออายุจากวันเดิม
+      try {
+        const me = await api('/api/me');
+        if (me.user && me.user.role === 'shop' && me.user.gift_expires_at) {
+          const d = new Date(me.user.gift_expires_at);
+          const pad = (n) => String(n).padStart(2, '0');
+          const dateText = pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
+          const days = Math.max(0, Math.ceil((d.getTime() - Date.now()) / 86400000));
+          renewBanner = `<div class="pkg-notice" style="background:var(--info-bg);border-color:var(--info-border);color:var(--info);">`
+            + `แพ็กเกจปัจจุบันของคุณใช้ได้ถึง <b>${dateText}</b> (เหลือ ${days} วัน) — `
+            + `ซื้อแพ็กเกจด้านล่างเพื่อ <b>ต่ออายุจากวันเดิม</b> ไม่ใช่เริ่มนับใหม่</div>`;
+        }
+      } catch (err) { /* ไม่ใช่เจ้าของร้านก็ข้าม */ }
       await loadMineAndRender();
       lastSig = signatureOf(payment);
       startStatusPoll();

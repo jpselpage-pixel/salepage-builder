@@ -18,7 +18,7 @@ const generatePromptPayPayload = require('promptpay-qr');
 const db = require('../db');
 const { requireLogin, requireOwner } = require('../middleware/auth');
 const { isAdminRole } = require('../lib/roles');
-const { futureMonthsSql } = require('../lib/time');
+const { futureMonthsSql, addMonthsSql, toSql, nowSql } = require('../lib/time');
 const { getPaymentSettings, hasAnyChannel, paymentInstructions } = require('../lib/payments');
 const { getSlipSettings, verifySlip, decideAutoApprove } = require('../lib/slip-verify');
 
@@ -58,7 +58,13 @@ function saveSlipBuffer(buf, ext, ref) {
 async function grantPackage(rec, confirmedBy = null) {
   const user = await db.findUserById(rec.user_id);
   if (!user) return null;
-  const expiresAt = futureMonthsSql(rec.duration_months);
+
+  // ถ้ายังมีสิทธิ์เหลืออยู่ → "ต่ออายุจากวันหมดอายุเดิม" (ซื้อซ้อนได้) ไม่ใช่เริ่มนับใหม่
+  const current = await db.maxActiveEntitlement(user.id);
+  const stillActive = current && new Date(current).getTime() > Date.now();
+  const startAt = stillActive ? toSql(current) : nowSql();
+  const expiresAt = addMonthsSql(startAt, rec.duration_months);
+
   await db.setUserRole(user.id, 'shop');
   await db.setUserShopExpiry(user.id, expiresAt);
   await db.createShopPurchase({
@@ -67,9 +73,11 @@ async function grantPackage(rec, confirmedBy = null) {
     paymentId: rec.id,
     packageName: clip(rec.package_name, 30),
     amount: Number(rec.amount),
+    startAt,
+    expiresAt,
   });
   await db.setPackagePaymentStatus(rec.id, 'paid', { confirmedBy });
-  return { user, expiresAt };
+  return { user, expiresAt, extended: Boolean(stillActive), startAt };
 }
 
 // ---------------------------------------------------------------------------
@@ -334,27 +342,47 @@ router.get('/api/owner/purchase-history', requireOwner, wrap(async (req, res) =>
       userExpiresAt: r.user_expires,
       slipStatus: r.slip_status || '',
       notified: r.notified === 1,
+      startAt: r.start_at,
+      expiresAt: r.expires_at,
+      revokedAt: r.revoked_at,
     })),
   });
 }));
 
 // ดึงสิทธิ์เจ้าของร้านคืน (ยกเลิกการใช้งาน) — ประวัติการซื้อและการชำระเงินยังอยู่ครบ
-router.post('/api/owner/shop-access/:userId/revoke', requireOwner, wrap(async (req, res) => {
-  const userId = Number(req.params.userId);
-  const target = await db.findUserById(userId);
-  if (!target) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' });
-  if (isAdminRole(target.role)) {
+// ดึงสิทธิ์กลับ "เฉพาะรายการซื้อนั้น" — รายการอื่น/อายุการใช้งานที่เหลือยังมีผลตามปกติ
+router.post('/api/owner/purchases/:id/revoke', requireOwner, wrap(async (req, res) => {
+  const purchase = await db.findShopPurchaseById(Number(req.params.id));
+  if (!purchase) return res.status(404).json({ ok: false, message: 'ไม่พบรายการซื้อ' });
+  if (purchase.revoked_at) return res.status(400).json({ ok: false, message: 'รายการนี้ถูกดึงสิทธิ์ไปแล้ว' });
+
+  const target = await db.findUserById(purchase.user_id);
+  if (target && isAdminRole(target.role)) {
     return res.status(400).json({ ok: false, message: 'ดึงสิทธิ์บัญชีแอดมิน/เจ้าของระบบไม่ได้' });
   }
-  if (target.role !== 'shop') {
-    return res.status(400).json({ ok: false, message: 'บัญชีนี้ไม่ได้เป็นเจ้าของร้านอยู่แล้ว' });
-  }
 
-  const done = await db.revokeShopAccess(userId);
+  const done = await db.revokeShopPurchase(purchase.id, req.owner.id);
   if (!done) return res.status(400).json({ ok: false, message: 'ดึงสิทธิ์ไม่สำเร็จ กรุณาลองใหม่' });
 
-  console.log(`🚫 [owner] ดึงสิทธิ์เจ้าของร้านคืน: ${target.email}`);
-  res.json({ ok: true, message: `ดึงสิทธิ์เจ้าของร้านของ ${target.email} คืนแล้ว (กลับเป็นผู้ใช้งานทั่วไป)` });
+  // คำนวณสิทธิ์ที่เหลือจากรายการอื่น แล้วปรับบทบาท/วันหมดอายุของผู้ใช้ให้ตรง
+  const remaining = await db.maxActiveEntitlement(purchase.user_id);
+  if (remaining) {
+    await db.setUserRole(purchase.user_id, 'shop');
+    await db.setUserShopExpiry(purchase.user_id, toSql(remaining));
+  } else {
+    await db.setUserRole(purchase.user_id, 'user');
+    await db.setUserShopExpiry(purchase.user_id, null);
+  }
+
+  const when = remaining ? toSql(remaining).slice(0, 10) : null;
+  console.log(`🚫 [owner] ดึงสิทธิ์รายการซื้อ #${purchase.id} "${purchase.package}" ของ ${target ? target.email : ''}${when ? ' — ยังเหลือสิทธิ์ถึง ' + when : ' — ไม่เหลือสิทธิ์'}`);
+  res.json({
+    ok: true,
+    remainingAt: when,
+    message: remaining
+      ? `ดึงสิทธิ์แพ็กเกจ "${purchase.package}" คืนแล้ว — ลูกค้ายังมีสิทธิ์จากรายการอื่นถึง ${when}`
+      : `ดึงสิทธิ์แพ็กเกจ "${purchase.package}" คืนแล้ว — ลูกค้าไม่มีสิทธิ์ที่ใช้งานได้เหลืออยู่`,
+  });
 }));
 
 // เจ้าของระบบแนบสลิปแทนลูกค้า → ตรวจกับ EasySlip → ถ้าผ่าน เปิดสิทธิ์ให้ทันที
@@ -420,8 +448,11 @@ router.post('/api/owner/package-payments/:id/confirm', requireOwner, wrap(async 
   const granted = await grantPackage(rec, req.owner.id);
   if (!granted) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้ของรายการนี้' });
 
-  console.log(`✅ [owner] ยืนยันชำระเงิน #${rec.id} (${rec.ref}) → ให้สิทธิ์ ${granted.user.email} ถึง ${granted.expiresAt}`);
-  res.json({ ok: true, message: `ยืนยันยอดแล้ว — ${granted.user.email} เป็นเจ้าของร้านถึง ${granted.expiresAt.slice(0, 10)}` });
+  console.log(`✅ [owner] ยืนยันชำระเงิน #${rec.id} (${rec.ref}) → ให้สิทธิ์ ${granted.user.email} ถึง ${granted.expiresAt}${granted.extended ? ' (ต่ออายุจากเดิม)' : ''}`);
+  res.json({
+    ok: true,
+    message: `ยืนยันยอดแล้ว — ${granted.user.email} เป็นเจ้าของร้านถึง ${granted.expiresAt.slice(0, 10)}` + (granted.extended ? ' (ต่ออายุจากวันหมดอายุเดิม)' : ''),
+  });
 }));
 
 // ยกเลิกรายการ (เช่น ตรวจแล้วไม่พบยอดโอน)

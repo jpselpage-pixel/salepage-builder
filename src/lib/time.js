@@ -21,4 +21,18 @@ function futureMonthsSql(months) {
   return d.toISOString().slice(0, 19).replace('T', ' ');
 }
 
-module.exports = { nowSql, futureSql, futureMonthsSql };
+/** บวกจำนวนเดือนจากวันที่ที่กำหนด (ถ้าไม่ส่ง base ใช้เวลาปัจจุบัน) — คืนรูปแบบ YYYY-MM-DD HH:MM:SS (UTC) */
+function addMonthsSql(base, months) {
+  const d = base ? new Date(base) : new Date();
+  const day = d.getUTCDate();
+  d.setUTCMonth(d.getUTCMonth() + Number(months || 0));
+  if (d.getUTCDate() < day) d.setUTCDate(0);
+  return d.toISOString().slice(0, 19).replace('T', ' ');
+}
+
+/** แปลงวันที่/สตริงวันที่ → รูปแบบ YYYY-MM-DD HH:MM:SS (UTC) */
+function toSql(base) {
+  return new Date(base).toISOString().slice(0, 19).replace('T', ' ');
+}
+
+module.exports = { nowSql, futureSql, futureMonthsSql, addMonthsSql, toSql };
