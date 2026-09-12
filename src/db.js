@@ -992,6 +992,7 @@ async function listPurchaseHistory({ q = null, from = null, to = null, limit = 2
     `SELECT sp.id, sp.user_id, sp.package AS package_name, sp.amount, sp.created_at,
             u.email AS user_email, u.role AS user_role, u.gift_expires_at AS user_expires,
             pp.ref, pp.method, pp.status AS pay_status, pp.confirmed_at, pp.duration_months AS pay_months,
+            pp.slip_status, pp.notified,
             p.duration_months AS pkg_months
        FROM shop_purchases sp
        JOIN users u ON u.id = sp.user_id

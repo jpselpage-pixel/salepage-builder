@@ -332,6 +332,8 @@ router.get('/api/owner/purchase-history', requireOwner, wrap(async (req, res) =>
       confirmedAt: r.confirmed_at,
       userRole: r.user_role,
       userExpiresAt: r.user_expires,
+      slipStatus: r.slip_status || '',
+      notified: r.notified === 1,
     })),
   });
 }));
