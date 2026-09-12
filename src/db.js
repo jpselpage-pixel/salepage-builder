@@ -7,6 +7,8 @@
 'use strict';
 
 const mysql = require('mysql2/promise');
+const fs = require('node:fs/promises');
+const path = require('node:path');
 
 const DATABASE_URL = process.env.DATABASE_URL || process.env.MYSQL_URL || '';
 
@@ -391,6 +393,37 @@ async function initDb() {
       }
     }
     await setSetting('legacy_owner_promoted', 'true');
+  }
+
+  // ล้างประวัติการชำระเงิน + ประวัติการซื้อทั้งหมด (คำขอผู้ดูแลระบบ) — ทำครั้งเดียว
+  // สำรองข้อมูลลงไฟล์ในเครื่องก่อนลบเสมอ ถ้าสำรองไม่สำเร็จจะ "ไม่ลบ" และไม่ตั้ง flag เพื่อลองใหม่รอบหน้า
+  if (getSetting('payment_history_purged') !== 'true') {
+    try {
+      const [[pays]] = await pool.query('SELECT COUNT(*) AS n FROM package_payments');
+      const [[purch]] = await pool.query('SELECT COUNT(*) AS n FROM shop_purchases');
+      const total = Number(pays.n) + Number(purch.n);
+      let info = `payments=${pays.n} purchases=${purch.n}`;
+      if (total > 0) {
+        const [rowsP] = await pool.query('SELECT * FROM package_payments');
+        const [rowsS] = await pool.query('SELECT * FROM shop_purchases');
+        const dir = path.join(__dirname, '..', 'backups');
+        await fs.mkdir(dir, { recursive: true });
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const file = path.join(dir, `payment-history-${stamp}.json`);
+        await fs.writeFile(file, JSON.stringify({ exportedAt: new Date().toISOString(), packagePayments: rowsP, shopPurchases: rowsS }, null, 2), 'utf8');
+        await pool.query('DELETE FROM package_payments');
+        await pool.query('DELETE FROM shop_purchases');
+        info += ` at=${new Date().toISOString()} backup=${path.basename(file)}`;
+        console.log(`🧹 ล้างประวัติการชำระเงิน ${pays.n} รายการ และประวัติการซื้อ ${purch.n} รายการ (สำรองไว้ที่ ${file})`);
+      } else {
+        info += ' at=' + new Date().toISOString() + ' (ไม่มีข้อมูลให้ลบ)';
+        console.log('🧹 ไม่มีประวัติการชำระเงิน/การซื้อให้ล้าง');
+      }
+      await setSetting('payment_history_purged_info', info);
+      await setSetting('payment_history_purged', 'true');
+    } catch (err) {
+      console.error('❌ ล้างประวัติการชำระเงิน/การซื้อไม่สำเร็จ (ยังไม่ได้ลบข้อมูล):', err.message);
+    }
   }
 }
 

@@ -10,6 +10,9 @@ node_modules/
 # uploads (รูปที่ผู้ใช้อัปโหลด)
 public/uploads/
 
+# ไฟล์สำรองข้อมูล (มีข้อมูลลูกค้า — ห้ามขึ้น GitHub)
+backups/
+
 # logs
 *.log
 
