@@ -1140,7 +1140,10 @@ async function findPendingPackagePaymentByUser(userId) {
 async function listPackagePayments({ status = null, userId = null, limit = 100 } = {}) {
   const where = [];
   const args = [];
-  if (status) { where.push('status = ?'); args.push(status); }
+  if (Array.isArray(status) && status.length) {
+    where.push(`status IN (${status.map(() => '?').join(', ')})`);
+    args.push(...status);
+  } else if (status) { where.push('status = ?'); args.push(status); }
   if (userId) { where.push('user_id = ?'); args.push(userId); }
   // LIMIT ต้องใส่เป็นตัวเลขในสตริง — MySQL ไม่รับค่า ? ใน prepared statement (ER_WRONG_ARGUMENTS)
   const n = Math.min(Math.max(Math.trunc(Number(limit)) || 100, 1), 500);

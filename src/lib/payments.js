@@ -42,6 +42,10 @@ function paymentInstructions(rec) {
     bank: s.bankAccount ? { name: s.bankName, account: s.bankAccount, holder: s.bankHolder } : null,
     // เวลาที่เหลือก่อนหมดอายุ (วินาที) — คิดจากเซิร์ฟเวอร์/ฐานข้อมูล จึงรีเฟรชแล้วยังนับต่อถูกต้อง
     secondsLeft: rec.seconds_left != null ? Math.max(0, Number(rec.seconds_left)) : null,
+    // เวลาหมดอายุแบบสัมบูรณ์ (epoch ms) — ให้ทุกหน้า (ลูกค้า/หลังบ้าน) นับถอยหลังจากจุดเดียวกันเป๊ะ
+    expiresAtMs: rec.created_at
+      ? new Date(rec.created_at).getTime() + db.getPaymentExpireMinutes() * 60 * 1000
+      : null,
     note: rec.note || '',      // หมายเหตุของรายการนั้น ๆ (เช่น เหตุผลที่ถูกยกเลิก)
     payNote: s.note || '',     // ข้อความถึงลูกค้าจากการตั้งค่าช่องทางรับเงิน
     slipUrl: rec.slip_url || null,       // รูปสลิปที่ลูกค้าแนบ

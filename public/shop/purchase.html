@@ -125,7 +125,7 @@
           <h2>${esc(p.packageName)} · ${esc(p.durationMonths)} เดือน</h2>
           <div class="pay-amount">฿${money(p.amount)}</div>
           <div class="pay-ref">รหัสอ้างอิง <strong class="mono">${esc(p.ref)}</strong></div>
-          ${!p.notified && p.secondsLeft != null ? `<div class="pay-countdown">เหลือเวลา <b id="payCountdown">–</b></div>` : ''}
+          ${!p.notified && p.expiresAtMs ? `<div class="pay-countdown">เหลือเวลา <b id="payCountdown">–</b></div>` : ''}
         </div>
         ${p.qrUrl ? `<div class="pay-qr">
           <img src="${esc(p.qrUrl)}" alt="PromptPay QR" width="230" height="230">
@@ -158,29 +158,29 @@
       const btn = document.getElementById('notifyBtn');
       if (btn && !p.notified) btn.addEventListener('click', notifyPaid);
 
-      // นับถอยหลัง — ค่าเริ่มต้นมาจากเซิร์ฟเวอร์ จึงรีเฟรชแล้วยังนับต่อได้ถูกต้อง
-      if (!p.notified && p.secondsLeft != null) startCountdown(p.secondsLeft);
+      // นับถอยหลัง — ใช้เวลาหมดอายุจริงจากเซิร์ฟเวอร์ (รีเฟรชแล้วยังนับต่อถูกต้อง)
+      if (!p.notified && p.expiresAtMs) startCountdown(p.expiresAtMs);
       else stopCountdown();
     }
 
     let countdownTimer = null;
     function stopCountdown() { if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; } }
 
-    function startCountdown(secondsLeft) {
+    // นับถอยหลังจาก "เวลาหมดอายุจริง" ที่เซิร์ฟเวอร์กำหนด → ตรงกับหน้าหลังบ้านเป๊ะ แม้รีเฟรช
+    function startCountdown(expiresAtMs) {
       stopCountdown();
-      let left = Math.max(0, Number(secondsLeft) || 0);
       const paint = () => {
         const el = document.getElementById('payCountdown');
-        if (!el) { stopCountdown(); return; }
+        if (!el) { stopCountdown(); return 0; }
+        const left = Math.max(0, Math.round((Number(expiresAtMs) - Date.now()) / 1000));
         el.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
         el.classList.toggle('low', left <= 60);
+        return left;
       };
-      paint();
+      if (paint() <= 0) { onPaymentExpired(); return; }
       countdownTimer = setInterval(() => {
-        left -= 1;
-        if (left < 0) { stopCountdown(); onPaymentExpired(); return; }
-        paint();
-      }, 1000);
+        if (paint() <= 0) { stopCountdown(); onPaymentExpired(); }
+      }, 250);
     }
 
     // หมดเวลา → ให้เซิร์ฟเวอร์ยกเลิกรายการ แล้วกลับไปหน้ารายการแพ็กเกจ

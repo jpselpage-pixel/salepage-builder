@@ -200,12 +200,22 @@
         body.innerHTML = '<tr><td colspan="10" class="empty-state">ไม่พบรายการซื้อตามเงื่อนไขที่เลือก</td></tr>';
         return;
       }
+      // สิทธิ์ปัจจุบันเป็นสถานะ "ต่อผู้ใช้" ไม่ใช่ต่อรายการ → แสดงเฉพาะรายการซื้อล่าสุดของลูกค้าแต่ละคน
+      const latestByUser = new Map();
+      for (const r of rows) {
+        const cur = latestByUser.get(r.userId);
+        if (cur == null || r.id > cur) latestByUser.set(r.userId, r.id);
+      }
+
       body.innerHTML = rows.map((r) => {
+        const isLatest = latestByUser.get(r.userId) === r.id;
         const isShop = r.userRole === 'shop';
-        const access = isShop
-          ? (r.userExpiresAt ? 'เจ้าของร้าน · ถึง ' + fmt(r.userExpiresAt).slice(0, 10) : 'เจ้าของร้าน · ไม่กำหนดวันหมดอายุ')
-          : (r.userRole ? 'ผู้ใช้งานทั่วไป' : '—');
-        const action = isShop
+        const access = !isLatest
+          ? '—'
+          : isShop
+            ? (r.userExpiresAt ? 'เจ้าของร้าน · ถึง ' + fmt(r.userExpiresAt).slice(0, 10) : 'เจ้าของร้าน · ไม่กำหนดวันหมดอายุ')
+            : (r.userRole ? 'ผู้ใช้งานทั่วไป' : '—');
+        const action = (isLatest && isShop)
           ? `<button class="icon-btn danger" data-revoke="${r.userId}" data-email="${esc(r.userEmail)}" type="button">ดึงสิทธิ์คืน</button>`
           : '<span style="color:var(--muted);font-size:12px;">—</span>';
         return `<tr>

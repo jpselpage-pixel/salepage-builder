@@ -168,8 +168,7 @@
           <svg viewBox="0 0 24 24" fill="none"><path d="M3 5h18v14H3zM3 10h18" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
           รายการชำระเงิน <span id="queueCount" style="color:var(--muted);font-weight:600;"></span>
           <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="icon-btn" data-tab="pending" type="button">รอตรวจสอบ</button>
-            <button class="icon-btn" data-tab="expired" type="button">หมดเวลา</button>
+            <button class="icon-btn" data-tab="todo" type="button">รอตรวจสอบ</button>
             <button class="icon-btn" data-tab="paid" type="button">ยืนยันแล้ว</button>
             <button class="icon-btn" data-tab="rejected" type="button">ยกเลิก</button>
           </div>
@@ -244,7 +243,7 @@
       not_configured: 'ยังไม่ตั้งค่าตรวจ', manual: 'ไม่มีสลิป',
     };
     const SLIP_CLASS = Object.fromEntries(Object.keys(SLIP_LABEL).map((k) => [k, k === 'verified' ? 'pill-valid' : k === 'duplicate' ? 'pill-expired' : k === 'not_configured' || k === 'manual' ? '' : 'pill-warning']));
-    let currentTab = 'pending';
+    let currentTab = 'todo'; // รวม "รอตรวจสอบ" + "หมดเวลา" ไว้ในแท็บเดียว
 
     function renderSlip(slip) {
       document.getElementById('slipAutoApprove').checked = Boolean(slip.autoApprove);
@@ -319,10 +318,10 @@
       }
     });
 
-    async function loadQueue() {
+    async function loadQueue(silent) {
       stopQueueTicker(); // หยุดตัวนับเดิมก่อนวาดใหม่
       const body = document.getElementById('queueBody');
-      body.innerHTML = '<tr><td colspan="9" class="empty-state">กำลังโหลด...</td></tr>';
+      if (!silent) body.innerHTML = '<tr><td colspan="9" class="empty-state">กำลังโหลด...</td></tr>';
       let rows = [];
       try {
         const data = await api('/api/owner/package-payments?status=' + currentTab);
@@ -343,8 +342,8 @@
         <td><strong>฿${money(p.amount)}</strong></td>
         <td><span class="mono">${esc(p.ref)}</span></td>
         <td><span class="pill ${STATUS_CLASS[p.status] || ''}">${STATUS_LABEL[p.status] || esc(p.status)}</span></td>
-        <td>${p.status === 'pending' && !p.notified && p.secondsLeft != null
-          ? `<span class="cd" data-left="${Number(p.secondsLeft)}">–</span>`
+        <td>${p.status === 'pending' && !p.notified && p.expiresAtMs
+          ? `<span class="cd" data-expires="${Number(p.expiresAtMs)}">–</span>`
           : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
         <td>${p.slipUrl
           ? `<a href="${esc(p.slipUrl)}" target="_blank" rel="noopener" class="icon-btn" style="padding:5px 10px;">ดูสลิป</a>${p.slipStatus ? `<div class="pill ${SLIP_CLASS[p.slipStatus] || ''}" style="margin-top:5px;">${esc(SLIP_LABEL[p.slipStatus] || p.slipStatus)}</div>` : ''}`
@@ -378,15 +377,17 @@
       }, 1500);
     }
 
+    // นับถอยหลังจาก "เวลาหมดอายุจริง" (expiresAtMs) → ตรงกับหน้าลูกค้าเป๊ะ ทุกวินาที
     function startQueueTicker() {
       stopQueueTicker();
       const cells = [...document.querySelectorAll('#queueBody .cd')];
       if (!cells.length) return;
       const paint = () => {
         let expired = false;
+        const now = Date.now();
         for (const el of cells) {
-          const left = Number(el.dataset.left);
-          el.textContent = Math.floor(Math.max(0, left) / 60) + ':' + String(Math.max(0, left) % 60).padStart(2, '0');
+          const left = Math.max(0, Math.round((Number(el.dataset.expires) - now) / 1000));
+          el.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
           el.classList.toggle('low', left <= 60);
           if (left <= 0) { el.classList.add('expired'); expired = true; }
         }
@@ -394,9 +395,18 @@
       };
       if (paint()) { stopQueueTicker(); scheduleQueueReload(); return; }
       queueTicker = setInterval(() => {
-        for (const el of cells) el.dataset.left = String(Number(el.dataset.left) - 1);
         if (paint()) { stopQueueTicker(); scheduleQueueReload(); }
-      }, 1000);
+      }, 250);
+    }
+
+    // อัปเดตรายการให้เองแบบเรียลไทม์ (ไม่ต้องกดรีเฟรช) — ทุก 8 วินาที
+    let queuePoll = null;
+    function startQueuePoll() {
+      if (queuePoll) clearInterval(queuePoll);
+      queuePoll = setInterval(() => {
+        if (document.hidden) return; // ไม่ดึงข้อมูลขณะแท็บถูกซ่อน
+        loadQueue(true).catch(() => {});
+      }, 8000);
     }
 
     async function act(btn, kind) {
@@ -477,7 +487,7 @@
     });
 
     (async function init() {
-      document.querySelector('[data-tab="pending"]').classList.add('primary');
+      document.querySelector('[data-tab="todo"]').classList.add('primary');
       try {
         const { user } = await api('/api/me');
         document.getElementById('adminEmail').textContent = user.email;
@@ -486,6 +496,7 @@
       } catch (err) { /* guard จัดการสิทธิ์แล้ว */ }
       try { await loadSettings(); } catch (err) { showToast(ICON_ALERT + esc(err.message)); }
       loadQueue();
+      startQueuePoll(); // อัปเดตคิวให้เองแบบเรียลไทม์
     })();
   </script>
 </body>
