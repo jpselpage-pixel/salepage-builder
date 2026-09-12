@@ -62,11 +62,13 @@ app.use(publicRoutes);
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// config ให้หน้าเว็บใช้ (reCAPTCHA site key + โหมด dev)
+// config ให้หน้าเว็บใช้ (reCAPTCHA site key + โหมด dev + เปิดใช้ Google login หรือยัง)
 app.get('/api/config', (req, res) => {
   res.json({
     recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY || null,
     devMode: devMode(),
+    // ยังไม่ตั้งค่า key ของ Google → ซ่อนปุ่มล็อกอินด้วย Google (ไม่ให้ผู้ใช้สับสน)
+    googleEnabled: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
   });
 });
 

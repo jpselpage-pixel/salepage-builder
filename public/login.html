@@ -103,7 +103,7 @@
           <button type="submit" class="btn btn-primary" id="submitBtn">เข้าสู่ระบบ</button>
         </form>
 
-        <div class="divider">หรือดำเนินการต่อด้วย</div>
+        <div class="divider" id="googleDivider">หรือดำเนินการต่อด้วย</div>
 
         <button class="btn btn-google" id="googleBtn" type="button">
           <svg viewBox="0 0 48 48">
@@ -183,6 +183,17 @@
         submitBtn.classList.remove('loading');
       }
     });
+
+    // ซ่อนปุ่ม Google ถ้ายังไม่ได้ตั้งค่า OAuth (กันผู้ใช้สับสน — พอตั้งค่าแล้วปุ่มจะกลับมาเอง)
+    (async function initGoogle() {
+      try {
+        const cfg = await (await fetch('/api/config')).json();
+        if (!cfg.googleEnabled) {
+          document.getElementById('googleBtn').style.display = 'none';
+          document.getElementById('googleDivider').style.display = 'none';
+        }
+      } catch (e) { /* ถ้าอ่านค่าไม่ได้ ก็ให้ปุ่มแสดงตามเดิม */ }
+    })();
 
     document.getElementById('googleBtn').addEventListener('click', async () => {
       try {
