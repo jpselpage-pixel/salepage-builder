@@ -62,18 +62,37 @@ async function issueOtp(userId, contact, purpose = 'signup') {
   if (purpose === 'password_reset') {
     deliverOtpEmail(otpId, contact, code);
   } else {
-    deliverOtpSms(otpId, contact, code, ttl);
+    deliverOtpSms(otpId, userId, contact, code, ttl);
   }
   return { code, expiresAt, otpId };
 }
 
-/** ส่ง SMS + บันทึกผล (สำเร็จ/ไม่สำเร็จ/เครดิตหมด/โหมดจำลอง) ลงรายการ OTP */
-async function deliverOtpSms(otpId, phone, code, ttl) {
+/**
+ * ส่ง SMS + บันทึกผล (สำเร็จ/ไม่สำเร็จ/เครดิตหมด/โหมดจำลอง) ลงรายการ OTP
+ * ถ้าส่ง SMS ไม่ได้ (เช่น ยังไม่ได้ตั้งค่าผู้ให้บริการ) → ส่งรหัสทางอีเมลแทน เพื่อไม่ให้สมัครสมาชิกไม่ได้
+ */
+async function deliverOtpSms(otpId, userId, phone, code, ttl) {
   try {
     const result = await sendOtpSms(phone, code, ttl);
+    if (!result.ok && await deliverOtpByEmailFallback(otpId, userId, code)) return;
     await db.setOtpNote(otpId, result.note);
   } catch (err) {
     await db.setOtpNote(otpId, 'ส่ง SMS ผิดพลาด: ' + String(err.message || err).slice(0, 200));
+  }
+}
+
+/** ส่งรหัส OTP ทางอีเมลแทน SMS (ใช้เมื่อส่ง SMS ไม่ได้) */
+async function deliverOtpByEmailFallback(otpId, userId, code) {
+  try {
+    const user = await db.findUserById(userId);
+    if (!user || !user.email) return false;
+    mailer.sendOtpEmail({ email: user.email, code });
+    await db.setOtpNote(otpId, 'ส่ง SMS ไม่ได้ — ส่งรหัสทางอีเมลแทน (' + user.email + ')');
+    console.log('📧 [OTP สำรอง] ส่งรหัสทางอีเมลแทน SMS → ' + user.email);
+    return true;
+  } catch (err) {
+    console.error('❌ ส่ง OTP ทางอีเมลสำรองไม่สำเร็จ:', err.message);
+    return false;
   }
 }
 
