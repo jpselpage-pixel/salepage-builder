@@ -340,6 +340,49 @@ router.post('/api/owner/shop-access/:userId/revoke', requireOwner, wrap(async (r
   res.json({ ok: true, message: `ดึงสิทธิ์เจ้าของร้านของ ${target.email} คืนแล้ว (กลับเป็นผู้ใช้งานทั่วไป)` });
 }));
 
+// เจ้าของระบบแนบสลิปแทนลูกค้า → ตรวจกับ EasySlip → ถ้าผ่าน เปิดสิทธิ์ให้ทันที
+router.post('/api/owner/package-payments/:id/verify-slip', requireOwner, wrap(async (req, res) => {
+  const rec = await db.findPackagePaymentById(Number(req.params.id));
+  if (!rec) return res.status(404).json({ ok: false, message: 'ไม่พบรายการชำระเงิน' });
+  if (!['pending', 'expired'].includes(rec.status)) {
+    return res.status(400).json({ ok: false, message: 'รายการนี้ถูกตรวจสอบไปแล้ว' });
+  }
+
+  let parsed;
+  try {
+    parsed = parseSlip(String(req.body?.slip || ''));
+  } catch (err) {
+    return res.status(400).json({ ok: false, message: err.message });
+  }
+  const slipUrl = saveSlipBuffer(parsed.buf, parsed.ext, rec.ref);
+
+  const settings = getSlipSettings();
+  if (!settings.configured) {
+    await db.setPackagePaymentSlip(rec.id, { slipUrl, slipStatus: 'not_configured', slipDetail: 'แนบสลิปโดยผู้ดูแลระบบ (ยังไม่ได้ตั้งค่า API ตรวจสลิป)' });
+    return res.status(400).json({ ok: false, message: 'แนบสลิปเก็บไว้แล้ว แต่ยังไม่ได้ตั้งค่า API key ของ EasySlip จึงตรวจอัตโนมัติไม่ได้ — กด "ยืนยันยอด" เองได้' });
+  }
+
+  const result = await verifySlip(parsed.buf, rec.amount);
+  // เจ้าของระบบเป็นผู้สั่งตรวจเอง จึงใช้เกณฑ์เดียวกับการอนุมัติอัตโนมัติ (ยอด/บัญชี/สลิปซ้ำ ต้องผ่าน)
+  const decision = decideAutoApprove({ settings: { ...settings, autoApprove: true }, record: rec, result });
+  await db.setPackagePaymentSlip(rec.id, { slipUrl, slipStatus: decision.status, slipDetail: 'แนบสลิปโดยผู้ดูแลระบบ — ' + decision.detail });
+
+  if (!decision.approve) {
+    console.log(`🔎 [owner] ตรวจสลิปแทนลูกค้า #${rec.id} (${rec.ref}) → ${decision.status}: ${decision.detail}`);
+    return res.status(400).json({ ok: false, approved: false, message: 'ตรวจสลิปไม่ผ่าน: ' + decision.detail });
+  }
+
+  const granted = await grantPackage(rec, req.owner.id);
+  console.log(`✅ [owner] ตรวจสลิปแทนลูกค้าผ่าน #${rec.id} (${rec.ref}) → เปิดสิทธิ์ ${granted ? granted.user.email : ''}`);
+  res.json({
+    ok: true,
+    approved: true,
+    message: granted
+      ? `ตรวจสลิปผ่าน — เปิดสิทธิ์เจ้าของร้านให้ ${granted.user.email} ถึง ${granted.expiresAt.slice(0, 10)} แล้ว`
+      : 'ตรวจสลิปผ่านและบันทึกแล้ว',
+  });
+}));
+
 // ยืนยันยอด → ให้สิทธิ์เจ้าของร้านทันทีตามอายุแพ็กเกจ
 router.post('/api/owner/package-payments/:id/confirm', requireOwner, wrap(async (req, res) => {
   const rec = await db.findPackagePaymentById(Number(req.params.id));

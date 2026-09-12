@@ -1162,6 +1162,14 @@ async function markPackagePaymentNotified(id, { slipUrl = '', slipStatus = '', s
   );
 }
 
+/** เก็บไฟล์สลิป + ผลตรวจ (ใช้เมื่อเจ้าของระบบแนบสลิปแทนลูกค้า — ไม่แตะสถานะ notified) */
+async function setPackagePaymentSlip(id, { slipUrl = '', slipStatus = '', slipDetail = '' }) {
+  await pool.execute(
+    'UPDATE package_payments SET slip_url = COALESCE(NULLIF(?, \'\'), slip_url), slip_status = ?, slip_detail = ? WHERE id = ?',
+    [slipUrl, slipStatus, slipDetail, id]
+  );
+}
+
 async function setPackagePaymentStatus(id, status, { confirmedBy = null, note = null } = {}) {
   const sets = ['status = ?'];
   const args = [status];
@@ -1456,6 +1464,7 @@ module.exports = {
   findPendingPackagePaymentByUser,
   listPackagePayments,
   markPackagePaymentNotified,
+  setPackagePaymentSlip,
   setPackagePaymentStatus,
   getPaymentExpireMinutes,
   expireStalePayments,

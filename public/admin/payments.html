@@ -198,6 +198,7 @@
   </div>
 
   <div class="toast" id="toast"></div>
+  <input type="file" id="ownerSlipFile" accept="image/png,image/jpeg,image/webp" style="display:none;">
 
   <script>
     const toast = document.getElementById('toast');
@@ -344,12 +345,16 @@
           ? `<a href="${esc(p.slipUrl)}" target="_blank" rel="noopener" class="icon-btn" style="padding:5px 10px;">ดูสลิป</a>${p.slipStatus ? `<div class="pill ${SLIP_CLASS[p.slipStatus] || ''}" style="margin-top:5px;">${esc(SLIP_LABEL[p.slipStatus] || p.slipStatus)}</div>` : ''}`
           : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
         <td>${(p.status === 'pending' || p.status === 'expired')
-          ? `<div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="icon-btn primary" data-confirm="${p.id}" type="button">ยืนยันยอด</button><button class="icon-btn danger" data-reject="${p.id}" type="button">ยกเลิก</button></div>`
+          ? `<div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="icon-btn" data-slip="${p.id}" type="button" title="แนบสลิปแทนลูกค้า แล้วให้ระบบตรวจให้">แนบสลิปตรวจ</button><button class="icon-btn primary" data-confirm="${p.id}" type="button">ยืนยันยอด</button><button class="icon-btn danger" data-reject="${p.id}" type="button">ยกเลิก</button></div>`
           : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
       </tr>`).join('');
 
       body.querySelectorAll('[data-confirm]').forEach((b) => b.addEventListener('click', () => act(b, 'confirm')));
       body.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', () => act(b, 'reject')));
+      body.querySelectorAll('[data-slip]').forEach((b) => b.addEventListener('click', () => {
+        slipTargetId = b.dataset.slip;
+        document.getElementById('ownerSlipFile').click();
+      }));
     }
 
     async function act(btn, kind) {
@@ -377,6 +382,39 @@
         btn.disabled = false;
       }
     }
+
+    // ---------- เจ้าของระบบแนบสลิปแทนลูกค้า (เช่น ลูกค้าส่งสลิปมาทาง LINE) ----------
+    let slipTargetId = null;
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ''));
+        r.onerror = () => reject(new Error('อ่านไฟล์สลิปไม่สำเร็จ'));
+        r.readAsDataURL(file);
+      });
+    }
+
+    document.getElementById('ownerSlipFile').addEventListener('change', async (e) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = '';
+      const id = slipTargetId;
+      slipTargetId = null;
+      if (!f || !id) return;
+      if (f.size > 2 * 1024 * 1024) { showToast(ICON_ALERT + 'ไฟล์สลิปใหญ่เกิน 2MB กรุณาย่อรูปก่อน'); return; }
+      showToast('กำลังส่งสลิปให้ระบบตรวจ...');
+      try {
+        const dataUrl = await readFileAsDataUrl(f);
+        const data = await api('/api/owner/package-payments/' + id + '/verify-slip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slip: dataUrl }),
+        });
+        showToast(ICON_CHECK + esc(data.message));
+      } catch (err) {
+        showToast(ICON_ALERT + esc(err.message));
+      }
+      await loadQueue();
+    });
 
     document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {
       currentTab = b.dataset.tab;
