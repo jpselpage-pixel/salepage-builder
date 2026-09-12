@@ -184,12 +184,13 @@
                 <th>ยอด</th>
                 <th>รหัสอ้างอิง</th>
                 <th>สถานะ</th>
+                <th>เวลาที่เหลือ</th>
                 <th>สลิป</th>
                 <th>จัดการ</th>
               </tr>
             </thead>
             <tbody id="queueBody">
-              <tr><td colspan="8" class="empty-state">กำลังโหลด...</td></tr>
+              <tr><td colspan="9" class="empty-state">กำลังโหลด...</td></tr>
             </tbody>
           </table>
         </div>
@@ -319,19 +320,20 @@
     });
 
     async function loadQueue() {
+      stopQueueTicker(); // หยุดตัวนับเดิมก่อนวาดใหม่
       const body = document.getElementById('queueBody');
-      body.innerHTML = '<tr><td colspan="8" class="empty-state">กำลังโหลด...</td></tr>';
+      body.innerHTML = '<tr><td colspan="9" class="empty-state">กำลังโหลด...</td></tr>';
       let rows = [];
       try {
         const data = await api('/api/owner/package-payments?status=' + currentTab);
         rows = data.payments || [];
       } catch (err) {
-        body.innerHTML = '<tr><td colspan="8" class="empty-state">' + esc(err.message) + '</td></tr>';
+        body.innerHTML = '<tr><td colspan="9" class="empty-state">' + esc(err.message) + '</td></tr>';
         return;
       }
       document.getElementById('queueCount').textContent = rows.length ? '(' + rows.length + ')' : '';
       if (!rows.length) {
-        body.innerHTML = '<tr><td colspan="8" class="empty-state">ไม่มีรายการในสถานะนี้</td></tr>';
+        body.innerHTML = '<tr><td colspan="9" class="empty-state">ไม่มีรายการในสถานะนี้</td></tr>';
         return;
       }
       body.innerHTML = rows.map((p) => `<tr>
@@ -341,6 +343,9 @@
         <td><strong>฿${money(p.amount)}</strong></td>
         <td><span class="mono">${esc(p.ref)}</span></td>
         <td><span class="pill ${STATUS_CLASS[p.status] || ''}">${STATUS_LABEL[p.status] || esc(p.status)}</span></td>
+        <td>${p.status === 'pending' && p.secondsLeft != null
+          ? `<span class="cd" data-left="${Number(p.secondsLeft)}">–</span>`
+          : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
         <td>${p.slipUrl
           ? `<a href="${esc(p.slipUrl)}" target="_blank" rel="noopener" class="icon-btn" style="padding:5px 10px;">ดูสลิป</a>${p.slipStatus ? `<div class="pill ${SLIP_CLASS[p.slipStatus] || ''}" style="margin-top:5px;">${esc(SLIP_LABEL[p.slipStatus] || p.slipStatus)}</div>` : ''}`
           : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
@@ -355,6 +360,43 @@
         slipTargetId = b.dataset.slip;
         document.getElementById('ownerSlipFile').click();
       }));
+
+      startQueueTicker(); // นับถอยหลังให้ตรงกับที่ลูกค้าเห็น
+    }
+
+    // ---------- นับถอยหลังในคิว (ค่ามาจากเซิร์ฟเวอร์ = ตรงกับหน้าลูกค้า) ----------
+    let queueTicker = null;
+    let queueReloading = false;
+    function stopQueueTicker() { if (queueTicker) { clearInterval(queueTicker); queueTicker = null; } }
+
+    function scheduleQueueReload() {
+      if (queueReloading) return;
+      queueReloading = true;
+      setTimeout(async () => {
+        await loadQueue();            // ให้เซิร์ฟเวอร์ปรับสถานะเป็น "หมดเวลา" แล้วย้ายแท็บ
+        queueReloading = false;
+      }, 1500);
+    }
+
+    function startQueueTicker() {
+      stopQueueTicker();
+      const cells = [...document.querySelectorAll('#queueBody .cd')];
+      if (!cells.length) return;
+      const paint = () => {
+        let expired = false;
+        for (const el of cells) {
+          const left = Number(el.dataset.left);
+          el.textContent = Math.floor(Math.max(0, left) / 60) + ':' + String(Math.max(0, left) % 60).padStart(2, '0');
+          el.classList.toggle('low', left <= 60);
+          if (left <= 0) { el.classList.add('expired'); expired = true; }
+        }
+        return expired;
+      };
+      if (paint()) { stopQueueTicker(); scheduleQueueReload(); return; }
+      queueTicker = setInterval(() => {
+        for (const el of cells) el.dataset.left = String(Number(el.dataset.left) - 1);
+        if (paint()) { stopQueueTicker(); scheduleQueueReload(); }
+      }, 1000);
     }
 
     async function act(btn, kind) {
