@@ -23,7 +23,12 @@
 .land-hero h1 { font-size: clamp(28px, 3.6vw, 42px); line-height: 1.35; letter-spacing: -.5px; margin: 22px 0 14px; font-weight: 800; }
 .land-hero p.lead { font-size: 16.5px; line-height: 1.85; opacity: .94; margin: 0 0 28px; max-width: 560px; }
 .land-cta { display: flex; gap: 12px; flex-wrap: wrap; }
-.land-cta .btn { width: auto; }
+.land-cta .btn { width: auto; white-space: nowrap; }
+/* ปุ่มในแถบเมนูด้านบน: ขนาดเท่ากันเป๊ะ ไม่ตัดข้อความขึ้นบรรทัดใหม่ */
+.land-nav-actions .btn { width: auto; white-space: nowrap; }
+.land-auth { display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; align-items: center; }
+.land-auth .btn { border: 1px solid transparent; }
+.land-auth .btn-outline { border-color: var(--border-strong); }
 .land-cta .btn-white { background: #fff; color: #4338ca; border: none; font-weight: 700; }
 .land-cta .btn-ghost { background: rgba(255, 255, 255, .16); color: #fff; border: 1px solid rgba(255, 255, 255, .38); font-weight: 700; }
 .land-cta .btn-ghost:hover { background: rgba(255, 255, 255, .24); }
@@ -101,6 +106,14 @@
   .land-hero-inner { grid-template-columns: 1fr; gap: 34px; }
   .land-phone { width: 250px; }
   .land-nav-links { display: none; }
+  /* ย่อปุ่มสมัคร/เข้าสู่ระบบให้พอดีจอ และยังกว้างเท่ากัน */
+  .land-nav { gap: 10px; }
+  .land-auth { gap: 6px; }
+  .land-auth .btn { padding: 8px 12px; font-size: 12.5px; }
+}
+/* จอเล็กมาก (≤380px): ซ่อนปุ่มสลับธีม เพื่อให้ปุ่มสมัคร/เข้าสู่ระบบมีที่พอและกว้างเท่ากัน */
+@media (max-width: 380px) {
+  .land-nav .theme-toggle { display: none; }
 }
 @media (max-width: 560px) {
   .land-nav { padding: 12px 14px; }
