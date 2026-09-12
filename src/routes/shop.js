@@ -12,7 +12,7 @@ const { getCurrentUser, requireLogin, requireShop } = require('../middleware/aut
 const { isAdminRole, isShop } = require('../lib/roles');
 const { randomToken } = require('../lib/crypto');
 const { addMonthsSql, toSql, nowSql } = require('../lib/time');
-const { getPaymentSettings, hasAnyChannel, paymentInstructions, generateRef, emailPackagePurchased } = require('../lib/payments');
+const { getPaymentSettings, hasAnyChannel, paymentInstructions, generateRef, emailPackagePurchased, entitlementEndFor } = require('../lib/payments');
 
 const router = express.Router();
 const PUBLIC_DIR = path.join(__dirname, '..', '..', 'public');
@@ -139,8 +139,8 @@ router.post('/api/shop/purchase', requireLogin, async (req, res) => {
 
   // โหมดที่ยังไม่เปิดรับชำระเงิน → ให้สิทธิ์ทันที
   // ถ้ายังมีสิทธิ์เหลืออยู่ ให้นับต่อจากวันหมดอายุเดิม (เหมือนเส้นทางที่ชำระเงินจริง)
-  const current = await db.maxActiveEntitlement(user.id);
-  const stillActive = current && new Date(current).getTime() > Date.now();
+  const current = await entitlementEndFor(user);
+  const stillActive = current && current.getTime() > Date.now();
   const startAt = stillActive ? toSql(current) : nowSql();
   const expiresAt = addMonthsSql(startAt, pkg.duration_months);
   await db.setUserRole(user.id, 'shop');

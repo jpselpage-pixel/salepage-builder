@@ -96,4 +96,20 @@ async function emailPackagePurchased({ user, packageId, packageName, durationMon
   }
 }
 
-module.exports = { getPaymentSettings, hasAnyChannel, paymentInstructions, generateRef, emailPackagePurchased };
+/**
+ * วันสิ้นสุดสิทธิ์ที่ต้อง "นับต่อ" เมื่อซื้อเพิ่ม
+ * ใช้ค่าที่ไกลที่สุดระหว่าง (รายการซื้อที่ยังใช้งานได้) กับ (วันหมดอายุบนบัญชีผู้ใช้)
+ * เหตุผลที่มี fallback: ถ้าประวัติการซื้อถูกล้าง แต่ผู้ใช้ยังมีสิทธิ์เหลืออยู่ (gift_expires_at)
+ * การซื้อใหม่ต้องต่อจากวันเดิม ไม่ใช่เริ่มนับใหม่จากวันนี้
+ */
+async function entitlementEndFor(user) {
+  const active = user && user.id ? await db.maxActiveEntitlement(user.id) : null;
+  const gift = user && user.gift_expires_at ? new Date(user.gift_expires_at) : null;
+  const times = [active, gift]
+    .filter(Boolean)
+    .map((v) => new Date(v).getTime())
+    .filter((t) => Number.isFinite(t));
+  return times.length ? new Date(Math.max(...times)) : null;
+}
+
+module.exports = { getPaymentSettings, hasAnyChannel, paymentInstructions, generateRef, emailPackagePurchased, entitlementEndFor };

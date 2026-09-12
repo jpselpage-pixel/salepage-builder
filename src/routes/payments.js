@@ -19,7 +19,7 @@ const db = require('../db');
 const { requireLogin, requireOwner } = require('../middleware/auth');
 const { isAdminRole } = require('../lib/roles');
 const { futureMonthsSql, addMonthsSql, toSql, nowSql } = require('../lib/time');
-const { getPaymentSettings, hasAnyChannel, paymentInstructions, emailPackagePurchased } = require('../lib/payments');
+const { getPaymentSettings, hasAnyChannel, paymentInstructions, emailPackagePurchased, entitlementEndFor } = require('../lib/payments');
 const { getSlipSettings, verifySlip, decideAutoApprove } = require('../lib/slip-verify');
 
 const router = express.Router();
@@ -62,8 +62,8 @@ async function grantPackage(rec, confirmedBy = null, baseUrl = '') {
   if (!user) return null;
 
   // ถ้ายังมีสิทธิ์เหลืออยู่ → "ต่ออายุจากวันหมดอายุเดิม" (ซื้อซ้อนได้) ไม่ใช่เริ่มนับใหม่
-  const current = await db.maxActiveEntitlement(user.id);
-  const stillActive = current && new Date(current).getTime() > Date.now();
+  const current = await entitlementEndFor(user);
+  const stillActive = current && current.getTime() > Date.now();
   const startAt = stillActive ? toSql(current) : nowSql();
   const expiresAt = addMonthsSql(startAt, rec.duration_months);
 
