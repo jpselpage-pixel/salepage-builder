@@ -202,7 +202,7 @@
         if (data.ok && data.url) {
           window.location.href = data.url;
         } else {
-          showError('ไม่สามารถเริ่มเข้าสู่ระบบด้วย Google ได้');
+          showError(data.message || 'ไม่สามารถเริ่มเข้าสู่ระบบด้วย Google ได้');
         }
       } catch {
         showError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');

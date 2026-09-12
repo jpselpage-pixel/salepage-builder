@@ -1,5 +1,8 @@
 /**
- * google.js — ล็อกอินด้วย Google (OAuth จริง/โหมด mock) + ตั้งสมัครให้ครบ
+ * google.js — ล็อกอินด้วย Google (OAuth 2.0 จริง) + ตั้งสมัครให้ครบ
+ *
+ * ต้องตั้งค่า GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI ก่อนใช้งาน
+ * ถ้ายังไม่ตั้งค่า ปุ่มล็อกอินด้วย Google จะถูกซ่อนที่หน้า login (ดู /api/config)
  */
 'use strict';
 
@@ -7,7 +10,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const db = require('../db');
 const otp = require('../lib/otp');
-const { isValidEmail, isValidThaiPhone, normalizeThaiPhone, passwordStrengthScore } = require('../lib/validators');
+const { isValidThaiPhone, normalizeThaiPhone, passwordStrengthScore } = require('../lib/validators');
 const { devMode } = require('../lib/settings');
 const { isAdminRole, isShop } = require('../lib/roles');
 const { startSession, requirePendingGoogle } = require('../middleware/auth');
@@ -17,8 +20,6 @@ const router = express.Router();
 
 // ---------------------------------------------------------------------------
 // เข้าสู่ระบบด้วย Google (OAuth 2.0)
-//   - มี GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET → OAuth จริง (redirect ไป Google)
-//   - ยังไม่มี key → โหมดทดสอบ (dev): ใช้หน้า google-login.html กรอกอีเมลจำลอง
 // ---------------------------------------------------------------------------
 function getGoogleConfig() {
   return {
@@ -33,8 +34,7 @@ function getGoogleConfig() {
 router.get('/api/auth/google/url', (req, res) => {
   const cfg = getGoogleConfig();
   if (!cfg.configured) {
-    // ยังไม่มี key → โหมด dev ใช้หน้า mock (กรอกอีเมลจำลอง)
-    return res.json({ ok: true, dev: true, url: '/google-login.html' });
+    return res.status(503).json({ ok: false, message: 'ยังไม่ได้ตั้งค่าล็อกอินด้วย Google (ต้องใส่ GOOGLE_CLIENT_ID / CLIENT_SECRET)' });
   }
   const params = new URLSearchParams({
     client_id: cfg.clientId,
@@ -73,20 +73,11 @@ router.get('/api/auth/google/callback', async (req, res) => {
     const info = await infoRes.json();
     if (!info.email) throw new Error('ไม่มีอีเมลจาก Google');
 
-    await handleGoogleUser(req, res, { email: info.email, googleId: info.id || info.email }, 'redirect');
+    await handleGoogleUser(req, res, { email: info.email, googleId: info.id || info.email });
   } catch (err) {
     console.error('❌ Google OAuth error:', err.message);
     res.redirect('/login.html?error=google');
   }
-});
-
-// โหมดทดสอบ (dev): จำลองบัญชี Google — รับอีเมลที่ผู้ใช้กรอกในหน้า mock
-router.post('/api/auth/google/mock', async (req, res) => {
-  const email = String(req.body?.email || '').trim().toLowerCase();
-  if (!isValidEmail(email)) {
-    return res.status(400).json({ ok: false, message: 'รูปแบบอีเมลไม่ถูกต้อง' });
-  }
-  await handleGoogleUser(req, res, { email, googleId: 'dev-' + email }, 'json');
 });
 
 /**
@@ -95,7 +86,7 @@ router.post('/api/auth/google/mock', async (req, res) => {
  *  - ผู้ใช้ค้าง (pending) → ไปหน้า google-setup.html เพื่อสมัครต่อ
  *  - ไม่มีบัญชี → สร้างผู้ใช้ค้าง (Google) → หน้า google-setup.html
  */
-async function handleGoogleUser(req, res, { email, googleId }, mode) {
+async function handleGoogleUser(req, res, { email, googleId }) {
   let user = await db.findUserByEmail(email);
   if (!user) {
     user = await db.createGooglePendingUser({ email, googleId });
@@ -109,12 +100,10 @@ async function handleGoogleUser(req, res, { email, googleId }, mode) {
 
   if (user.status !== 'active') {
     console.log(`🔑 [Google] ผู้ใช้ค้าง → ไปตั้งรหัส/เบอร์: ${email}`);
-    if (mode === 'redirect') return res.redirect('/google-setup.html');
-    return res.json({ ok: true, redirect: '/google-setup.html' });
+    return res.redirect('/google-setup.html');
   }
   console.log(`🔑 [Google] ล็อกอินบัญชีเดิม: ${email}`);
-  if (mode === 'redirect') return res.redirect(isAdminRole(user.role) ? '/admin/' : isShop(user.role) ? '/shop' : '/settings/profile');
-  res.json({ ok: true, redirect: isAdminRole(user.role) ? '/admin/' : isShop(user.role) ? '/shop' : '/settings/profile' });
+  res.redirect(isAdminRole(user.role) ? '/admin/' : isShop(user.role) ? '/shop' : '/settings/profile');
 }
 
 // ---------------------------------------------------------------------------
