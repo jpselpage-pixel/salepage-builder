@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 100" width="240" height="100" role="img" aria-label="Qpage">
+  <defs>
+    <linearGradient id="purplePink" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#A855F7" />
+      <stop offset="100%" stop-color="#EC4899" />
+    </linearGradient>
+  </defs>
+
+  <!-- ICON Q -->
+  <g transform="translate(5, 5)">
+    <rect x="10" y="10" width="60" height="60" rx="18" fill="none" stroke="url(#purplePink)" stroke-width="9" />
+    <path d="M 45 45 L 76 76" stroke="url(#purplePink)" stroke-width="9" stroke-linecap="round" />
+    <circle cx="40" cy="40" r="7" fill="#EC4899" />
+  </g>
+
+  <!-- TEXT page. -->
+  <text x="86" y="63" font-family="'Inter','Noto Sans Thai',Arial,Helvetica,sans-serif" font-size="52" font-weight="300" fill="#94A3B8" letter-spacing="-1">page<tspan fill="#EC4899">.</tspan></text>
+</svg>

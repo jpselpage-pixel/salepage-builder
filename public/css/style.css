@@ -177,6 +177,9 @@ img, svg, video { max-width: 100%; }
   flex-shrink: 0;
 }
 .brand-logo img { width: 76%; height: 76%; display: block; }
+/* โลโก้แบบมีคำว่า page. — ใช้ในหน้า login/สมัครสมาชิก */
+.brand-wordmark { height: 46px; width: auto; display: block; }
+.auth-head .mobile-brand .brand-wordmark { height: 34px; }
 .brand-name { font-size: 19px; font-weight: 800; letter-spacing: 0.2px; }
 
 .brand-content { max-width: 420px; }
