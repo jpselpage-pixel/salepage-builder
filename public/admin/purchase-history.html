@@ -141,6 +141,24 @@
 
   <div class="toast" id="toast"></div>
 
+  <!-- ป๊อปอัพยืนยันดึงสิทธิ์คืน -->
+  <div class="modal-overlay" id="revokeModal">
+    <div class="modal">
+      <h3>ดึงสิทธิ์เจ้าของร้านคืน</h3>
+      <p class="sub" id="revokeSub">—</p>
+      <div style="font-size:13.5px;line-height:1.9;">
+        <div style="color:var(--danger);background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:var(--radius);padding:11px 13px;">
+          ลูกค้าจะกลับเป็น <strong>“ผู้ใช้งานทั่วไป”</strong> และเข้าใช้ระบบร้านไม่ได้ทันที<br>
+          ข้อมูลร้าน/เมนูและประวัติการซื้อจะยังอยู่ครบ (ซื้อใหม่แล้วกลับมาใช้ได้)
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="icon-btn" id="revokeCancelBtn" type="button">ปิด</button>
+        <button class="icon-btn danger" id="revokeOkBtn" type="button">ยืนยันดึงสิทธิ์คืน</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const toast = document.getElementById('toast');
     const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -193,14 +211,6 @@
       document.getElementById('sumMonth').textContent = '฿' + money(s.monthTotal) + ' (' + s.monthCount + ')';
     }
 
-    // ปุ่มที่ถูกติดอาวุธ (กดครั้งแรก) — ยกเลิกอัตโนมัติใน 5 วินาที
-    function disarm(btn) {
-      if (btn._armTimer) clearTimeout(btn._armTimer);
-      btn.dataset.armed = '';
-      btn.classList.remove('confirming');
-      if (btn.dataset.label) btn.textContent = btn.dataset.label;
-    }
-
     function renderRows() {
       const body = document.getElementById('historyBody');
       document.getElementById('rowCount').textContent = rows.length ? '(' + rows.length + ')' : '';
@@ -243,29 +253,38 @@
       body.querySelectorAll('[data-revoke]').forEach((b) => b.addEventListener('click', () => revoke(b)));
     }
 
-    async function revoke(btn) {
-      const email = btn.dataset.email;
-      // กันกดพลาด: กดครั้งแรก = ติดอาวุธ ต้องกดซ้ำภายใน 5 วินาทีจึงดึงสิทธิ์จริง
-      if (btn.dataset.armed !== 'yes') {
-        document.querySelectorAll('#historyBody [data-armed="yes"]').forEach(disarm);
-        btn.dataset.armed = 'yes';
-        btn.dataset.label = btn.textContent;
-        btn.classList.add('confirming');
-        btn.textContent = 'แน่ใจ? กดอีกครั้ง';
-        btn._armTimer = setTimeout(() => disarm(btn), 5000);
-        showToast('⚠️ ดึงสิทธิ์ของ ' + esc(email) + ' คืน: ผู้ใช้จะกลับเป็น "ผู้ใช้งานทั่วไป" และเข้าใช้ระบบร้านไม่ได้ (ข้อมูลร้าน/เมนูยังอยู่ · ประวัติยังอยู่) — ถ้าจะดึงสิทธิ์ กดปุ่ม "แน่ใจ? กดอีกครั้ง"', 7000);
-        return;
-      }
-      disarm(btn);
+    // ป๊อปอัพยืนยันการดึงสิทธิ์คืน (กันกดพลาด)
+    let revokeTarget = null;
+    const revokeModal = document.getElementById('revokeModal');
+
+    function openRevokeModal(btn) {
+      revokeTarget = { userId: btn.dataset.revoke, email: btn.dataset.email };
+      document.getElementById('revokeSub').textContent = revokeTarget.email;
+      revokeModal.classList.add('show');
+    }
+    function closeRevokeModal() { revokeModal.classList.remove('show'); revokeTarget = null; }
+
+    document.getElementById('revokeCancelBtn').addEventListener('click', closeRevokeModal);
+    revokeModal.addEventListener('click', (e) => { if (e.target === revokeModal) closeRevokeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && revokeModal.classList.contains('show')) closeRevokeModal(); });
+
+    document.getElementById('revokeOkBtn').addEventListener('click', async (e) => {
+      if (!revokeTarget) return;
+      const btn = e.currentTarget;
       btn.disabled = true;
       try {
-        const data = await api('/api/owner/shop-access/' + btn.dataset.revoke + '/revoke', { method: 'POST' });
+        const data = await api('/api/owner/shop-access/' + revokeTarget.userId + '/revoke', { method: 'POST' });
+        closeRevokeModal();
         showToast(ICON_CHECK + esc(data.message));
         await load();
       } catch (err) {
         showToast(ICON_ALERT + esc(err.message));
         btn.disabled = false;
       }
+    });
+
+    function revoke(btn) {
+      openRevokeModal(btn);
     }
 
     async function load() {

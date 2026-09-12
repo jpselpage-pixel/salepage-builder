@@ -200,6 +200,23 @@
   <div class="toast" id="toast"></div>
   <input type="file" id="ownerSlipFile" accept="image/png,image/jpeg,image/webp" style="display:none;">
 
+  <!-- ป๊อปอัพยืนยันยอด / ยกเลิกรายการ -->
+  <div class="modal-overlay" id="actModal">
+    <div class="modal">
+      <h3 id="actTitle">ยืนยันยอดเงิน</h3>
+      <p class="sub" id="actSub">—</p>
+      <div id="actBody" style="font-size:13.5px;line-height:1.9;"></div>
+      <div class="field" id="actReasonField" style="display:none;margin-top:16px;">
+        <label for="actReason">เหตุผลที่ยกเลิก (ลูกค้าจะเห็นข้อความนี้)</label>
+        <input type="text" id="actReason" maxlength="200" placeholder="เช่น ไม่พบยอดโอน">
+      </div>
+      <div class="modal-actions">
+        <button class="icon-btn" id="actCancelBtn" type="button">ปิด</button>
+        <button class="icon-btn primary" id="actOkBtn" type="button">ยืนยันยอด</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const toast = document.getElementById('toast');
     const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
@@ -361,8 +378,9 @@
           : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
       </tr>`).join('');
 
-      body.querySelectorAll('[data-confirm]').forEach((b) => b.addEventListener('click', () => act(b, 'confirm')));
-      body.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', () => act(b, 'reject')));
+      queueRows = rows;
+      body.querySelectorAll('[data-confirm]').forEach((b) => b.addEventListener('click', () => openActModal('confirm', Number(b.dataset.confirm))));
+      body.querySelectorAll('[data-reject]').forEach((b) => b.addEventListener('click', () => openActModal('reject', Number(b.dataset.reject))));
       body.querySelectorAll('[data-slip]').forEach((b) => b.addEventListener('click', () => {
         slipTargetId = b.dataset.slip;
         document.getElementById('ownerSlipFile').click();
@@ -418,39 +436,56 @@
       }, 8000);
     }
 
-    // ปุ่มที่ถูก "ติดอาวุธ" (กดครั้งแรก) — คงสถานะไว้ชั่วครู่ และหยุดรีเฟรชอัตโนมัติระหว่างนั้น
-    let armedUntil = 0;
-    function disarm(btn) {
-      if (btn._armTimer) clearTimeout(btn._armTimer);
-      btn.dataset.armed = '';
-      btn.classList.remove('confirming');
-      if (btn.dataset.label) btn.textContent = btn.dataset.label;
+    // ---------- ป๊อปอัพยืนยันยอด / ยกเลิกรายการ (กันกดพลาด — ต้องยืนยันในกล่องเท่านั้น) ----------
+    let queueRows = [];
+    let actTarget = null;
+    let armedUntil = 0; // ช่วงเวลาที่ห้ามรีเฟรชอัตโนมัติ (ระหว่างเปิดกล่องยืนยัน)
+    const actModal = document.getElementById('actModal');
+
+    function openActModal(kind, id) {
+      const p = queueRows.find((x) => Number(x.id) === Number(id));
+      if (!p) return;
+      actTarget = { id: p.id, kind };
+
+      document.getElementById('actTitle').textContent = kind === 'confirm' ? 'ยืนยันยอดเงิน' : 'ยกเลิกรายการชำระเงิน';
+      document.getElementById('actSub').textContent = p.ref + ' · ' + p.userEmail;
+      document.getElementById('actBody').innerHTML = [
+        ['แพ็กเกจ', p.packageName + ' (' + p.durationMonths + ' เดือน)'],
+        ['ยอดเงิน', '฿' + money(p.amount)],
+        ['สถานะ', STATUS_LABEL[p.status] || p.status],
+      ].map(([k, v]) => `<div style="display:flex;gap:10px;"><span style="color:var(--muted);min-width:72px;">${k}</span><strong>${esc(v)}</strong></div>`).join('')
+        + (kind === 'confirm'
+          ? '<p style="margin:14px 0 0;color:var(--warning);background:var(--warning-bg);border:1px solid var(--warning-border);border-radius:var(--radius);padding:11px 13px;line-height:1.75;">กรุณาตรวจยอดในแอปธนาคารให้แน่ใจก่อน — ระบบจะเปิดสิทธิ์เจ้าของร้านให้ลูกค้าทันทีตามอายุแพ็กเกจ</p>'
+          : '<p style="margin:14px 0 0;color:var(--danger);background:var(--danger-bg);border:1px solid var(--danger-border);border-radius:var(--radius);padding:11px 13px;line-height:1.75;">ลูกค้าจะเห็นเหตุผลนี้ และต้องสร้างรายการใหม่ถ้าต้องการชำระอีกครั้ง</p>');
+
+      document.getElementById('actReasonField').style.display = kind === 'reject' ? '' : 'none';
+      if (kind === 'reject') document.getElementById('actReason').value = 'ไม่พบยอดโอน';
+
+      const ok = document.getElementById('actOkBtn');
+      ok.textContent = kind === 'confirm' ? 'ยืนยันยอด' : 'ยืนยันการยกเลิก';
+      ok.className = kind === 'confirm' ? 'icon-btn primary' : 'icon-btn danger';
+      ok.disabled = false;
+
+      actModal.classList.add('show');
+      armedUntil = Date.now() + 600000; // หยุดรีเฟรชอัตโนมัติระหว่างเปิดกล่อง
+      if (kind === 'reject') setTimeout(() => document.getElementById('actReason').focus(), 50);
     }
 
-    async function act(btn, kind) {
-      const id = kind === 'confirm' ? btn.dataset.confirm : btn.dataset.reject;
+    function closeActModal() {
+      actModal.classList.remove('show');
+      actTarget = null;
+      armedUntil = 0;
+    }
 
-      // กันกดพลาด: กดครั้งแรก = ติดอาวุธ (ปุ่มเปลี่ยนสี/ข้อความ) ต้องกดซ้ำภายใน 5 วินาทีจึงทำงานจริง
-      if (btn.dataset.armed !== 'yes') {
-        document.querySelectorAll('#queueBody [data-armed="yes"]').forEach(disarm);
-        btn.dataset.armed = 'yes';
-        btn.dataset.label = btn.textContent;
-        btn.classList.add('confirming');
-        btn.textContent = 'แน่ใจ? กดอีกครั้ง';
-        armedUntil = Date.now() + 5000;
-        btn._armTimer = setTimeout(() => disarm(btn), 5000);
-        showToast(kind === 'confirm'
-          ? '⚠️ ตรวจยอดในแอปธนาคารก่อน — ถ้าจะยืนยันการรับเงิน กดปุ่ม "แน่ใจ? กดอีกครั้ง"'
-          : '⚠️ การยกเลิกรายการจะแจ้งลูกค้าว่าไม่พบยอดโอน — ถ้าจะยกเลิก กดปุ่ม "แน่ใจ? กดอีกครั้ง"', 6000);
-        return;
-      }
-      disarm(btn);
+    document.getElementById('actCancelBtn').addEventListener('click', closeActModal);
+    actModal.addEventListener('click', (e) => { if (e.target === actModal) closeActModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && actModal.classList.contains('show')) closeActModal(); });
 
-      let reason = '';
-      if (kind === 'reject') {
-        reason = prompt('เหตุผลที่ยกเลิก (ลูกค้าจะเห็นข้อความนี้)', 'ไม่พบยอดโอน') || '';
-        if (reason === '') return;
-      }
+    document.getElementById('actOkBtn').addEventListener('click', async (e) => {
+      if (!actTarget) return;
+      const btn = e.currentTarget;
+      const { id, kind } = actTarget;
+      const reason = kind === 'reject' ? (document.getElementById('actReason').value.trim() || 'ไม่พบยอดโอน') : '';
       btn.disabled = true;
       try {
         const data = await api('/api/owner/package-payments/' + id + '/' + kind, {
@@ -458,13 +493,14 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ reason }),
         });
+        closeActModal();
         showToast(ICON_CHECK + esc(data.message));
-        await loadQueue();
+        await loadQueue(true);
       } catch (err) {
         showToast(ICON_ALERT + esc(err.message));
         btn.disabled = false;
       }
-    }
+    });
 
     // ---------- เจ้าของระบบแนบสลิปแทนลูกค้า (เช่น ลูกค้าส่งสลิปมาทาง LINE) ----------
     let slipTargetId = null;
