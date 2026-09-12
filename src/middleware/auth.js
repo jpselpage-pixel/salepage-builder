@@ -5,7 +5,7 @@
 
 const db = require('../db');
 const { sha256, randomToken } = require('../lib/crypto');
-const { nowSql, futureSql } = require('../lib/time');
+const { isExpired, futureSql } = require('../lib/time');
 const { isAdminRole, isOwner, isShop } = require('../lib/roles');
 const { SESSION_TTL_MS, COOKIE_NAME, COOKIE_SECURE } = require('../config');
 
@@ -14,7 +14,7 @@ async function getCurrentUser(req) {
   if (!token) return null;
   const session = await db.findSession(sha256(token));
   if (!session) return null;
-  if (session.expires_at <= nowSql()) {
+  if (isExpired(session.expires_at)) {
     await db.deleteSession(session.token);
     return null;
   }

@@ -35,4 +35,25 @@ function toSql(base) {
   return new Date(base).toISOString().slice(0, 19).replace('T', ' ');
 }
 
-module.exports = { nowSql, futureSql, futureMonthsSql, addMonthsSql, toSql };
+/**
+ * แปลงค่าที่ได้จากฐานข้อมูล (Date หรือสตริง DATETIME) → epoch ms
+ * สตริงจาก MySQL เป็นเวลา UTC ('YYYY-MM-DD HH:MM:SS') จึงเติม Z ก่อนแปลง
+ */
+function toMs(v) {
+  if (v == null) return NaN;
+  if (v instanceof Date) return v.getTime();
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/.test(s)) return new Date(s.replace(' ', 'T') + 'Z').getTime();
+  return new Date(s).getTime();
+}
+
+/**
+ * หมดอายุแล้วหรือยัง
+ * หมายเหตุ: ห้ามเทียบ Date กับสตริงด้วย <= ตรง ๆ (จะได้ false เสมอ เพราะสตริงกลายเป็น NaN)
+ */
+function isExpired(v) {
+  const t = toMs(v);
+  return Number.isFinite(t) && t <= Date.now();
+}
+
+module.exports = { nowSql, futureSql, futureMonthsSql, addMonthsSql, toSql, toMs, isExpired };

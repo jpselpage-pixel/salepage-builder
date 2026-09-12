@@ -8,7 +8,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../db');
 const otp = require('../lib/otp');
 const { sha256, randomToken } = require('../lib/crypto');
-const { nowSql, futureSql } = require('../lib/time');
+const { isExpired, futureSql } = require('../lib/time');
 const { isValidEmail, passwordStrengthScore } = require('../lib/validators');
 const mailer = require('../lib/mailer');
 const { rateLimit } = require('../middleware/rate-limit');
@@ -111,7 +111,7 @@ router.post('/api/forgot-reset-password', async (req, res) => {
   if (!record || record.used === 1) {
     return res.status(400).json({ ok: false, message: 'โทเคนไม่ถูกต้องหรือถูกใช้ไปแล้ว กรุณาเริ่มใหม่' });
   }
-  if (record.expires_at <= nowSql()) {
+  if (isExpired(record.expires_at)) {
     return res.status(400).json({ ok: false, message: 'โทเคนหมดอายุแล้ว กรุณาเริ่มใหม่' });
   }
   if (passwordStrengthScore(String(newPassword || '')) < 3) {

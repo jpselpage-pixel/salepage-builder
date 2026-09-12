@@ -15,7 +15,7 @@ const mailer = require('./mailer');
 const sms = require('./sms');
 const { devMode } = require('./settings');
 const { sha256 } = require('./crypto');
-const { nowSql, futureSql } = require('./time');
+const { isExpired, futureSql } = require('./time');
 
 const OTP_TTL_MINUTES = Number(process.env.OTP_TTL_MINUTES || 5);
 const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS || 5);
@@ -105,7 +105,7 @@ async function verifyOtp(userId, inputCode, purpose = 'signup') {
   if (!record || record.used === 1) {
     return { ok: false, message: 'รหัส OTP ไม่ถูกต้องหรือหมดอายุแล้ว' };
   }
-  if (record.expires_at <= nowSql()) {
+  if (isExpired(record.expires_at)) {
     return { ok: false, message: 'รหัส OTP หมดอายุแล้ว กรุณาขอรหัสใหม่' };
   }
   if (record.attempts >= getOtpMaxAttempts()) {
