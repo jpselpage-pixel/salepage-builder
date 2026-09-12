@@ -14,10 +14,63 @@
  */
 'use strict';
 
+const dns = require('node:dns');
+const http = require('node:http');
+const https = require('node:https');
 const db = require('../db');
 
 // เปลี่ยนปลายทางได้ผ่าน env สำหรับทดสอบ/staging
 const EASYSLIP_ENDPOINT = process.env.SLIP_API_BASE || 'https://api.easyslip.com/v2/verify/bank';
+
+/** แปลงชื่อโฮสต์ → IPv4 */
+function resolveIpv4(host) {
+  return new Promise((resolve) => {
+    dns.resolve4(host, (err, addrs) => resolve(err || !addrs || !addrs.length ? null : addrs[0]));
+  });
+}
+
+/**
+ * POST JSON โดยเลือกใช้ IPv4 ก่อน
+ * เหตุผล: เซิร์ฟเวอร์นี้มีทั้ง IPv4/IPv6 แต่ผู้ให้บริการ (EasySlip) whitelist เฉพาะ IPv4
+ * ถ้าปล่อยให้ Node วิ่งไป IPv6 จะโดน IP_NOT_ALLOWED — จึงบังคับต่อผ่าน IPv4
+ * (คง Host/SNI เป็นชื่อโฮสต์จริง เพื่อให้ตรวจ certificate ผ่าน)
+ */
+async function postJson(urlStr, headers, bodyObj) {
+  const url = new URL(urlStr);
+  const isHttps = url.protocol === 'https:';
+  const ip = isHttps ? await resolveIpv4(url.hostname) : null;
+  const body = JSON.stringify(bodyObj);
+  const mod = isHttps ? https : http;
+
+  return new Promise((resolve, reject) => {
+    const req = mod.request({
+      host: ip || url.hostname,
+      servername: isHttps ? url.hostname : undefined,
+      port: url.port || (isHttps ? 443 : 80),
+      path: url.pathname + url.search,
+      method: 'POST',
+      headers: Object.assign({
+        Host: url.hostname,
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      }, headers),
+      timeout: 30000,
+    }, (res) => {
+      let data = '';
+      res.setEncoding('utf8');
+      res.on('data', (c) => { data += c; });
+      res.on('end', () => {
+        let json = null;
+        try { json = JSON.parse(data); } catch (e) { json = null; }
+        resolve({ status: res.statusCode, json });
+      });
+    });
+    req.on('timeout', () => req.destroy(new Error('หมดเวลารอผู้ให้บริการ')));
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
 
 /** รหัสข้อผิดพลาดของผู้ให้บริการ → รหัสภายในระบบ */
 const ERROR_MAP = {
@@ -106,20 +159,15 @@ async function verifySlip(buffer, expectedAmount) {
   if (Number.isFinite(amount) && amount > 0) body.matchAmount = amount;
 
   try {
-    const res = await fetch(EASYSLIP_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.apiKey },
-      body: JSON.stringify(body),
-    });
-    const json = await res.json().catch(() => null);
+    const { status, json } = await postJson(EASYSLIP_ENDPOINT, { Authorization: 'Bearer ' + s.apiKey }, body);
 
     if (!json) {
-      console.error('⚠️ EasySlip ตอบกลับไม่ใช่ JSON (HTTP ' + res.status + ')');
+      console.error('⚠️ EasySlip ตอบกลับไม่ใช่ JSON (HTTP ' + status + ')');
       return { ok: false, code: 'verify_failed', message: OWNER_TEXT.verify_failed, customerMessage: '' };
     }
 
     if (json.success !== true) {
-      const code = (json.error && json.error.code) || 'HTTP_' + res.status;
+      const code = (json.error && json.error.code) || 'HTTP_' + status;
       const providerMessage = (json.error && json.error.message) || '';
       const mapped = ERROR_MAP[code] || 'verify_failed';
       console.error('⚠️ EasySlip [' + code + '] ' + providerMessage);
