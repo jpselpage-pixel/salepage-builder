@@ -80,16 +80,16 @@ async function deliverOtpSms(otpId, phone, code, ttl) {
   }
 }
 
-/** ส่งอีเมล OTP (กู้รหัสผ่าน) + บันทึกผล */
+/** ส่งอีเมล OTP (กู้รหัสผ่าน) + บันทึกผล — ช่องทางอีเมลทำงานอิสระจากโหมด dev */
 async function deliverOtpEmail(otpId, email, code) {
   try {
-    if (!devMode()) {
-      mailer.sendOtpEmail({ email, code });
-      await db.setOtpNote(otpId, 'ส่งอีเมล OTP แล้ว (ตรวจอินบ็อกซ์)');
-    } else {
-      console.log(`🔐 [OTP กู้รหัสผ่าน — โหมดจำลอง] ส่งไปยังอีเมล ${email}`);
-      await db.setOtpNote(otpId, 'โหมดทดสอบ (dev) — ไม่ได้ส่งอีเมลจริง');
+    if (!mailer.getSmtpConfig().configured) {
+      console.log(`🔐 [OTP กู้รหัสผ่าน — ยังไม่ได้ตั้งค่า SMTP] ${email}`);
+      await db.setOtpNote(otpId, 'ยังไม่ได้ตั้งค่า SMTP — ไม่ได้ส่งอีเมลจริง');
+      return;
     }
+    mailer.sendOtpEmail({ email, code });
+    await db.setOtpNote(otpId, 'ส่งอีเมล OTP แล้ว (ตรวจอินบ็อกซ์)');
   } catch (err) {
     await db.setOtpNote(otpId, 'ส่งอีเมลผิดพลาด: ' + String(err.message || err).slice(0, 200));
   }

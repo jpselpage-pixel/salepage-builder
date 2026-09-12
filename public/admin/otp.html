@@ -106,8 +106,9 @@
             <label>โหมดทดสอบ (dev)</label>
             <div class="switch-row">
               <div style="flex:1;">
-                <div class="switch-desc">เปิด = แสดงรหัส OTP ที่ console/หน้าเว็บ (ไม่ส่งจริง)</div>
-                <div class="switch-desc">ปิด = ต้องมี SMS/อีเมลจริง ไม่งั้น OTP จะส่งไม่ออก</div>
+                <div class="switch-desc">มีผลกับ <b>ช่องทาง SMS เท่านั้น</b> (อีเมลไม่ขึ้นกับสวิตช์นี้)</div>
+                <div class="switch-desc">เปิด = แสดงรหัส OTP ที่ console/หน้าเว็บ (ไม่ส่ง SMS จริง)</div>
+                <div class="switch-desc">ปิด = ส่ง SMS จริง ต้องตั้งค่าผู้ให้บริการ SMS ก่อน ไม่งั้น OTP จะส่งไม่ออก</div>
               </div>
               <label class="switch">
                 <input type="checkbox" id="devModeSwitch">
@@ -129,7 +130,7 @@
           ตั้งค่า SMS จริง
         </h2>
         <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px;">
-          เลือกผู้ให้บริการแล้วกรอกค่าตามฟอร์ม — เมื่อครบและปิดโหมด dev ระบบจะส่ง OTP ผ่าน SMS จริง
+          เลือกผู้ให้บริการแล้วกรอกค่าตามฟอร์ม — เมื่อกรอกครบและปิดสวิตช์โหมด dev (สวิตช์นี้คุมเฉพาะ SMS) ระบบจะส่ง OTP ผ่าน SMS จริง
           (ค่าเก็บในฐานข้อมูลของเรา ไม่มีการแสดง API Key/Token กลับมา)
         </p>
 
@@ -198,7 +199,7 @@
         </h2>
         <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px;">
           ใช้สำหรับส่ง<b>ลิงก์ยืนยันอีเมล</b> และ <b>OTP กู้รหัสผ่านทางอีเมล</b> —
-          ตั้งค่า SMTP ของผู้ให้บริการอีเมล (เช่น Gmail, Zoho, Hosting ฯลฯ) เมื่อครบและปิดโหมด dev ระบบจะส่งอีเมลจริง
+          ตั้งค่า SMTP ของผู้ให้บริการอีเมล (เช่น Gmail, Zoho, Hosting ฯลฯ) — <b>กรอกครบแล้วส่งอีเมลจริงทันที ไม่ต้องปิดโหมด dev</b> (โหมด dev มีผลกับ SMS เท่านั้น)
         </p>
 
         <!-- วิธีตั้งค่า (ซ่อนไว้ — กดปุ่ม "<svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:6px;"><path d="M9.1 9a3 3 0 015.8 1c0 2-3 3-3 3M12 17h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> วิธีตั้งค่า") -->
@@ -662,7 +663,7 @@
         badge.innerHTML = ICON_CHECK + 'ตั้งค่าแล้ว';
         badge.className = 'pill pill-valid';
         detail.innerHTML = `Host: <span class="mono">${escapeHtml(status.host)}</span> · Port: ${status.port} · User: <span class="mono">${escapeHtml(status.userMasked)}</span> · From: <span class="mono">${escapeHtml(status.from)}</span> · แหล่ง: ${status.source === 'admin' ? 'หน้าแอดมิน' : '.env'}`;
-        hint.textContent = status.devMode ? 'พร้อมส่งจริงเมื่อปิดโหมด dev' : 'พร้อมส่งอีเมลจริงแล้ว';
+        hint.textContent = 'พร้อมส่งอีเมลจริงแล้ว (ไม่ขึ้นกับโหมด dev)';
         hint.style.color = 'var(--success)';
       } else {
         badge.innerHTML = ICON_ALERT + 'ยังไม่ได้ตั้งค่า';

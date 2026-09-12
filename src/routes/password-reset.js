@@ -10,7 +10,7 @@ const otp = require('../lib/otp');
 const { sha256, randomToken } = require('../lib/crypto');
 const { nowSql, futureSql } = require('../lib/time');
 const { isValidEmail, passwordStrengthScore } = require('../lib/validators');
-const { devMode } = require('../lib/settings');
+const mailer = require('../lib/mailer');
 const { rateLimit } = require('../middleware/rate-limit');
 
 const router = express.Router();
@@ -48,10 +48,12 @@ router.post('/api/forgot-password', async (req, res) => {
     }
   }
 
+  // ช่องทางอีเมลแยกอิสระจากโหมด dev — แสดงรหัสให้ทดสอบเฉพาะเมื่อยังไม่ได้ตั้งค่า SMTP
+  const smtpReady = mailer.getSmtpConfig().configured;
   let devOtp = null;
   if (eligible) {
     const otpResult = await otp.issueOtp(user.id, user.email, 'password_reset');
-    if (devMode()) devOtp = otpResult.code;
+    if (!smtpReady) devOtp = otpResult.code;
     console.log(`🔐 ขอ OTP กู้รหัสผ่าน: ${user.email}`);
   }
 
@@ -59,7 +61,7 @@ router.post('/api/forgot-password', async (req, res) => {
   res.json({
     ok: true,
     message: 'ถ้าอีเมลนี้มีในระบบ เราจะส่งรหัส OTP ไปให้ที่อีเมลของคุณ',
-    dev: devMode() ? { devOtp, userExists: Boolean(eligible) } : null,
+    dev: smtpReady ? null : { devOtp, userExists: Boolean(eligible) },
   });
 });
 

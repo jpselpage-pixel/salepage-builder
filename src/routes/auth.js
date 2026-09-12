@@ -153,14 +153,15 @@ router.post('/api/verify-otp', async (req, res) => {
   // ล็อกอินอัตโนมัติ
   await startSession(res, user.id);
 
-  // ส่งลิงก์ยืนยันอีเมลอัตโนมัติหลังสมัคร (โหมด dev จะ log ลิงก์ที่ console)
+  // ส่งลิงก์ยืนยันอีเมลอัตโนมัติหลังสมัคร
+  // แสดงลิงก์ให้ทดสอบเฉพาะเมื่อ "ยังไม่ได้ตั้งค่า SMTP" (ช่องทางอีเมล) — ไม่เกี่ยวกับโหมด dev ซึ่งมีผลกับ SMS
   let devVerifyLink = null;
   if (!user.is_email_verified) {
     const token = randomToken();
     await db.createEmailToken({ userId: user.id, tokenHash: sha256(token), expiresAt: futureSql(24 * 60 * 60 * 1000) });
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const sent = mailer.sendVerificationEmail({ email: user.email, token, baseUrl });
-    if (devMode()) devVerifyLink = sent.link;
+    if (!mailer.getSmtpConfig().configured) devVerifyLink = sent.link;
   }
 
   console.log(`✅ ผู้ใช้ยืนยัน OTP แล้ว: ${user.email} → ${user.phone}${roleNote(user.role)} (ล็อกอินอัตโนมัติ)`);
@@ -169,7 +170,8 @@ router.post('/api/verify-otp', async (req, res) => {
     ok: true,
     message: 'ยืนยันเบอร์โทรสำเร็จ เข้าสู่ระบบแล้ว',
     redirect: isAdminRole(user.role) ? '/admin/' : isShop(user.role) ? '/shop' : '/settings/profile',
-    dev: devMode() ? { devVerifyLink } : null,
+    // ที่นี่ไม่มีรหัส OTP ใหม่ให้แสดง (ผู้ใช้เพิ่งกรอกรหัส) — ส่งเฉพาะลิงก์ยืนยันอีเมลเมื่อยังไม่ตั้งค่า SMTP
+    dev: devVerifyLink ? { devVerifyLink } : null,
   });
 });
 
@@ -300,7 +302,8 @@ router.post('/api/send-verify-email', async (req, res) => {
   res.json({
     ok: true,
     message: 'ส่งลิงก์ยืนยันอีเมลแล้ว',
-    dev: devMode() ? { devVerifyLink: sent.link } : null,
+    // แสดงลิงก์เฉพาะเมื่อยังไม่ได้ตั้งค่า SMTP — ช่องทางอีเมลแยกจากโหมด dev
+    dev: mailer.getSmtpConfig().configured ? null : { devVerifyLink: sent.link },
   });
 });
 

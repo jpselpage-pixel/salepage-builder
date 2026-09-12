@@ -5,8 +5,10 @@
  * แล้วค่อยใช้ค่า .env เป็นค่าเริ่มต้น
  *
  * การทำงาน:
- *  - ตั้งค่า SMTP ครบ + ปิดโหมด dev → ส่งอีเมลจริงผ่าน nodemailer
- *  - โหมด dev หรือยังไม่ตั้งค่า SMTP → จำลอง (พิมพ์ที่ console + แสดงลิงก์ dev)
+ *  - ตั้งค่า SMTP ครบ → ส่งอีเมลจริงผ่าน nodemailer ทันที (ไม่ขึ้นกับโหมด dev)
+ *  - ยังไม่ตั้งค่า SMTP → จำลอง (พิมพ์ที่ console)
+ *
+ * หมายเหตุ: "โหมด dev" มีผลกับช่องทาง SMS เท่านั้น — ช่องทางอีเมลแยกอิสระ
  *
  * หมายเหตุ: บน Railway (cloud) port SMTP 587/465 ถูก block — ต้องรันในเครื่อง/VPS
  * หรือใช้บริการส่งเมลผ่าน HTTPS API (Brevo ฯลฯ) แทนถ้าต้องการส่งจริงบน Railway
@@ -14,7 +16,6 @@
 'use strict';
 
 const db = require('../db');
-const { devMode } = require('./settings');
 
 function getSmtpConfig() {
   const host = db.getSetting('smtp_host') || process.env.SMTP_HOST || '';
@@ -36,14 +37,13 @@ let transporter = null;
 function _resetTransporter() { transporter = null; }
 
 /**
- * ส่งอีเมลจริง (ถ้าตั้งค่า SMTP ครบ + ปิด dev) — ไม่เช่นนั้นจำลองที่ console
+ * ส่งอีเมลจริงเมื่อตั้งค่า SMTP ครบ — ไม่เช่นนั้นจำลองที่ console
  * @returns {{ ok: boolean, simulated?: boolean, messageId?: string, error?: string }}
  */
 async function sendEmail({ to, subject, htmlBody }) {
   const cfg = getSmtpConfig();
-  const dev = devMode();
 
-  if (cfg.configured && !dev) {
+  if (cfg.configured) {
     try {
       if (!transporter) {
         const nodemailer = require('nodemailer');
@@ -75,15 +75,13 @@ async function sendEmail({ to, subject, htmlBody }) {
     }
   }
 
-  // โหมดจำลอง (dev เปิด หรือยังไม่ตั้งค่า SMTP)
-  console.log('📧 [อีเมล — โหมดจำลอง]');
+  // ยังไม่ได้ตั้งค่า SMTP → จำลอง (บันทึกที่ console)
+  console.log('📧 [อีเมล — โหมดจำลอง: ยังไม่ได้ตั้งค่า SMTP]');
   console.log('   ถึง: ' + to);
   console.log('   หัวข้อ: ' + subject);
   console.log('   เนื้อหา:');
   console.log('   ' + htmlBody.replace(/<[^>]+>/g, '').replace(/\n+/g, '\n   ').trim());
-  if (!cfg.configured && !dev) {
-    console.log('   ⚠️ เตือน: ปิดโหมด dev แล้วแต่ยังไม่ตั้งค่า SMTP → กรุณากรอกค่าที่หน้าแอดมิน');
-  }
+  console.log('   ⚠️ เตือน: ยังไม่ได้ตั้งค่า SMTP → กรุณากรอกค่าที่หน้าแอดมิน');
   return { ok: true, simulated: true };
 }
 
@@ -114,7 +112,7 @@ function sendVerificationEmail({ email, token, baseUrl }) {
 
 /**
  * ส่งรหัส OTP ทางอีเมล (ใช้กับฟังก์ชันกู้รหัสผ่าน)
- * โหมด dev: แสดงรหัสที่ console + server.js แนบ devOtp กลับให้ทดสอบ
+ * ส่งจริงทันทีเมื่อตั้งค่า SMTP ครบ — ไม่ขึ้นกับโหมด dev
  */
 function sendOtpEmail({ email, code }) {
   // หัวข้ออังกฤษ ASCII + เนื้อหาธรรมดาไม่มีสี/ตัวใหญ่ — Gmail กรองเมลหัวข้อไทยและเมลตกแต่งจากผู้ส่งรายใหม่
