@@ -11,6 +11,7 @@
 
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 const express = require('express');
 const QRCode = require('qrcode');
 const generatePromptPayPayload = require('promptpay-qr');
@@ -132,7 +133,7 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
     return res.status(400).json({
       ok: false,
       expired: true,
-      message: 'หมดเวลาชำระเงินแล้ว — ถ้าโอนไปแล้วและมีสลิป กรุณาสร้างรายการใหม่แล้วแนบสลิปเดิม',
+      message: 'หมดเวลาชำระเงินสำหรับรายการนี้แล้ว — ถ้าโอนไปแล้ว กรุณาแจ้งผู้ดูแลระบบพร้อมรูปสลิป ผู้ดูแลระบบจะตรวจสอบและเปิดสิทธิ์ให้',
     });
   }
 
@@ -141,6 +142,7 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
   let slipStatus = 'manual';
   let slipDetail = 'ลูกค้าแจ้งโอน (ไม่มีสลิป) — รอผู้ดูแลระบบตรวจสอบ';
   let customerNote = ''; // ข้อความถึงลูกค้า (เฉพาะกรณีที่ลูกค้าแก้เองได้)
+  let slipHash = '';     // ลายนิ้วมือไฟล์สลิป (ใช้กันอัพสลิปซ้ำข้ามรายการ)
 
   if (slipData) {
     let parsed;
@@ -149,6 +151,17 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
     } catch (err) {
       return res.status(400).json({ ok: false, message: err.message });
     }
+    // กันอัพสลิปไฟล์เดิมซ้ำกับรายการอื่น (เช่น เอาสลิปของรายการที่ถูกยกเลิกไปใช้กับรายการใหม่)
+    slipHash = crypto.createHash('sha256').update(parsed.buf).digest('hex');
+    const usedBy = await db.findPaymentBySlipHash(slipHash, rec.id);
+    if (usedBy) {
+      console.log(`⛔ ปฏิเสธสลิปซ้ำ: #${rec.id} (${rec.ref}) ใช้ไฟล์เดียวกับ #${usedBy.id} (${usedBy.ref})`);
+      return res.status(400).json({
+        ok: false,
+        message: 'สลิปนี้เคยถูกใช้กับรายการอื่นแล้ว (' + usedBy.ref + ') — กรุณาแจ้งผู้ดูแลระบบเพื่อตรวจสอบ',
+      });
+    }
+
     slipUrl = saveSlipBuffer(parsed.buf, parsed.ext, rec.ref);
 
     const settings = getSlipSettings();
@@ -160,7 +173,7 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
       customerNote = result.customerMessage || '';
 
       if (decision.approve) {
-        await db.markPackagePaymentNotified(rec.id, { slipUrl, slipStatus, slipDetail });
+        await db.markPackagePaymentNotified(rec.id, { slipUrl, slipStatus, slipDetail, slipHash });
         const granted = await grantPackage(rec, null);
         console.log(`✅ ตรวจสลิปผ่าน — อนุมัติอัตโนมัติ #${rec.id} (${rec.ref})${granted ? ' → ' + granted.user.email : ''}`);
         return res.json({
@@ -176,7 +189,7 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
     }
   }
 
-  await db.markPackagePaymentNotified(rec.id, { slipUrl, slipStatus, slipDetail });
+  await db.markPackagePaymentNotified(rec.id, { slipUrl, slipStatus, slipDetail, slipHash });
   console.log(`💸 ลูกค้าแจ้งชำระเงิน #${rec.id} (${rec.ref}) ยอด ฿${rec.amount} [${slipStatus}]`);
   res.json({
     ok: true,
@@ -355,17 +368,18 @@ router.post('/api/owner/package-payments/:id/verify-slip', requireOwner, wrap(as
     return res.status(400).json({ ok: false, message: err.message });
   }
   const slipUrl = saveSlipBuffer(parsed.buf, parsed.ext, rec.ref);
+  const slipHash = crypto.createHash('sha256').update(parsed.buf).digest('hex');
 
   const settings = getSlipSettings();
   if (!settings.configured) {
-    await db.setPackagePaymentSlip(rec.id, { slipUrl, slipStatus: 'not_configured', slipDetail: 'แนบสลิปโดยผู้ดูแลระบบ (ยังไม่ได้ตั้งค่า API ตรวจสลิป)' });
+    await db.setPackagePaymentSlip(rec.id, { slipUrl, slipStatus: 'not_configured', slipHash, slipDetail: 'แนบสลิปโดยผู้ดูแลระบบ (ยังไม่ได้ตั้งค่า API ตรวจสลิป)' });
     return res.status(400).json({ ok: false, message: 'แนบสลิปเก็บไว้แล้ว แต่ยังไม่ได้ตั้งค่า API key ของ EasySlip จึงตรวจอัตโนมัติไม่ได้ — กด "ยืนยันยอด" เองได้' });
   }
 
   const result = await verifySlip(parsed.buf, rec.amount);
   // เจ้าของระบบเป็นผู้สั่งตรวจเอง จึงใช้เกณฑ์เดียวกับการอนุมัติอัตโนมัติ (ยอด/บัญชี/สลิปซ้ำ ต้องผ่าน)
   const decision = decideAutoApprove({ settings: { ...settings, autoApprove: true }, record: rec, result });
-  await db.setPackagePaymentSlip(rec.id, { slipUrl, slipStatus: decision.status, slipDetail: 'แนบสลิปโดยผู้ดูแลระบบ — ' + decision.detail });
+  await db.setPackagePaymentSlip(rec.id, { slipUrl, slipStatus: decision.status, slipHash, slipDetail: 'แนบสลิปโดยผู้ดูแลระบบ — ' + decision.detail });
 
   if (!decision.approve) {
     console.log(`🔎 [owner] ตรวจสลิปแทนลูกค้า #${rec.id} (${rec.ref}) → ${decision.status}: ${decision.detail}`);

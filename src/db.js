@@ -279,6 +279,8 @@ async function initSchema() {
   await ensureColumn('package_payments', 'slip_url', "slip_url VARCHAR(255) NOT NULL DEFAULT ''");
   await ensureColumn('package_payments', 'slip_status', "slip_status VARCHAR(24) NOT NULL DEFAULT ''");
   await ensureColumn('package_payments', 'slip_detail', "slip_detail VARCHAR(255) NOT NULL DEFAULT ''");
+  // ลายนิ้วมือของไฟล์สลิป (sha256) — กันลูกค้าเอาสลิปเดิมมาอัพซ้ำกับรายการใหม่
+  await ensureColumn('package_payments', 'slip_hash', "slip_hash CHAR(64) NOT NULL DEFAULT ''");
 
   // ── โต๊ะ + ออเดอร์ (ระบบสั่งอาหาร) ─────────────────────────────────────
   await pool.execute(`
@@ -1109,7 +1111,7 @@ async function expireStalePayments() {
   const [res] = await pool.execute(
     `UPDATE package_payments
         SET status = 'expired',
-            note = 'หมดเวลาชำระเงิน (${mins} นาที) — ถ้าโอนแล้วแต่แนบสลิปไม่ทัน กรุณาแจ้งผู้ดูแลระบบ'
+            note = 'หมดเวลาชำระเงิน (${mins} นาที) — ถ้าโอนแล้วแต่แนบสลิปไม่ทัน ผู้ดูแลระบบสามารถตรวจสลิปและเปิดสิทธิ์ให้ได้'
       WHERE status = 'pending' AND notified = 0
         AND created_at < DATE_SUB(NOW(), INTERVAL ${mins} MINUTE)`
   );
@@ -1151,22 +1153,35 @@ async function listPackagePayments({ status = null, userId = null, limit = 100 }
   return rows;
 }
 
-async function markPackagePaymentNotified(id, { slipUrl = '', slipStatus = '', slipDetail = '' } = {}) {
+async function markPackagePaymentNotified(id, { slipUrl = '', slipStatus = '', slipDetail = '', slipHash = '' } = {}) {
   await pool.execute(
     `UPDATE package_payments
         SET notified = 1,
             slip_url = COALESCE(NULLIF(?, ''), slip_url),
-            slip_status = ?, slip_detail = ?
+            slip_status = ?, slip_detail = ?, slip_hash = COALESCE(NULLIF(?, ''), slip_hash)
       WHERE id = ? AND status = 'pending'`,
-    [slipUrl, slipStatus, slipDetail, id]
+    [slipUrl, slipStatus, slipDetail, slipHash, id]
   );
 }
 
+/** หารายการอื่นที่ใช้ไฟล์สลิปเดียวกันไปแล้ว (กันอัพสลิปซ้ำข้ามรายการ) */
+async function findPaymentBySlipHash(hash, excludeId = 0) {
+  if (!hash) return null;
+  const [rows] = await pool.execute(
+    'SELECT id, ref, status FROM package_payments WHERE slip_hash = ? AND id <> ? LIMIT 1',
+    [hash, excludeId]
+  );
+  return rows[0] || null;
+}
+
 /** เก็บไฟล์สลิป + ผลตรวจ (ใช้เมื่อเจ้าของระบบแนบสลิปแทนลูกค้า — ไม่แตะสถานะ notified) */
-async function setPackagePaymentSlip(id, { slipUrl = '', slipStatus = '', slipDetail = '' }) {
+async function setPackagePaymentSlip(id, { slipUrl = '', slipStatus = '', slipDetail = '', slipHash = '' }) {
   await pool.execute(
-    'UPDATE package_payments SET slip_url = COALESCE(NULLIF(?, \'\'), slip_url), slip_status = ?, slip_detail = ? WHERE id = ?',
-    [slipUrl, slipStatus, slipDetail, id]
+    `UPDATE package_payments
+        SET slip_url = COALESCE(NULLIF(?, ''), slip_url),
+            slip_status = ?, slip_detail = ?, slip_hash = COALESCE(NULLIF(?, ''), slip_hash)
+      WHERE id = ?`,
+    [slipUrl, slipStatus, slipDetail, slipHash, id]
   );
 }
 
@@ -1464,6 +1479,7 @@ module.exports = {
   findPendingPackagePaymentByUser,
   listPackagePayments,
   markPackagePaymentNotified,
+  findPaymentBySlipHash,
   setPackagePaymentSlip,
   setPackagePaymentStatus,
   getPaymentExpireMinutes,
