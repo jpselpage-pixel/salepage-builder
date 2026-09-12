@@ -19,12 +19,14 @@ const db = require('../db');
 const { requireLogin, requireOwner } = require('../middleware/auth');
 const { isAdminRole } = require('../lib/roles');
 const { futureMonthsSql, addMonthsSql, toSql, nowSql } = require('../lib/time');
-const { getPaymentSettings, hasAnyChannel, paymentInstructions } = require('../lib/payments');
+const { getPaymentSettings, hasAnyChannel, paymentInstructions, emailPackagePurchased } = require('../lib/payments');
 const { getSlipSettings, verifySlip, decideAutoApprove } = require('../lib/slip-verify');
 
 const router = express.Router();
 const clip = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
 const digitsOnly = (v) => String(v == null ? '' : v).replace(/\D/g, '');
+// โดเมนจริงของผู้ใช้ (รองรับ X-Forwarded-Proto ผ่าน trust proxy) — ใช้ทำลิงก์ในอีเมล
+const baseUrlFrom = (req) => `${req.protocol}://${req.get('host')}`;
 
 // Express 4 ไม่ดัก error จาก async handler ให้เอง — ถ้าไม่ดักไว้ ข้อผิดพลาดจะทำให้โปรเซสล่ม
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -55,7 +57,7 @@ function saveSlipBuffer(buf, ext, ref) {
 }
 
 /** ให้สิทธิ์เจ้าของร้านตามแพ็กเกจ — ใช้ทั้งการกดยืนยันเองและการอนุมัติอัตโนมัติจากสลิป */
-async function grantPackage(rec, confirmedBy = null) {
+async function grantPackage(rec, confirmedBy = null, baseUrl = '') {
   const user = await db.findUserById(rec.user_id);
   if (!user) return null;
 
@@ -77,6 +79,19 @@ async function grantPackage(rec, confirmedBy = null) {
     expiresAt,
   });
   await db.setPackagePaymentStatus(rec.id, 'paid', { confirmedBy });
+  // แจ้งลูกค้าทางอีเมล (รายละเอียดแพ็กเกจดึงจากที่แอดมินตั้งไว้) — ไม่บล็อกการตอบกลับ
+  await emailPackagePurchased({
+    user,
+    packageId: rec.package_id,
+    packageName: rec.package_name,
+    durationMonths: rec.duration_months,
+    amount: rec.amount,
+    startAt,
+    expiresAt,
+    ref: rec.ref,
+    extended: Boolean(stillActive),
+    baseUrl,
+  });
   return { user, expiresAt, extended: Boolean(stillActive), startAt };
 }
 
@@ -224,7 +239,7 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
 
       if (decision.approve) {
         await db.markPackagePaymentNotified(rec.id, { slipUrl, slipStatus, slipDetail, slipHash });
-        const granted = await grantPackage(rec, null);
+        const granted = await grantPackage(rec, null, baseUrlFrom(req));
         console.log(`✅ ตรวจสลิปผ่าน — อนุมัติอัตโนมัติ #${rec.id} (${rec.ref})${granted ? ' → ' + granted.user.email : ''}`);
         return res.json({
           ok: true,
@@ -467,7 +482,7 @@ router.post('/api/owner/package-payments/:id/verify-slip', requireOwner, wrap(as
   const slipHash = crypto.createHash('sha256').update(parsed.buf).digest('hex');
   await db.setPackagePaymentSlip(rec.id, { slipUrl, slipStatus: decision.status, slipHash, slipDetail: 'แนบสลิปโดยผู้ดูแลระบบ — ' + decision.detail });
 
-  const granted = await grantPackage(rec, req.owner.id);
+  const granted = await grantPackage(rec, req.owner.id, baseUrlFrom(req));
   console.log(`✅ [owner] ตรวจสลิปแทนลูกค้าผ่าน #${rec.id} (${rec.ref}) → เปิดสิทธิ์ ${granted ? granted.user.email : ''}`);
   res.json({
     ok: true,
@@ -487,7 +502,7 @@ router.post('/api/owner/package-payments/:id/confirm', requireOwner, wrap(async 
     return res.status(400).json({ ok: false, message: 'รายการนี้ถูกตรวจสอบไปแล้ว' });
   }
 
-  const granted = await grantPackage(rec, req.owner.id);
+  const granted = await grantPackage(rec, req.owner.id, baseUrlFrom(req));
   if (!granted) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้ของรายการนี้' });
 
   console.log(`✅ [owner] ยืนยันชำระเงิน #${rec.id} (${rec.ref}) → ให้สิทธิ์ ${granted.user.email} ถึง ${granted.expiresAt}${granted.extended ? ' (ต่ออายุจากเดิม)' : ''}`);

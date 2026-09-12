@@ -11,8 +11,8 @@ const db = require('../db');
 const { getCurrentUser, requireLogin, requireShop } = require('../middleware/auth');
 const { isAdminRole, isShop } = require('../lib/roles');
 const { randomToken } = require('../lib/crypto');
-const { futureMonthsSql } = require('../lib/time');
-const { getPaymentSettings, hasAnyChannel, paymentInstructions, generateRef } = require('../lib/payments');
+const { addMonthsSql, toSql, nowSql } = require('../lib/time');
+const { getPaymentSettings, hasAnyChannel, paymentInstructions, generateRef, emailPackagePurchased } = require('../lib/payments');
 
 const router = express.Router();
 const PUBLIC_DIR = path.join(__dirname, '..', '..', 'public');
@@ -137,11 +137,31 @@ router.post('/api/shop/purchase', requireLogin, async (req, res) => {
     return res.json({ ok: true, pending: true, message: 'สร้างรายการชำระเงินแล้ว (รหัส ' + rec.ref + ')', payment: paymentInstructions(rec) });
   }
 
-  const expiresAt = futureMonthsSql(pkg.duration_months); // อายุการใช้งานตามจำนวนเดือนของแพ็กเกจ
+  // โหมดที่ยังไม่เปิดรับชำระเงิน → ให้สิทธิ์ทันที
+  // ถ้ายังมีสิทธิ์เหลืออยู่ ให้นับต่อจากวันหมดอายุเดิม (เหมือนเส้นทางที่ชำระเงินจริง)
+  const current = await db.maxActiveEntitlement(user.id);
+  const stillActive = current && new Date(current).getTime() > Date.now();
+  const startAt = stillActive ? toSql(current) : nowSql();
+  const expiresAt = addMonthsSql(startAt, pkg.duration_months);
   await db.setUserRole(user.id, 'shop');
   await db.setUserShopExpiry(user.id, expiresAt);
-  await db.createShopPurchase({ userId: user.id, packageId: pkg.id, packageName: clip(pkg.name, 30), amount });
-  console.log(`🛒 ซื้อแพ็กเกจร้านค้า: ${user.email} (${pkg.name} · ${pkg.duration_months} เดือน · ฿${amount} · ถึง ${expiresAt})`);
+  await db.createShopPurchase({
+    userId: user.id, packageId: pkg.id, packageName: clip(pkg.name, 30), amount, startAt, expiresAt,
+  });
+  console.log(`🛒 ซื้อแพ็กเกจร้านค้า: ${user.email} (${pkg.name} · ${pkg.duration_months} เดือน · ฿${amount} · ถึง ${expiresAt}${stillActive ? ' · ต่อจากเดิม' : ''})`);
+  // แจ้งลูกค้าทางอีเมล พร้อมรายละเอียดแพ็กเกจที่แอดมินตั้งไว้
+  await emailPackagePurchased({
+    user,
+    packageId: pkg.id,
+    packageName: pkg.name,
+    durationMonths: pkg.duration_months,
+    amount,
+    startAt,
+    expiresAt,
+    ref: '',
+    extended: Boolean(stillActive),
+    baseUrl: `${req.protocol}://${req.get('host')}`,
+  });
   res.json({
     ok: true,
     message: `ซื้อแพ็กเกจ "${pkg.name}" สำเร็จ ตอนนี้คุณเป็นเจ้าของร้านแล้ว`,

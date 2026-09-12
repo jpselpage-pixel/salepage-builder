@@ -7,6 +7,7 @@
 
 const crypto = require('node:crypto');
 const db = require('../db');
+const mailer = require('./mailer');
 
 /** อ่านค่าตั้งช่องทางรับเงิน */
 function getPaymentSettings() {
@@ -59,4 +60,40 @@ function generateRef() {
   return 'QP' + crypto.randomBytes(4).toString('hex').toUpperCase();
 }
 
-module.exports = { getPaymentSettings, hasAnyChannel, paymentInstructions, generateRef };
+/**
+ * แจ้งลูกค้าทางอีเมลว่าซื้อแพ็กเกจสำเร็จ
+ * รายละเอียดแพ็กเกจใช้ค่าที่แอดมินตั้งไว้ในหน้าจัดการแพ็กเกจ (packages.details)
+ * ส่งแบบไม่บล็อก/ไม่ throw — ให้สิทธิ์สำเร็จแล้วต้องไม่พังเพราะส่งอีเมลไม่ได้
+ */
+async function emailPackagePurchased({ user, packageId, packageName, durationMonths, amount, startAt, expiresAt, ref, extended = false, baseUrl = '' }) {
+  try {
+    if (!user || !user.email) return;
+    let details = [];
+    let name = packageName;
+    let months = durationMonths;
+    if (packageId) {
+      const pkg = await db.findPackageById(packageId);
+      if (pkg) {
+        if (Array.isArray(pkg.details)) details = pkg.details; // รายละเอียดที่แอดมินตั้งไว้
+        if (pkg.name) name = pkg.name;
+        if (pkg.duration_months) months = pkg.duration_months;
+      }
+    }
+    mailer.sendPackagePurchasedEmail({
+      email: user.email,
+      packageName: name,
+      durationMonths: months,
+      amount,
+      startAt,
+      expiresAt,
+      ref,
+      details,
+      extended,
+      baseUrl,
+    });
+  } catch (err) {
+    console.error('❌ เตรียมอีเมลยืนยันการซื้อไม่สำเร็จ:', err.message);
+  }
+}
+
+module.exports = { getPaymentSettings, hasAnyChannel, paymentInstructions, generateRef, emailPackagePurchased };
