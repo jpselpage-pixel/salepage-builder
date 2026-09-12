@@ -6,6 +6,7 @@
 const path = require('node:path');
 const express = require('express');
 const { devMode } = require('./lib/settings');
+const { getGoogleConfig } = require('./lib/google-oauth');
 const { adminGuard, accountGuard, shopGuard, ownerGuard } = require('./middleware/guards');
 const authRoutes = require('./routes/auth');
 const passwordResetRoutes = require('./routes/password-reset');
@@ -68,7 +69,7 @@ app.get('/api/config', (req, res) => {
     recaptchaSiteKey: process.env.RECAPTCHA_SITE_KEY || null,
     devMode: devMode(),
     // ยังไม่ตั้งค่า key ของ Google → ซ่อนปุ่มล็อกอินด้วย Google (ไม่ให้ผู้ใช้สับสน)
-    googleEnabled: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    googleEnabled: getGoogleConfig().configured,
   });
 });
 

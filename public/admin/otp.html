@@ -71,6 +71,9 @@
           <button class="icon-btn" id="toggleSmtpBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="2" stroke="currentColor" stroke-width="2"/><path d="M22 7l-10 6L2 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ตั้งค่า SMTP (อีเมล)
           </button>
+          <button class="icon-btn" id="toggleGoogleBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 11-3-6.7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M21 4v5h-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ตั้งค่า Google Login
+          </button>
           <button class="icon-btn" id="refreshBtn" type="button">
             <svg viewBox="0 0 24 24" fill="none"><path d="M21 12a9 9 0 11-2.6-6.4M21 3v6h-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             รีเฟรช
@@ -250,6 +253,59 @@
           <button class="icon-btn" id="testSmtpBtn"><svg viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ทดสอบส่งอีเมล</button>
           <input type="email" class="test-to-input" id="smtpTestTo" placeholder="อีเมลปลายทางทดสอบ" autocomplete="off">
           <span style="font-size:12.5px;color:var(--muted);" id="smtpHint"></span>
+        </div>
+      </div>
+
+      <!-- ตั้งค่าล็อกอินด้วย Google — ซ่อนไว้ — กดปุ่ม "ตั้งค่า Google Login" เพื่อเปิด -->
+      <div class="admin-card" id="googleCard" style="display:none;">
+        <h2 style="display:flex;align-items:center;gap:8px;">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          ตั้งค่าล็อกอินด้วย Google
+        </h2>
+        <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:16px;">
+          ใส่ Client ID และ Client Secret จาก Google Cloud Console — เมื่อครบทั้งสองค่า
+          ปุ่ม "เข้าสู่ระบบด้วย Google" จะแสดงที่หน้า login โดยอัตโนมัติ (ไม่ต้องรีสตาร์ทเซิร์ฟเวอร์)
+        </p>
+
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;font-size:13px;">
+          <span>สถานะ:</span>
+          <span class="pill" id="googleBadge">กำลังตรวจ...</span>
+          <span id="googleDetail" style="color:var(--muted);"></span>
+        </div>
+
+        <div class="settings-grid">
+          <div class="settings-field">
+            <label for="googleClientId">Client ID</label>
+            <input type="text" id="googleClientId" placeholder="เช่น 1234567890-abc.apps.googleusercontent.com">
+          </div>
+          <div class="settings-field">
+            <label for="googleRedirect">Redirect URI (ต้องตรงกับที่ตั้งใน Google)</label>
+            <input type="text" id="googleRedirect" placeholder="https://qpage.website/api/auth/google/callback">
+          </div>
+        </div>
+        <div class="settings-field" style="margin-top:16px;">
+          <label for="googleClientSecret">Client Secret</label>
+          <input type="password" id="googleClientSecret" placeholder="วาง Client Secret (เว้นว่าง = ใช้ค่าเดิม)" autocomplete="new-password">
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="icon-btn primary" id="saveGoogleBtn">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M17 21v-8H7v8M7 3v5h8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            บันทึกค่า Google
+          </button>
+          <span style="font-size:12.5px;color:var(--muted);" id="googleHint"></span>
+        </div>
+
+        <div class="help-box" style="margin-top:16px;">
+          <strong>วิธีเอา Client ID / Client Secret</strong>
+          <ol>
+            <li>เข้า <span class="hl">console.cloud.google.com</span> → สร้าง Project</li>
+            <li>APIs &amp; Services → <span class="hl">OAuth consent screen</span> → เลือก External → กรอกชื่อแอป + อีเมลสนับสนุน</li>
+            <li>Credentials → Create credentials → <span class="hl">OAuth client ID</span> → Web application</li>
+            <li>Authorized JavaScript origins: <span class="hl" id="googleOriginHint">https://qpage.website</span></li>
+            <li>Authorized redirect URIs: <span class="hl" id="googleRedirectHint">https://qpage.website/api/auth/google/callback</span> ← ต้องตรงกับช่องด้านบนเป๊ะ</li>
+            <li>คัดลอก Client ID / Client secret มาวางด้านบน แล้วกดบันทึก</li>
+          </ol>
         </div>
       </div>
 
@@ -737,6 +793,62 @@
         btn.classList.remove('spinning');
         btn.disabled = false;
         btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> ทดสอบส่งอีเมล';
+      }
+    });
+
+    // ---------- ตั้งค่าล็อกอินด้วย Google ----------
+    async function loadGoogleStatus() {
+      const { status } = await api('/api/admin/google-settings');
+      const badge = document.getElementById('googleBadge');
+      const detail = document.getElementById('googleDetail');
+      if (status.configured) {
+        badge.textContent = 'เปิดใช้งานแล้ว';
+        badge.className = 'pill pill-valid';
+      } else {
+        badge.textContent = 'ยังไม่ได้ตั้งค่า';
+        badge.className = 'pill pill-expired';
+      }
+      detail.textContent = status.clientId
+        ? 'Client ID: ' + status.clientId.slice(0, 20) + '… · แหล่ง: ' + (status.source === 'admin' ? 'หน้าแอดมิน' : '.env')
+        : 'ใส่ Client ID และ Client Secret เพื่อเปิดใช้';
+
+      document.getElementById('googleClientId').value = status.clientId || '';
+      document.getElementById('googleRedirect').value = status.redirectUri || '';
+      setSecretField('googleClientSecret', status.hasSecret, status.secretMasked);
+
+      document.getElementById('googleOriginHint').textContent = location.origin;
+      document.getElementById('googleRedirectHint').textContent = location.origin + '/api/auth/google/callback';
+      document.getElementById('googleHint').textContent = status.configured ? 'พร้อมใช้งาน — ปุ่ม Google แสดงที่หน้า login แล้ว' : '';
+    }
+
+    document.getElementById('toggleGoogleBtn').addEventListener('click', async function () {
+      const card = document.getElementById('googleCard');
+      const show = card.style.display === 'none';
+      card.style.display = show ? '' : 'none';
+      if (show) {
+        try { await loadGoogleStatus(); } catch (err) { showToast(ICON_ALERT + escapeHtml(err.message)); }
+      }
+    });
+
+    document.getElementById('saveGoogleBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      try {
+        const data = await api('/api/admin/google-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: document.getElementById('googleClientId').value.trim(),
+            clientSecret: document.getElementById('googleClientSecret').value,
+            redirectUri: document.getElementById('googleRedirect').value.trim(),
+          }),
+        });
+        showToast(ICON_CHECK + escapeHtml(data.message));
+        await loadGoogleStatus();
+      } catch (err) {
+        showToast(ICON_ALERT + escapeHtml(err.message));
+      } finally {
+        btn.disabled = false;
       }
     });
 

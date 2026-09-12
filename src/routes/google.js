@@ -14,21 +14,9 @@ const { isValidThaiPhone, normalizeThaiPhone, passwordStrengthScore } = require(
 const { devMode } = require('../lib/settings');
 const { isAdminRole, isShop } = require('../lib/roles');
 const { startSession, requirePendingGoogle } = require('../middleware/auth');
-const { PORT } = require('../config');
+const { getGoogleConfig } = require('../lib/google-oauth');
 
 const router = express.Router();
-
-// ---------------------------------------------------------------------------
-// เข้าสู่ระบบด้วย Google (OAuth 2.0)
-// ---------------------------------------------------------------------------
-function getGoogleConfig() {
-  return {
-    clientId: process.env.GOOGLE_CLIENT_ID || '',
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    redirectUri: process.env.GOOGLE_REDIRECT_URI || `http://localhost:${PORT}/api/auth/google/callback`,
-    configured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-  };
-}
 
 // เปิด URL สำหรับล็อกอิน Google
 router.get('/api/auth/google/url', (req, res) => {

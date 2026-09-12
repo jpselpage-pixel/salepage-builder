@@ -13,6 +13,7 @@ const { isValidEmail, isValidThaiPhone, normalizeThaiPhone, passwordStrengthScor
 const { devMode } = require('../lib/settings');
 const { isValidRole, isAdminRole, isOwner } = require('../lib/roles');
 const { requireAdmin, requireOwner } = require('../middleware/auth');
+const { getGoogleConfig } = require('../lib/google-oauth');
 
 const router = express.Router();
 
@@ -113,6 +114,57 @@ router.post('/api/admin/smtp-test', requireAdmin, async (req, res) => {
       ? 'ส่งอีเมลทดสอบแล้ว (โหมดจำลอง — ดูที่ console เซิร์ฟเวอร์)'
       : 'ส่งอีเมลทดสอบสำเร็จแล้ว (ตรวจที่อินบ็อกซ์ของคุณ)',
     simulated: Boolean(result.simulated),
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Admin — ตั้งค่าล็อกอินด้วย Google (OAuth)
+// ---------------------------------------------------------------------------
+
+// สถานะการตั้งค่า Google Login
+router.get('/api/admin/google-settings', requireAdmin, (req, res) => {
+  const cfg = getGoogleConfig();
+  res.json({
+    ok: true,
+    status: {
+      configured: cfg.configured,
+      clientId: cfg.clientId,
+      hasSecret: Boolean(cfg.clientSecret),
+      secretMasked: cfg.clientSecret ? '••••' + cfg.clientSecret.slice(-4) : null,
+      redirectUri: cfg.redirectUri,
+      source: cfg.source,
+    },
+  });
+});
+
+// บันทึกค่า Google Login (Client ID / Client Secret / Redirect URI)
+router.post('/api/admin/google-settings', requireAdmin, async (req, res) => {
+  const clientId = String(req.body?.clientId || '').trim();
+  const clientSecret = String(req.body?.clientSecret || '').trim();
+  const redirectUri = String(req.body?.redirectUri || '').trim();
+
+  if (clientId && !clientId.endsWith('.apps.googleusercontent.com')) {
+    return res.status(400).json({ ok: false, field: 'clientId', message: 'Client ID ไม่ถูกต้อง — ต้องลงท้ายด้วย .apps.googleusercontent.com' });
+  }
+  if (redirectUri && !/^https?:\/\/.+/i.test(redirectUri)) {
+    return res.status(400).json({ ok: false, field: 'redirectUri', message: 'Redirect URI ต้องขึ้นต้นด้วย http:// หรือ https://' });
+  }
+
+  let changed = 0;
+  if (clientId) { await db.setSetting('google_client_id', clientId); changed++; }
+  if (clientSecret) { await db.setSetting('google_client_secret', clientSecret); changed++; } // เว้นว่าง = ใช้ค่าเดิม
+  if (redirectUri) { await db.setSetting('google_redirect_uri', redirectUri); changed++; }
+
+  const cfg = getGoogleConfig();
+  console.log(`🔑 [แอดมิน] บันทึกการตั้งค่า Google Login (${changed} รายการ) — เปิดใช้=${cfg.configured}`);
+  res.json({
+    ok: true,
+    configured: cfg.configured,
+    message: changed === 0
+      ? 'ไม่มีรายการที่เปลี่ยนแปลง'
+      : cfg.configured
+        ? 'บันทึกแล้ว — เปิดใช้ล็อกอินด้วย Google และปุ่มจะแสดงที่หน้า login ทันที'
+        : 'บันทึกแล้ว แต่ยังไม่ครบทั้ง Client ID และ Client Secret',
   });
 });
 
