@@ -203,7 +203,8 @@ async function verifySlip(buffer, expectedAmount) {
     };
   } catch (err) {
     console.error('⚠️ เชื่อมต่อ EasySlip ไม่สำเร็จ:', err.message);
-    return { ok: false, code: 'error', message: OWNER_TEXT.error, customerMessage: '' };
+    // เก็บสาเหตุจริงไว้ด้วย เพื่อให้ตรวจสอบย้อนหลังได้ (เช่น timeout / DNS / TLS)
+    return { ok: false, code: 'error', message: OWNER_TEXT.error + ' (' + String(err.message || '').slice(0, 120) + ')', customerMessage: '' };
   }
 }
 

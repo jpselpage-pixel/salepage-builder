@@ -375,6 +375,11 @@ router.post('/api/owner/package-payments/:id/verify-slip', requireOwner, wrap(as
   }
 
   const result = await verifySlip(parsed.buf, rec.amount);
+  // กันเหนียว: ระหว่างตรวจ รายการอาจถูกยืนยัน/ยกเลิกไปแล้วโดยคำขออื่น → ห้ามเขียนทับ
+  const fresh = await db.findPackagePaymentById(rec.id);
+  if (!fresh || !['pending', 'expired'].includes(fresh.status)) {
+    return res.json({ ok: true, approved: true, message: 'รายการนี้ถูกตรวจสอบไปแล้ว — ไม่ได้บันทึกสลิปเพิ่ม' });
+  }
   // เจ้าของระบบเป็นผู้สั่งตรวจเอง จึงใช้เกณฑ์เดียวกับการอนุมัติอัตโนมัติ (ยอด/บัญชี/สลิปซ้ำ ต้องผ่าน)
   const decision = decideAutoApprove({ settings: { ...settings, autoApprove: true }, record: rec, result });
 
