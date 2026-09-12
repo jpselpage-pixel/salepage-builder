@@ -1,0 +1,112 @@
+/* ============================================================
+   landing.css — หน้าโปรโมทเว็บไซต์ (หน้าแรก)
+   ใช้ตัวแปรสีจาก style.css จึงรองรับธีมสว่าง/มืดอัตโนมัติ
+   ============================================================ */
+
+/* ---------- แถบเมนูด้านบน ---------- */
+.land-nav { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 32px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 30; }
+.land-nav .brand { display: flex; align-items: center; gap: 10px; }
+.land-nav .brand img { height: 40px; width: auto; display: block; }
+.land-nav-links { display: flex; align-items: center; gap: 22px; }
+.land-nav-links a { font-size: 14px; font-weight: 600; color: var(--muted); text-decoration: none; }
+.land-nav-links a:hover { color: var(--accent); }
+.land-nav-actions { display: flex; align-items: center; gap: 8px; }
+
+/* ---------- ส่วนหัว (Hero) ---------- */
+.land-hero { position: relative; overflow: hidden; background: var(--accent-gradient); color: #fff; padding: 68px 24px 96px; }
+.land-hero::before, .land-hero::after { content: ''; position: absolute; border-radius: 50%; pointer-events: none; }
+.land-hero::before { width: 420px; height: 420px; top: -190px; right: -110px; background: rgba(255, 255, 255, .13); }
+.land-hero::after { width: 260px; height: 260px; bottom: -140px; left: -70px; background: rgba(255, 255, 255, .1); }
+.land-hero-inner { position: relative; max-width: 1120px; margin: 0 auto; display: grid; grid-template-columns: 1.1fr .9fr; gap: 44px; align-items: center; }
+.land-logo-chip { display: inline-flex; align-items: center; background: #fff; border-radius: 14px; padding: 10px 16px; box-shadow: var(--shadow-md); }
+.land-logo-chip img { height: 44px; width: auto; display: block; }
+.land-hero h1 { font-size: clamp(28px, 3.6vw, 42px); line-height: 1.35; letter-spacing: -.5px; margin: 22px 0 14px; font-weight: 800; }
+.land-hero p.lead { font-size: 16.5px; line-height: 1.85; opacity: .94; margin: 0 0 28px; max-width: 560px; }
+.land-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.land-cta .btn { width: auto; }
+.land-cta .btn-white { background: #fff; color: #4338ca; border: none; font-weight: 700; }
+.land-cta .btn-ghost { background: rgba(255, 255, 255, .16); color: #fff; border: 1px solid rgba(255, 255, 255, .38); font-weight: 700; }
+.land-cta .btn-ghost:hover { background: rgba(255, 255, 255, .24); }
+.land-hero-points { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 26px; font-size: 13.5px; opacity: .95; }
+.land-hero-points span { display: inline-flex; align-items: center; gap: 7px; }
+
+/* ---------- มือถือจำลอง ---------- */
+.land-phone { justify-self: center; width: 268px; background: #0f172a; border-radius: 34px; padding: 12px; box-shadow: 0 26px 60px rgba(15, 23, 42, .38); }
+.land-phone-screen { background: var(--surface); border-radius: 24px; overflow: hidden; color: var(--text); }
+.land-phone-top { background: var(--accent-gradient); color: #fff; padding: 14px 16px; }
+.land-phone-top b { font-size: 14px; display: block; }
+.land-phone-top small { font-size: 11.5px; opacity: .9; }
+.land-phone-body { padding: 12px; display: grid; gap: 9px; }
+.land-phone-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
+.land-phone-thumb { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(135deg, #a855f7, #ec4899); flex-shrink: 0; }
+.land-phone-row .nm { font-size: 12.5px; font-weight: 700; line-height: 1.35; }
+.land-phone-row .pr { font-size: 11.5px; color: var(--muted); }
+.land-phone-row .add { margin-left: auto; width: 24px; height: 24px; border-radius: 8px; background: var(--accent-gradient); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; }
+.land-phone-cta { margin: 4px 12px 14px; background: var(--accent-gradient); color: #fff; text-align: center; font-size: 13px; font-weight: 700; padding: 11px; border-radius: 12px; }
+
+/* ---------- ส่วนเนื้อหา ---------- */
+.land-section { max-width: 1120px; margin: 0 auto; padding: 72px 24px; }
+.land-section-head { text-align: center; max-width: 660px; margin: 0 auto 42px; }
+.land-section-head h2 { font-size: clamp(23px, 2.6vw, 31px); font-weight: 800; letter-spacing: -.4px; margin: 0 0 12px; }
+.land-section-head p { color: var(--muted); font-size: 15.5px; line-height: 1.85; margin: 0; }
+.land-alt { background: var(--surface-2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
+.land-features { display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 20px; }
+.land-feature { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; box-shadow: var(--shadow-sm); transition: transform .18s ease, box-shadow .18s ease; }
+.land-feature:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.land-feature-icon { width: 46px; height: 46px; border-radius: 13px; background: var(--ring); color: var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.land-feature h3 { font-size: 16px; font-weight: 800; margin: 0 0 8px; }
+.land-feature p { font-size: 13.8px; line-height: 1.8; color: var(--muted); margin: 0; }
+
+.land-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; }
+.land-step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 22px; }
+.land-step-num { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-gradient); color: #fff; font-weight: 800; font-size: 15px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; }
+.land-step h3 { font-size: 15.5px; font-weight: 800; margin: 0 0 7px; }
+.land-step p { font-size: 13.5px; line-height: 1.8; color: var(--muted); margin: 0; }
+
+/* ---------- แพ็กเกจ ---------- */
+.land-pkgs { display: grid; grid-template-columns: repeat(auto-fit, minmax(272px, 1fr)); gap: 22px; align-items: stretch; }
+.land-pkg { display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 26px 24px; box-shadow: var(--shadow-sm); transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.land-pkg:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
+.land-pkg-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.land-pkg h3 { font-size: 17px; font-weight: 800; margin: 0; line-height: 1.45; }
+.land-pkg-duration { flex-shrink: 0; font-size: 12px; font-weight: 700; color: var(--accent); background: var(--ring); border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
+.land-pkg-price { display: flex; align-items: baseline; gap: 3px; margin: 14px 0 4px; }
+.land-pkg-price .cur { font-size: 19px; font-weight: 700; color: var(--muted); }
+.land-pkg-price .amt { font-size: 38px; font-weight: 800; letter-spacing: -1.4px; background: var(--accent-gradient); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) { .land-pkg-price .amt { -webkit-text-fill-color: var(--accent); color: var(--accent); } }
+.land-pkg-per { font-size: 13px; font-weight: 600; color: var(--muted); margin-left: 4px; }
+.land-pkg ul { list-style: none; margin: 18px 0 22px; padding: 18px 0 0; border-top: 1px solid var(--border); display: grid; gap: 11px; flex: 1; }
+.land-pkg li { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; line-height: 1.6; }
+.land-pkg li strong { display: block; font-size: 13.8px; font-weight: 700; }
+.land-pkg li .d { color: var(--muted); }
+.land-pkg .tick { flex-shrink: 0; width: 19px; height: 19px; margin-top: 1px; border-radius: 50%; background: var(--success-bg); color: var(--success); display: flex; align-items: center; justify-content: center; }
+.land-pkg-note { text-align: center; color: var(--muted); font-size: 13px; margin-top: 22px; }
+
+/* ---------- แถบชวนสมัคร ---------- */
+.land-band { background: var(--accent-gradient); color: #fff; text-align: center; padding: 62px 24px; }
+.land-band h2 { font-size: clamp(22px, 2.6vw, 30px); font-weight: 800; margin: 0 0 12px; }
+.land-band p { opacity: .94; font-size: 15.5px; line-height: 1.8; margin: 0 auto 26px; max-width: 560px; }
+.land-band .land-cta { justify-content: center; }
+
+/* ---------- ท้ายเว็บ ---------- */
+.land-footer { border-top: 1px solid var(--border); padding: 30px 24px 40px; text-align: center; color: var(--muted); font-size: 13px; line-height: 2; }
+.land-footer a { color: var(--muted); text-decoration: none; }
+.land-footer a:hover { color: var(--accent); }
+.land-footer .brand-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 12px; }
+.land-footer .brand-row img { height: 34px; width: auto; }
+
+/* ---------- จอเล็ก ---------- */
+@media (max-width: 900px) {
+  .land-hero-inner { grid-template-columns: 1fr; gap: 34px; }
+  .land-phone { width: 250px; }
+  .land-nav-links { display: none; }
+}
+@media (max-width: 560px) {
+  .land-nav { padding: 12px 14px; }
+  .land-nav .brand img { height: 34px; }
+  .land-hero { padding: 44px 16px 68px; }
+  .land-section { padding: 52px 16px; }
+  .land-logo-chip img { height: 36px; }
+  .land-pkg-price .amt { font-size: 32px; }
+}

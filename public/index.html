@@ -3,62 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบสมาชิก</title>
-  <meta name="description" content="ระบบสมาชิก: สมัครสมาชิก ยืนยันตัวตน เข้าสู่ระบบ และจัดการบัญชี">
+  <title>Qpage — ระบบสั่งอาหารสำหรับร้านอาหาร ลูกค้าสแกน QR สั่งเองได้ทันที</title>
+  <meta name="description" content="ระบบสั่งอาหารครบวงจรสำหรับร้านอาหาร: ลูกค้าสแกน QR ที่โต๊ะสั่งเอง ออเดอร์เข้าครัวทันทีพร้อมจับเวลา เช็คบิลแม่นยำ ดูประวัติย้อนหลัง ใช้ผ่านมือถือไม่ต้องติดตั้งแอป">
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/landing.css">
   <script src="js/theme.js"></script>
-  <style>
-    .home-hero {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 96px 24px 72px;
-      text-align: center;
-    }
-    .home-hero h1 {
-      font-size: clamp(30px, 5vw, 44px);
-      line-height: 1.3;
-      margin: 0 0 18px;
-    }
-    .home-hero p {
-      font-size: 17px;
-      line-height: 1.8;
-      color: var(--muted);
-      margin: 0 auto 32px;
-      max-width: 540px;
-    }
-    .home-hero-cta {
-      display: flex;
-      gap: 12px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .home-hero-cta .btn { width: auto; }
-    @media (max-width: 520px) {
-      .home-hero { padding: 56px 16px 48px; }
-      .home-hero h1 { font-size: 30px; }
-      .site-nav { padding: 12px 14px; }
-      .site-nav .brand-name { font-size: 16px; }
-    }
-    .home-footer {
-      border-top: 1px solid var(--border);
-      margin-top: 48px;
-      padding: 24px;
-      text-align: center;
-      font-size: 13px;
-      color: var(--muted);
-    }
-    .home-footer a { color: var(--muted); }
-    .home-footer a:hover { color: var(--accent); }
-  </style>
   <link rel="icon" type="image/svg+xml" href="/img/logo.svg">
 </head>
 <body>
-  <nav class="site-nav">
+  <nav class="land-nav">
     <a class="brand" href="/">
-      <div class="brand-logo"><img src="/img/logo.svg" alt="QPage"></div>
-      <span class="brand-name">ระบบสมาชิก</span>
+      <img src="/img/logo-wordmark.svg" alt="Qpage">
     </a>
-    <div style="display:flex;align-items:center;gap:8px;">
+    <div class="land-nav-links">
+      <a href="#features">คุณสมบัติ</a>
+      <a href="#how">วิธีใช้งาน</a>
+      <a href="#packages">แพ็กเกจ</a>
+    </div>
+    <div class="land-nav-actions">
       <button class="theme-toggle" type="button" aria-label="สลับธีม" style="position:static;">
         <svg class="icon-sun" viewBox="0 0 24 24" fill="none" style="display:none">
           <circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.8"/>
@@ -68,23 +30,126 @@
           <path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-      <span id="authButtons">
+      <span id="authButtons" style="display:inline-flex;gap:8px;align-items:center;">
         <a class="btn btn-outline btn-small" href="login.html">เข้าสู่ระบบ</a>
         <a class="btn btn-primary btn-small" href="register.html">สมัครสมาชิก</a>
       </span>
     </div>
   </nav>
 
-  <header class="home-hero">
-    <h1>ยินดีต้อนรับสู่ระบบสมาชิก</h1>
-    <p>สมัครสมาชิก ยืนยันตัวตน และเข้าสู่ระบบเพื่อจัดการบัญชีของคุณได้ในที่เดียว</p>
-    <div class="home-hero-cta" id="heroCta">
-      <a class="btn btn-primary" href="register.html">สมัครสมาชิกฟรี</a>
-      <a class="btn btn-outline" href="login.html">เข้าสู่ระบบ</a>
+  <!-- ส่วนหัว -->
+  <header class="land-hero">
+    <div class="land-hero-inner">
+      <div>
+        <span class="land-logo-chip"><img src="/img/logo-wordmark.svg" alt="Qpage"></span>
+        <h1>ให้ลูกค้าสแกน QR สั่งอาหารเองได้ทันที</h1>
+        <p class="lead">ระบบสั่งอาหารครบวงจรสำหรับร้านอาหาร — ลูกค้าสั่งเองที่โต๊ะ ออเดอร์เด้งเข้าครัวพร้อมจับเวลา เช็คบิลแม่นยำ ดูประวัติย้อนหลังได้ทุกบิล ใช้งานผ่านมือถือได้เลย ไม่ต้องติดตั้งแอป</p>
+        <div class="land-cta" id="heroCta">
+          <a class="btn btn-white" href="register.html">สมัครสมาชิกฟรี</a>
+          <a class="btn btn-ghost" href="#packages">ดูแพ็กเกจ</a>
+        </div>
+        <div class="land-hero-points">
+          <span>✓ ไม่มีค่าติดตั้ง</span>
+          <span>✓ ตั้งค่าเองได้ในไม่กี่นาที</span>
+          <span>✓ ใช้ได้ทุกมือถือ</span>
+        </div>
+      </div>
+
+      <div class="land-phone" aria-hidden="true">
+        <div class="land-phone-screen">
+          <div class="land-phone-top">
+            <b>ร้านเด็ดยำ</b>
+            <small>โต๊ะ A3 · บิล #1042</small>
+          </div>
+          <div class="land-phone-body">
+            <div class="land-phone-row"><span class="land-phone-thumb"></span><span><span class="nm">ยำวุ้นเส้น</span><br><span class="pr">฿ 120</span></span><span class="add">+</span></div>
+            <div class="land-phone-row"><span class="land-phone-thumb"></span><span><span class="nm">ต้มยำกุ้งน้ำข้น</span><br><span class="pr">฿ 250</span></span><span class="add">+</span></div>
+            <div class="land-phone-row"><span class="land-phone-thumb"></span><span><span class="nm">ข้าวผัดปู</span><br><span class="pr">฿ 180</span></span><span class="add">+</span></div>
+          </div>
+          <div class="land-phone-cta">สั่งออเดอร์</div>
+        </div>
+      </div>
     </div>
   </header>
 
-  <footer class="home-footer">
+  <!-- คุณสมบัติ -->
+  <section class="land-section" id="features">
+    <div class="land-section-head">
+      <h2>ครบทุกอย่างที่ร้านอาหารต้องใช้</h2>
+      <p>ตั้งแต่ลูกค้าสแกนสั่ง ไปจนถึงครัวทำอาหารและปิดบิล — จบในระบบเดียว</p>
+    </div>
+    <div class="land-features">
+      <div class="land-feature">
+        <div class="land-feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.8"/><path d="M14 14h3v3h-3zM20 14v3M17 20h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <h3>ลูกค้าสแกน QR สั่งเองได้ทันที</h3>
+        <p>ไม่ต้องรอเรียกพนักงาน ลูกค้าสแกนคิวอาร์ที่โต๊ะแล้วเลือกสั่งอาหารได้เองจากมือถือ</p>
+      </div>
+      <div class="land-feature">
+        <div class="land-feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h3>ออเดอร์เข้าครัวทันที พร้อมจับเวลา</h3>
+        <p>ครัวเห็นรายการทันที แยกสถานะ รอทำ / กำลังทำ / เสร็จแล้ว พร้อมตัวจับเวลาต่อจาน</p>
+      </div>
+      <div class="land-feature">
+        <div class="land-feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 7h6M9 11h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <h3>เช็คบิลแม่นยำ ไม่มีตกหล่น</h3>
+        <p>รวมทุกรายการของโต๊ะเป็นบิลเดียว และล็อกไม่ให้เช็คบิลถ้าอาหารยังทำไม่ครบ</p>
+      </div>
+      <div class="land-feature">
+        <div class="land-feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 3v18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M7 15l3.5-4 3 2.5L19 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h3>ดูประวัติการขายย้อนหลังได้ทุกบิล</h3>
+        <p>ตรวจสอบยอดขายและรายการที่ขายได้ย้อนหลัง แยกตามโต๊ะหรือบิล และส่งออกเป็นไฟล์ได้</p>
+      </div>
+      <div class="land-feature">
+        <div class="land-feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 9h16M9 9v11" stroke="currentColor" stroke-width="1.8"/></svg></div>
+        <h3>จัดการเมนูได้เอง ไม่จำกัด</h3>
+        <p>เพิ่ม/แก้เมนู หมวดหมู่ และตัวเลือก เช่น ระดับความเผ็ด ทานที่ร้าน/ห่อกลับบ้าน</p>
+      </div>
+      <div class="land-feature">
+        <div class="land-feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="7" y="2" width="10" height="20" rx="2.5" stroke="currentColor" stroke-width="1.8"/><path d="M11 18h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+        <h3>ใช้ผ่านมือถือ ไม่ต้องติดตั้งแอป</h3>
+        <p>เจ้าของร้านและลูกค้าใช้งานผ่านเบราว์เซอร์ได้ทันที รองรับมือถือทุกรุ่น</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- วิธีใช้งาน -->
+  <div class="land-alt">
+    <section class="land-section" id="how">
+      <div class="land-section-head">
+        <h2>เริ่มใช้งานได้ใน 4 ขั้นตอน</h2>
+        <p>ไม่ต้องมีช่างเทคนิค ตั้งค่าเองได้ทั้งหมด</p>
+      </div>
+      <div class="land-steps">
+        <div class="land-step"><div class="land-step-num">1</div><h3>สมัครสมาชิก</h3><p>สมัครด้วยอีเมลและยืนยันตัวตนให้เรียบร้อย</p></div>
+        <div class="land-step"><div class="land-step-num">2</div><h3>เลือกแพ็กเกจ</h3><p>เลือกแพ็กเกจที่เหมาะกับร้าน แล้วชำระเงินผ่านพร้อมเพย์หรือโอนธนาคาร</p></div>
+        <div class="land-step"><div class="land-step-num">3</div><h3>ตั้งร้านและเมนู</h3><p>ใส่ชื่อร้าน เบอร์ติดต่อ LINE โลโก้ และเพิ่มเมนูพร้อมรูปและราคา</p></div>
+        <div class="land-step"><div class="land-step-num">4</div><h3>เปิดให้ลูกค้าสแกน</h3><p>สร้างโต๊ะ ระบบออก QR ให้ พร้อมรับออเดอร์เข้าครัวทันที</p></div>
+      </div>
+    </section>
+  </div>
+
+  <!-- แพ็กเกจ (ดึงจากระบบจริง) -->
+  <section class="land-section" id="packages" style="display:none;">
+    <div class="land-section-head">
+      <h2>แพ็กเกจสำหรับร้านของคุณ</h2>
+      <p>เลือกแพ็กเกจที่เปิดขายอยู่ในขณะนี้</p>
+    </div>
+    <div class="land-pkgs" id="pkgGrid"></div>
+    <p class="land-pkg-note" id="pkgNote"></p>
+  </section>
+
+  <!-- ชวนสมัคร -->
+  <section class="land-band">
+    <h2>พร้อมเปิดร้านของคุณหรือยัง?</h2>
+    <p>สมัครวันนี้ ตั้งร้านและเมนูให้เสร็จ แล้วให้ลูกค้าสแกนสั่งได้เลย</p>
+    <div class="land-cta" id="bandCta">
+      <a class="btn btn-white" href="register.html">สมัครสมาชิกฟรี</a>
+      <a class="btn btn-ghost" href="login.html">เข้าสู่ระบบ</a>
+    </div>
+  </section>
+
+  <footer class="land-footer">
+    <div class="brand-row"><img src="/img/logo-wordmark.svg" alt="Qpage"></div>
     <div>
       <a href="privacy.html">นโยบายความเป็นส่วนตัว</a>
       &nbsp;·&nbsp;
@@ -92,34 +157,80 @@
       &nbsp;·&nbsp;
       <a href="register.html">สมัครสมาชิก</a>
     </div>
-    <div style="margin-top:10px;">© 2026 ระบบสมาชิก — สงวนลิขสิทธิ์</div>
+    <div style="margin-top:8px;">© 2026 Qpage — สงวนลิขสิทธิ์</div>
   </footer>
 
   <script>
-    // เปลี่ยนปุ่มตามสถานะล็อกอิน
+    const TICK = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    let pkgCta = { href: 'register.html', label: 'สมัครเพื่อเริ่มใช้' };
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function money(v) { return Number(v || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+
+    // เปลี่ยนปุ่มตามสถานะล็อกอิน + กำหนดปลายทางของปุ่มในส่วนแพ็กเกจ
     async function initNav() {
       try {
         const res = await fetch('/api/me');
         const data = await res.json();
         if (!data.ok) return;
         const u = data.user;
-        // บัญชียังยืนยันเบอร์ไม่ครบ → ยังไม่ถือว่าสมัครเสร็จ ให้ไปทำขั้นตอนให้ครบก่อน
+        const auth = document.getElementById('authButtons');
+        const hero = document.getElementById('heroCta');
+        const band = document.getElementById('bandCta');
+
+        // บัญชียังยืนยันไม่ครบ → พาไปทำขั้นตอนให้จบก่อน
         if (u.status !== 'active') {
           const target = u.provider === 'google' ? '/google-setup.html' : '/otp.html';
-          const html = '<a class="btn btn-primary btn-small" href="' + target + '">ทำขั้นตอนสมัครให้ครบ</a>';
-          document.getElementById('authButtons').innerHTML = html;
-          document.getElementById('heroCta').innerHTML =
-            '<a class="btn btn-primary" href="' + target + '">ทำขั้นตอนสมัครให้ครบ</a>';
+          auth.innerHTML = '<a class="btn btn-primary btn-small" href="' + target + '">ทำขั้นตอนสมัครให้ครบ</a>';
+          hero.innerHTML = '<a class="btn btn-white" href="' + target + '">ทำขั้นตอนสมัครให้ครบ</a>';
+          band.innerHTML = '<a class="btn btn-white" href="' + target + '">ทำขั้นตอนสมัครให้ครบ</a>';
+          pkgCta = { href: target, label: 'ทำขั้นตอนสมัครให้ครบ' };
           return;
         }
-        const account = '<a class="btn btn-primary btn-small" href="/settings/profile">บัญชีของฉัน</a>';
-        document.getElementById('authButtons').innerHTML = account;
-        document.getElementById('heroCta').innerHTML =
-          '<a class="btn btn-primary" href="/settings/profile">ไปที่บัญชีของฉัน</a>';
+
+        if (u.role === 'shop') {
+          pkgCta = { href: '/shop/menu.html', label: 'ไปที่ร้านของฉัน' };
+        } else if (u.role === 'user') {
+          pkgCta = { href: '/shop/purchase.html', label: 'เลือกแพ็กเกจนี้' };
+        } else {
+          pkgCta = { href: '/admin/', label: 'ไปหน้าผู้ดูแลระบบ' };
+        }
+
+        auth.innerHTML = '<a class="btn btn-primary btn-small" href="/settings/profile">บัญชีของฉัน</a>';
+        hero.innerHTML = '<a class="btn btn-white" href="/settings/profile">ไปที่บัญชีของฉัน</a>';
+        band.innerHTML = '<a class="btn btn-white" href="/settings/profile">ไปที่บัญชีของฉัน</a>';
       } catch (e) { /* ยังไม่ล็อกอิน */ }
     }
 
-    initNav();
+    // แสดงแพ็กเกจที่เปิดขายจริงจากระบบ
+    async function loadPackages() {
+      try {
+        const data = await (await fetch('/api/packages')).json();
+        const list = (data.packages || []);
+        if (!list.length) return; // ไม่มีแพ็กเกจเปิดขาย → ซ่อนส่วนนี้
+        document.getElementById('pkgGrid').innerHTML = list.map((p) => {
+          const details = (p.details || []).filter((d) => d.heading || d.text).slice(0, 4);
+          const feats = details.length
+            ? '<ul>' + details.map((d) => '<li><span class="tick">' + TICK + '</span><div><strong>' + esc(d.heading) + '</strong>' + (d.text ? '<span class="d">' + esc(d.text) + '</span>' : '') + '</div></li>').join('') + '</ul>'
+            : '<ul></ul>';
+          return '<article class="land-pkg">' +
+            '<div class="land-pkg-top"><h3>' + esc(p.name) + '</h3><span class="land-pkg-duration">' + esc(p.duration_months) + ' เดือน</span></div>' +
+            '<div class="land-pkg-price"><span class="cur">฿</span><span class="amt">' + money(p.price) + '</span><span class="land-pkg-per">/ ' + esc(p.duration_months) + ' เดือน</span></div>' +
+            feats +
+            '<a class="btn btn-primary" style="width:100%;text-align:center;" href="' + pkgCta.href + '">' + esc(pkgCta.label) + '</a>' +
+            '</article>';
+        }).join('');
+        document.getElementById('pkgNote').textContent = 'ราคาตามที่ร้านกำหนด — ชำระเงินผ่านพร้อมเพย์หรือโอนธนาคาร แล้วรอการยืนยันจากผู้ดูแลระบบ';
+        document.getElementById('packages').style.display = '';
+      } catch (e) { /* โหลดไม่ได้ → ซ่อนส่วนแพ็กเกจ */ }
+    }
+
+    (async function init() {
+      await initNav();
+      loadPackages();
+    })();
   </script>
 </body>
 </html>
