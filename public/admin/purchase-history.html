@@ -233,11 +233,15 @@
           : isShop
             ? (r.userExpiresAt ? 'เจ้าของร้าน · ถึง ' + fmt(r.userExpiresAt).slice(0, 10) : 'เจ้าของร้าน · ไม่กำหนดวันหมดอายุ')
             : (r.userRole ? 'ผู้ใช้งานทั่วไป' : '—');
-        // คอลัมน์จัดการ: ต้องมีข้อมูลทุกแถว (ปุ่มดึงสิทธิ์มีเฉพาะแถวล่าสุดที่ลูกค้ายังเป็นเจ้าของร้าน)
+        // คอลัมน์จัดการ: ต้องมีข้อมูลทุกแถว
+        //  - แถวล่าสุดที่ลูกค้ายังเป็นเจ้าของร้าน → ปุ่มดึงสิทธิ์คืน
+        //  - ลูกค้าไม่ได้เป็นเจ้าของร้านแล้ว (ถูกดึงสิทธิ์กลับ หรือหมดอายุ) → แจ้งว่าถูกดึงสิทธิ์กลับ
+        //  - แถวก่อนหน้าของลูกค้าที่ยังเป็นเจ้าของร้าน → ชี้ไปดูสิทธิ์ที่แถวล่าสุด
+        const accessGone = isShop === false;
         const action = (isLatest && isShop)
           ? `<button class="icon-btn danger" data-revoke="${r.userId}" data-email="${esc(r.userEmail)}" type="button">ดึงสิทธิ์คืน</button>`
-          : isLatest
-            ? '<span style="color:var(--muted);font-size:12px;">ลูกค้าเป็นผู้ใช้งานทั่วไปอยู่</span>'
+          : accessGone
+            ? '<span style="color:var(--danger);font-size:12px;">ถูกดึงสิทธิ์กลับ</span>'
             : '<span style="color:var(--muted);font-size:12px;">รายการก่อนหน้า — สิทธิ์ปัจจุบันดูที่แถวล่าสุด</span>';
         // วิธีที่รายการนี้ถูกยืนยัน
         const verify = r.slipStatus === 'verified'
