@@ -412,17 +412,40 @@
     function startQueuePoll() {
       if (queuePoll) clearInterval(queuePoll);
       queuePoll = setInterval(() => {
-        if (document.hidden) return; // ไม่ดึงข้อมูลขณะแท็บถูกซ่อน
+        if (document.hidden) return;            // ไม่ดึงข้อมูลขณะแท็บถูกซ่อน
+        if (Date.now() < armedUntil) return;    // มีปุ่มรอยืนยันอยู่ → อย่าเพิ่งวาดใหม่ทับ
         loadQueue(true).catch(() => {});
       }, 8000);
     }
 
+    // ปุ่มที่ถูก "ติดอาวุธ" (กดครั้งแรก) — คงสถานะไว้ชั่วครู่ และหยุดรีเฟรชอัตโนมัติระหว่างนั้น
+    let armedUntil = 0;
+    function disarm(btn) {
+      if (btn._armTimer) clearTimeout(btn._armTimer);
+      btn.dataset.armed = '';
+      btn.classList.remove('confirming');
+      if (btn.dataset.label) btn.textContent = btn.dataset.label;
+    }
+
     async function act(btn, kind) {
       const id = kind === 'confirm' ? btn.dataset.confirm : btn.dataset.reject;
-      const ask = kind === 'confirm'
-        ? 'ยืนยันว่าลูกค้ารายนี้โอนเงินแล้ว และเปิดสิทธิ์เจ้าของร้านให้เลย?\n(กรุณาตรวจยอดในแอปธนาคารก่อน — ใช้ได้ทั้งรายการที่รอตรวจสอบและรายการที่หมดเวลา)'
-        : 'ยกเลิกรายการนี้ (เช่น ไม่พบยอดโอน)?';
-      if (!confirm(ask)) return;
+
+      // กันกดพลาด: กดครั้งแรก = ติดอาวุธ (ปุ่มเปลี่ยนสี/ข้อความ) ต้องกดซ้ำภายใน 5 วินาทีจึงทำงานจริง
+      if (btn.dataset.armed !== 'yes') {
+        document.querySelectorAll('#queueBody [data-armed="yes"]').forEach(disarm);
+        btn.dataset.armed = 'yes';
+        btn.dataset.label = btn.textContent;
+        btn.classList.add('confirming');
+        btn.textContent = 'แน่ใจ? กดอีกครั้ง';
+        armedUntil = Date.now() + 5000;
+        btn._armTimer = setTimeout(() => disarm(btn), 5000);
+        showToast(kind === 'confirm'
+          ? '⚠️ ตรวจยอดในแอปธนาคารก่อน — ถ้าจะยืนยันการรับเงิน กดปุ่ม "แน่ใจ? กดอีกครั้ง"'
+          : '⚠️ การยกเลิกรายการจะแจ้งลูกค้าว่าไม่พบยอดโอน — ถ้าจะยกเลิก กดปุ่ม "แน่ใจ? กดอีกครั้ง"', 6000);
+        return;
+      }
+      disarm(btn);
+
       let reason = '';
       if (kind === 'reject') {
         reason = prompt('เหตุผลที่ยกเลิก (ลูกค้าจะเห็นข้อความนี้)', 'ไม่พบยอดโอน') || '';
