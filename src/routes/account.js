@@ -8,7 +8,7 @@ const fs = require('node:fs/promises');
 const express = require('express');
 const db = require('../db');
 const { sha256 } = require('../lib/crypto');
-const { nowSql } = require('../lib/time');
+const { isExpired } = require('../lib/time');
 const { buildResultPage } = require('../lib/result-page');
 const { getCurrentUser } = require('../middleware/auth');
 const { isShop } = require('../lib/roles');
@@ -57,19 +57,22 @@ router.get(['/dashboard/:section', '/settings/:section'], async (req, res, next)
 router.get('/verify-email', async (req, res) => {
   const token = String(req.query.token || '');
   const record = await db.findEmailTokenByHash(sha256(token));
+  // ถ้าล็อกอินอยู่แล้ว (และเป็นบัญชีเดียวกัน) ปุ่มบนหน้าผลลัพธ์จะพาเข้าใช้งานต่อ ไม่พาไปหน้าล็อกอิน
+  const viewer = await getCurrentUser(req);
+  const opts = { viewer, targetUserId: record ? record.user_id : null };
 
   if (!record || record.used === 1) {
-    return res.status(400).send(buildResultPage(false, 'ลิงก์ยืนยันไม่ถูกต้องหรือถูกใช้ไปแล้ว'));
+    return res.status(400).send(buildResultPage(false, 'ลิงก์ยืนยันไม่ถูกต้องหรือถูกใช้ไปแล้ว', opts));
   }
-  if (record.expires_at <= nowSql()) {
-    return res.status(400).send(buildResultPage(false, 'ลิงก์ยืนยันหมดอายุแล้ว กรุณาขอใหม่'));
+  if (isExpired(record.expires_at)) {
+    return res.status(400).send(buildResultPage(false, 'ลิงก์ยืนยันหมดอายุแล้ว กรุณาขอใหม่', opts));
   }
 
   await db.markEmailTokenUsed(record.id);
   await db.setEmailVerified(record.user_id, 1);
   console.log(`📧 ยืนยันอีเมลสำเร็จ: user_id=${record.user_id}`);
 
-  res.send(buildResultPage(true, 'ยืนยันอีเมลสำเร็จ! คุณสามารถเข้าสู่ระบบได้เลย'));
+  res.send(buildResultPage(true, 'ยืนยันอีเมลสำเร็จ! คุณสามารถเข้าสู่ระบบได้เลย', opts));
 });
 
 module.exports = router;

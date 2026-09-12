@@ -1,18 +1,39 @@
 /**
- * result-page.js — หน้าผลลัพธ์การยืนยันอีเมล (HTML)
+ * หน้าผลลัพธ์การยืนยันอีเมล (HTML)
+ * @param success   ยืนยันสำเร็จหรือไม่
+ * @param message   ข้อความเมื่อไม่สำเร็จ
+ * @param viewer    ผู้ใช้ที่กำลังล็อกอินอยู่ (ถ้ามี) — ใช้เลือกปุ่มให้ตรงกับสถานะจริง
+ * @param targetUserId  เจ้าของอีเมลที่ถูกยืนยัน (ถ้าล็อกอินเป็นคนละบัญชี จะไม่พาไปหน้าของเจ้าของ)
  */
+
 'use strict';
 
-function buildResultPage(success, message) {
+function buildResultPage(success, message, { viewer = null, targetUserId = null } = {}) {
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // ล็อกอินอยู่แล้ว "และเป็นบัญชีเดียวกัน" → ปุ่มพาเข้าใช้งานต่อ ไม่ใช่พาไปหน้าล็อกอิน
+  const loggedIn = Boolean(viewer) && (targetUserId == null || Number(viewer.id) === Number(targetUserId));
+  let dest = '/login.html';
+  let label = 'ไปหน้าเข้าสู่ระบบ';
+  if (loggedIn) {
+    // กรณีผิดพลาด/หมดอายุ → พาไปหน้าบัญชีของฉัน ซึ่งมีปุ่มขอลิงก์ยืนยันใหม่
+    if (!success) { dest = '/settings/profile'; label = 'ไปที่บัญชีของฉัน'; }
+    else if (viewer.role === 'owner' || viewer.role === 'admin') { dest = '/admin/'; label = 'ไปหน้าจัดการระบบ'; }
+    else if (viewer.role === 'shop') { dest = '/shop'; label = 'ไปที่ร้านค้าของฉัน'; }
+    else { dest = '/settings/profile'; label = 'ไปที่บัญชีของฉัน'; }
+  }
   const accent = success ? '#16a34a' : '#dc2626';
   const accentBg = success ? '#dcfce7' : '#fee2e2';
   const statusSvg = success
     ? '<svg viewBox="0 0 24 24" fill="none" width="34" height="34"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>'
     : '<svg viewBox="0 0 24 24" fill="none" width="30" height="30"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const sub = success
-    ? 'อีเมลของคุณได้รับการยืนยันแล้ว — เข้าสู่ระบบเพื่อเริ่มใช้งานได้เลย'
+    ? (loggedIn
+      ? 'อีเมลของคุณได้รับการยืนยันแล้ว — คุณเข้าสู่ระบบอยู่แล้ว เข้าใช้งานต่อได้เลย'
+      : 'อีเมลของคุณได้รับการยืนยันแล้ว — เข้าสู่ระบบเพื่อเริ่มใช้งานได้เลย')
     : esc(message);
+  const btnIcon = loggedIn
+    ? '<path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    : '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
   return `<!DOCTYPE html>
 <html lang="th">
 <head>
@@ -81,9 +102,9 @@ function buildResultPage(success, message) {
     <div class="status">${statusSvg}</div>
     <h1>${success ? 'ยืนยันอีเมลสำเร็จ' : 'เกิดข้อผิดพลาด'}</h1>
     <div class="sub">${sub}</div>
-    <a class="btn" href="/login.html">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      ไปหน้าเข้าสู่ระบบ
+    <a class="btn" href="${dest}">
+      <svg viewBox="0 0 24 24" fill="none">${btnIcon}</svg>
+      ${label}
     </a>
     <div class="hint">ระบบสมาชิก</div>
   </div>
