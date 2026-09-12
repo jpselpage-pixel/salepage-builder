@@ -20,6 +20,10 @@ const publicRoutes = require('./routes/public');
 
 const app = express();
 
+// อยู่หลัง Nginx (reverse proxy) — ทำให้ req.protocol อ่านค่า https ถูกต้อง
+// ไม่งั้นลิงก์ที่ส่งในอีเมล/QR จะออกมาเป็น http:// ซึ่งเสี่ยงถูกกรองเป็นสแปม
+app.set('trust proxy', 1);
+
 // เพดาน 4mb เผื่ออัปโหลดรูป (base64) จากพื้นที่ร้านค้า — route อื่นยังมี body เล็ก
 app.use(express.json({ limit: '4mb' }));
 

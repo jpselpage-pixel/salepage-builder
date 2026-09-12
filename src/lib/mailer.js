@@ -40,8 +40,10 @@ function _resetTransporter() { transporter = null; }
  * ส่งอีเมลจริงเมื่อตั้งค่า SMTP ครบ — ไม่เช่นนั้นจำลองที่ console
  * @returns {{ ok: boolean, simulated?: boolean, messageId?: string, error?: string }}
  */
-async function sendEmail({ to, subject, htmlBody }) {
+async function sendEmail({ to, subject, htmlBody, text }) {
   const cfg = getSmtpConfig();
+  // ใส่ชื่อผู้ส่งให้อ่านออก (เช่น QPage <noreply@...>) — ช่วยให้ผู้รับเห็นว่าเป็นแบรนด์ ไม่ใช่ที่อยู่เปล่า ๆ
+  const fromHeader = cfg.from && !cfg.from.includes('<') ? 'QPage <' + cfg.from + '>' : cfg.from;
 
   if (cfg.configured) {
     try {
@@ -64,9 +66,10 @@ async function sendEmail({ to, subject, htmlBody }) {
         });
       }
       const info = await transporter.sendMail({
-        from: cfg.from,
+        from: fromHeader,
         to,
         subject,
+        text: text || undefined,   // ฉบับข้อความล้วน (multipart/alternative) ช่วยเรื่องการกรองสแปม
         html: htmlBody,
       });
       return { ok: true, messageId: info.messageId };
@@ -91,18 +94,34 @@ async function sendEmail({ to, subject, htmlBody }) {
  */
 function sendVerificationEmail({ email, token, baseUrl }) {
   const link = `${baseUrl}/verify-email?token=${encodeURIComponent(token)}`;
-  // หัวข้อเป็นอังกฤษ ASCII ล้วน (ห้ามอักขระพิเศษ/ไทย) — Gmail กรองเมลหัวข้อภาษาไทยจาก sender นี้ (เทสต์แล้วฉบับ EN ถึง)
-  const subject = 'Verify your email - Member System';
-  // เนื้อหาธรรมดา ไม่มีปุ่ม/สีเยอะ — Gmail กรองเมลแบบมีปุ่มตกแต่ง (เทสต์แล้วฉบับธรรมดาส่งถึง)
+  // หัวข้ออังกฤษล้วน ASCII — Gmail กรองหัวข้อภาษาไทยจากผู้ส่งรายนี้
+  const subject = 'Confirm your email address - QPage';
+  // ฉบับข้อความล้วน: ช่วยให้ผู้ให้บริการเมลเห็นว่าเนื้อหาตรงกับฉบับ HTML (ลดคะแนนสแปม)
+  const textBody = [
+    'Hello,',
+    '',
+    'Thanks for signing up for QPage.',
+    'Please confirm your email address by opening this link (valid for 24 hours):',
+    link,
+    '',
+    "If you didn't create this account, you can safely ignore this email.",
+  ].join('\n');
   const htmlBody = `
-    <p>สวัสดีครับ/ค่ะ</p>
-    <p>ขอบคุณที่สมัครสมาชิกกับระบบสมาชิก</p>
-    <p>กรุณายืนยันอีเมลของคุณโดยเปิดลิงก์ด้านล่าง (ใช้ได้ 24 ชั่วโมง):</p>
-    <p><a href="${link}">${link}</a></p>
-    <p>หากคุณไม่ได้สมัครสมาชิก กรุณาเพิกเฉยอีเมลนี้</p>
-  `;
+  <div style="font-family:'Noto Sans Thai',Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:10px;color:#101828;line-height:1.7;font-size:15px;">
+    <h2 style="font-size:18px;font-weight:800;margin:0 0 14px;">Confirm your email address</h2>
+    <p style="margin:0 0 10px;">Hello,</p>
+    <p style="margin:0 0 10px;">Thanks for signing up for QPage. Please confirm your email address to activate your account.</p>
+    <p style="margin:24px 0;text-align:center;">
+      <a href="${link}" style="display:inline-block;background:#6366f1;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 30px;border-radius:10px;">Confirm email</a>
+    </p>
+    <p style="margin:0 0 6px;font-size:13px;color:#667085;">This link is valid for 24 hours.</p>
+    <p style="margin:0 0 6px;font-size:13px;color:#667085;">If the button does not work, copy and paste this link into your browser:</p>
+    <p style="margin:0 0 18px;font-size:13px;word-break:break-all;"><a href="${link}" style="color:#6366f1;">${link}</a></p>
+    <hr style="border:none;border-top:1px solid #e4e7ec;margin:18px 0;">
+    <p style="margin:0;font-size:12.5px;color:#98a2b3;">If you didn't create this account, you can safely ignore this email.</p>
+  </div>`;
   // ส่งแบบไม่บล็อก — บันทึกผลลัพธ์ที่ console เสมอ (ทั้งสำเร็จ/จำลอง/ล้มเหลว)
-  sendEmail({ to: email, subject, htmlBody }).then((r) => {
+  sendEmail({ to: email, subject, htmlBody, text: textBody }).then((r) => {
     if (!r || !r.ok) console.error('❌ ส่งอีเมลยืนยันไม่สำเร็จ:', r && r.error ? r.error : 'ไม่ทราบสาเหตุ');
     else if (r.simulated) console.log('📧 [ยืนยันอีเมล — โหมดจำลอง] ถึง ' + email);
     else console.log('📧 ส่งอีเมลยืนยันแล้ว → ' + email + ' (id=' + r.messageId + ')');
