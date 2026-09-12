@@ -96,6 +96,22 @@ router.post('/api/shop/purchase', requireLogin, async (req, res) => {
     return res.status(400).json({ ok: false, message: 'บัญชีผู้ดูแลระบบไม่ต้องซื้อแพ็กเกจ' });
   }
 
+  // ต้องยืนยันเบอร์โทร + อีเมลให้ครบทั้งสองอย่างก่อน จึงจะซื้อแพ็กเกจได้
+  const need = [];
+  if (user.status !== 'active') need.push('phone');
+  if (Number(user.is_email_verified) !== 1) need.push('email');
+  if (need.length) {
+    return res.status(403).json({
+      ok: false,
+      need,
+      message: need.length === 2
+        ? 'กรุณายืนยันเบอร์โทรศัพท์และอีเมลให้เสร็จทั้งสองอย่างก่อน จึงจะซื้อแพ็กเกจได้'
+        : need[0] === 'phone'
+          ? 'กรุณายืนยันเบอร์โทรศัพท์ให้เสร็จก่อน จึงจะซื้อแพ็กเกจได้'
+          : 'กรุณายืนยันอีเมลให้เสร็จก่อน จึงจะซื้อแพ็กเกจได้',
+    });
+  }
+
   const packageId = Number(req.body?.packageId);
   if (!Number.isInteger(packageId) || packageId <= 0) {
     return res.status(400).json({ ok: false, message: 'กรุณาเลือกแพ็กเกจที่ต้องการซื้อ' });

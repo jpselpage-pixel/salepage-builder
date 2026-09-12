@@ -285,3 +285,21 @@ button.cart-info strong { color: var(--text); }
 .pay-countdown { margin-top: 12px; font-size: 13.5px; color: var(--muted); }
 .pay-countdown b { font-size: 18px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
 .pay-countdown b.low { color: var(--danger); }
+
+/* ---------- แผงแจ้ง "ต้องยืนยันตัวตนก่อนซื้อแพ็กเกจ" ---------- */
+.gate-icon { width: 54px; height: 54px; border-radius: 50%; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+.gate-badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px; background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning-border); }
+.gate-lead { font-size: 13.5px; color: var(--muted); line-height: 1.75; margin: 6px 0 18px; }
+.gate-list { list-style: none; margin: 0 0 16px; padding: 0; display: flex; flex-direction: column; gap: 10px; text-align: left; }
+.gate-item { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius); }
+.gate-item > div { flex: 1; min-width: 0; }
+.gate-item strong { display: block; font-size: 14px; }
+.gate-item span { display: block; font-size: 12.5px; color: var(--muted); line-height: 1.6; margin-top: 2px; word-break: break-word; }
+.gate-dot { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--ring); color: var(--accent); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+.gate-item .btn { flex-shrink: 0; width: auto; margin: 0; }
+.gate-note { font-size: 12.5px; line-height: 1.7; padding: 10px 12px; margin-bottom: 14px; border-radius: var(--radius); background: var(--info-bg); color: var(--info); border: 1px solid var(--info-border); text-align: left; word-break: break-word; }
+.gate-note-error { background: var(--danger-bg); color: var(--danger); border-color: var(--danger-border); }
+@media (max-width: 560px) {
+  .gate-item { flex-wrap: wrap; }
+  .gate-item .btn { width: 100%; }
+}

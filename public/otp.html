@@ -108,10 +108,10 @@
     }
 
     const phoneLabel = document.getElementById('phoneLabel');
-    if (pending.phoneMasked) phoneLabel.textContent = pending.phoneMasked;
+    if (pending && pending.phoneMasked) phoneLabel.textContent = pending.phoneMasked;
 
     // โหมด dev: แสดงรหัสทดสอบ
-    if (pending.devOtp) {
+    if (pending && pending.devOtp) {
       document.getElementById('devBanner').style.display = 'block';
       document.getElementById('devOtpText').textContent = pending.devOtp;
     }

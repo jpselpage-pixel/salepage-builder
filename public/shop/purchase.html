@@ -340,24 +340,97 @@
       }, 12000);
     }
 
+    // ---------- ต้องยืนยันเบอร์โทร + อีเมลให้ครบก่อน จึงจะซื้อแพ็กเกจได้ ----------
+    function renderVerifyGate(missing) {
+      document.getElementById('notice').innerHTML = '';
+      const items = [];
+      if (missing.includes('phone')) {
+        const phoneUrl = meUser.provider === 'google' ? '/google-setup.html' : '/otp.html';
+        items.push(`<li class="gate-item">
+          <span class="gate-dot">1</span>
+          <div><strong>ยืนยันเบอร์โทรศัพท์</strong><span>ยืนยันด้วยรหัส OTP ที่ส่งไปยังเบอร์ของคุณ</span></div>
+          <a class="btn btn-outline btn-small" href="${phoneUrl}">ไปยืนยันเบอร์</a>
+        </li>`);
+      }
+      if (missing.includes('email')) {
+        items.push(`<li class="gate-item">
+          <span class="gate-dot">${missing.includes('phone') ? 2 : 1}</span>
+          <div><strong>ยืนยันอีเมล</strong><span>เราจะส่งลิงก์ยืนยันไปที่ <b>${esc(meUser.email)}</b> — เปิดลิงก์ในอีเมลเพื่อยืนยัน</span></div>
+          <button class="btn btn-primary btn-small" id="gateSendMail" type="button">ส่งลิงก์ยืนยันอีเมล</button>
+        </li>`);
+      }
+      document.getElementById('pkgGrid').innerHTML = `<div class="pay-box gate-box">
+        <div class="gate-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="pay-head">
+          <span class="gate-badge">ยังซื้อแพ็กเกจไม่ได้</span>
+          <h2>กรุณายืนยันตัวตนให้ครบก่อน</h2>
+        </div>
+        <p class="gate-lead">เพื่อความปลอดภัยของบัญชี และเพื่อให้เราส่งมอบแพ็กเกจให้คุณได้ กรุณาทำรายการต่อไปนี้ให้เสร็จก่อน แล้วกลับมาซื้อแพ็กเกจได้ทันที</p>
+        <ul class="gate-list">${items.join('')}</ul>
+        <div id="gateNote"></div>
+        <button class="btn btn-outline btn-small" id="gateRecheck" type="button">ตรวจสอบสถานะอีกครั้ง</button>
+        <p class="pay-hint">ยืนยันครบทั้งสองอย่างแล้ว ระบบจะเปิดให้เลือกแพ็กเกจทันที</p>
+      </div>`;
+      const send = document.getElementById('gateSendMail');
+      if (send) send.addEventListener('click', sendVerifyMail);
+      document.getElementById('gateRecheck').addEventListener('click', () => window.location.reload());
+    }
+
+    function gateNote(msg, isError) {
+      const el = document.getElementById('gateNote');
+      if (!el) return;
+      el.innerHTML = '<div class="gate-note' + (isError ? ' gate-note-error' : '') + '">' + msg + '</div>';
+    }
+
+    async function sendVerifyMail() {
+      const btn = document.getElementById('gateSendMail');
+      const old = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'กำลังส่ง...';
+      try {
+        await api('/api/send-verify-email', { method: 'POST' });
+        gateNote('ส่งลิงก์ยืนยันไปที่ <b>' + esc(meUser.email) + '</b> แล้ว — กรุณาเปิดลิงก์ในอีเมลเพื่อยืนยัน แล้วกด “ตรวจสอบสถานะอีกครั้ง”');
+        btn.textContent = 'ส่งลิงก์อีกครั้ง';
+      } catch (err) {
+        gateNote(esc(err.message), true);
+        btn.textContent = old;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    let meUser = null;
+
     (async function init() {
+      // ต้องยืนยันเบอร์โทร + อีเมลให้ครบก่อน จึงจะซื้อแพ็กเกจได้
+      try {
+        const me = await api('/api/me');
+        meUser = me.user || null;
+      } catch (err) { meUser = null; }
+      const isStaff = meUser && (meUser.role === 'admin' || meUser.role === 'owner');
+      if (meUser && !isStaff) {
+        const missing = [];
+        if (meUser.status !== 'active') missing.push('phone');
+        if (!meUser.is_email_verified) missing.push('email');
+        if (missing.length) { renderVerifyGate(missing); return; }
+      }
+
       try {
         const info = await api('/api/payment-info');
         payEnabled = Boolean(info.payment && info.payment.enabled);
       } catch (err) { /* ถ้าอ่านไม่ได้ให้ถือว่าโหมดทดลอง */ }
       // ถ้าเป็นเจ้าของร้านอยู่แล้ว → แจ้งสิทธิ์ปัจจุบัน และบอกว่าซื้อเพิ่ม = ต่ออายุจากวันเดิม
-      try {
-        const me = await api('/api/me');
-        if (me.user && me.user.role === 'shop' && me.user.gift_expires_at) {
-          const d = new Date(me.user.gift_expires_at);
-          const pad = (n) => String(n).padStart(2, '0');
-          const dateText = pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
-          const days = Math.max(0, Math.ceil((d.getTime() - Date.now()) / 86400000));
-          renewBanner = `<div class="pkg-notice" style="background:var(--info-bg);border-color:var(--info-border);color:var(--info);">`
-            + `แพ็กเกจปัจจุบันของคุณใช้ได้ถึง <b>${dateText}</b> (เหลือ ${days} วัน) — `
-            + `ซื้อแพ็กเกจด้านล่างเพื่อ <b>ต่ออายุจากวันเดิม</b> ไม่ใช่เริ่มนับใหม่</div>`;
-        }
-      } catch (err) { /* ไม่ใช่เจ้าของร้านก็ข้าม */ }
+      if (meUser && meUser.role === 'shop' && meUser.gift_expires_at) {
+        const d = new Date(meUser.gift_expires_at);
+        const pad = (n) => String(n).padStart(2, '0');
+        const dateText = pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
+        const days = Math.max(0, Math.ceil((d.getTime() - Date.now()) / 86400000));
+        renewBanner = `<div class="pkg-notice" style="background:var(--info-bg);border-color:var(--info-border);color:var(--info);">`
+          + `แพ็กเกจปัจจุบันของคุณใช้ได้ถึง <b>${dateText}</b> (เหลือ ${days} วัน) — `
+          + `ซื้อแพ็กเกจด้านล่างเพื่อ <b>ต่ออายุจากวันเดิม</b> ไม่ใช่เริ่มนับใหม่</div>`;
+      }
       await loadMineAndRender();
       lastSig = signatureOf(payment);
       startStatusPoll();
