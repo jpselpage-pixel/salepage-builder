@@ -41,6 +41,11 @@
         <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="11" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         ความปลอดภัย
       </a>
+      <div class="menu-title">การชำระเงิน</div>
+      <a class="menu-item" href="/settings/history">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1015.5-6.2M3 4v4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ประวัติการชำระเงิน
+      </a>
       <!--SHOP_MENU-->
       <div class="menu-divider"></div>
       <button class="menu-item" type="button" id="logoutBtn">
@@ -170,17 +175,34 @@
           </button>
         </div>
       </section>
+
+      <!-- ===== ประวัติการชำระเงิน ===== -->
+      <section id="panel-history" style="display:none;">
+        <div class="panel-head">
+          <div class="panel-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M3 12a9 9 0 1015.5-6.2M3 4v4h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 8v4l3 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h1>ประวัติการชำระเงิน</h1>
+          <p>แพ็กเกจที่คุณซื้อ สถานะการชำระเงิน วันที่ และช่วงเวลาสิทธิ์ที่ได้รับในแต่ละรายการ</p>
+        </div>
+
+        <div class="pay-stats" id="payStats"></div>
+        <div id="payHistoryList"><div class="pay-empty">กำลังโหลด...</div></div>
+        <div id="payGrantsWrap" style="display:none;">
+          <div class="pay-sec-title">แพ็กเกจที่ได้รับโดยไม่มีรายการชำระเงิน</div>
+          <div id="payGrantsList"></div>
+        </div>
+      </section>
     </main>
   </div>
 
   <script>
     const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" width="14" height="14" style="vertical-align:-2px;margin-right:4px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-    // ---------- เลือก panel ตาม URL (profile / security) ----------
+    // ---------- เลือก panel ตาม URL (profile / security / history) ----------
     const section = (window.location.pathname.split('/').filter(Boolean).pop() || 'profile');
-    const activePanel = ['profile', 'security'].includes(section) ? section : 'profile';
-    document.getElementById('panel-profile').style.display = activePanel === 'profile' ? '' : 'none';
-    document.getElementById('panel-security').style.display = activePanel === 'security' ? '' : 'none';
+    const activePanel = ['profile', 'security', 'history'].includes(section) ? section : 'profile';
+    ['profile', 'security', 'history'].forEach((name) => {
+      document.getElementById('panel-' + name).style.display = activePanel === name ? '' : 'none';
+    });
     document.querySelectorAll('.settings-menu .menu-item').forEach((el) => {
       if (el.getAttribute('href') && el.getAttribute('href').endsWith('/' + activePanel)) {
         el.classList.add('active');
@@ -446,7 +468,118 @@
       window.location.href = '/';
     });
 
+    // ---------- ประวัติการชำระเงิน ----------
+    const METHOD_LABEL = { promptpay: 'พร้อมเพย์', bank: 'โอนผ่านธนาคาร' };
+    const PAY_STATUS = {
+      paid: { text: 'ชำระแล้ว', cls: 'badge-success' },
+      rejected: { text: 'ถูกยกเลิก', cls: 'badge-danger' },
+      expired: { text: 'หมดเวลา', cls: 'badge-muted' },
+      pending: { text: 'รอชำระเงิน', cls: 'badge-warning' },
+    };
+    function money(v) { return Number(v || 0).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+    function dt(v) {
+      if (!v) return '—';
+      const d = new Date(v);
+      if (Number.isNaN(d.getTime())) return '—';
+      const p = (n) => String(n).padStart(2, '0');
+      return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+    }
+    function dOnly(v) { return v ? dt(v).slice(0, 10) : '—'; }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    function daysLeft(v) {
+      const t = new Date(v).getTime();
+      return Number.isFinite(t) ? Math.max(0, Math.ceil((t - Date.now()) / 86400000)) : null;
+    }
+    // ช่วงสิทธิ์ที่ได้จากรายการนั้น + สถานะของสิทธิ์ตอนนี้
+    function entitlementText(e) {
+      if (!e || !e.startAt || !e.expiresAt) return '—';
+      const period = dOnly(e.startAt) + ' – ' + dOnly(e.expiresAt);
+      if (e.revokedAt) return 'ถูกดึงสิทธิ์กลับ (' + period + ')';
+      const left = daysLeft(e.expiresAt);
+      if (left === null) return period;
+      return left > 0 ? period + ' · เหลือ ' + left + ' วัน' : period + ' · หมดอายุแล้ว';
+    }
+    function statCard(label, value, sub) {
+      return '<div class="pay-stat"><div class="ps-label">' + label + '</div><div class="ps-value">' + value + '</div>'
+        + (sub ? '<div class="ps-sub">' + sub + '</div>' : '') + '</div>';
+    }
+    function payCard(r) {
+      let st = PAY_STATUS[r.status] || { text: r.status, cls: 'badge-muted' };
+      if (r.status === 'pending' && r.notified) st = { text: 'รอตรวจสอบยอด', cls: 'badge-warning' };
+      const facts = [['ช่องทาง', METHOD_LABEL[r.method] || '—']];
+      if (r.confirmedAt) facts.push(['ชำระเมื่อ', dt(r.confirmedAt)]);
+      facts.push(['สิทธิ์ที่ได้รับ', entitlementText(r.entitlement)]);
+      if (r.slipStatus === 'verified') facts.push(['ตรวจสลิป', 'ผ่านอัตโนมัติ']);
+      else if (r.hasSlip) facts.push(['สลิปโอนเงิน', 'แนบไว้แล้ว']);
+
+      let note = '';
+      if (r.status === 'rejected' && r.note) note = '<div class="phc-note phc-note-danger"><strong>เหตุผลที่ยกเลิก:</strong> ' + esc(r.note) + '</div>';
+      else if (r.status === 'expired' && r.note) note = '<div class="phc-note">' + esc(r.note) + '</div>';
+      const action = (r.status === 'pending' && !r.notified)
+        ? '<div class="phc-actions"><a class="btn btn-small btn-primary" href="/shop/purchase.html">ไปชำระเงิน</a></div>'
+        : '';
+
+      return '<article class="pay-hist-card">'
+        + '<div class="phc-top"><div class="phc-title"><span class="badge ' + st.cls + '">' + st.text + '</span>'
+        + '<strong>' + esc(r.packageName) + '</strong>'
+        + (r.durationMonths ? '<span class="phc-dur">' + esc(r.durationMonths) + ' เดือน</span>' : '')
+        + '</div><div class="phc-amount">฿' + money(r.amount) + '</div></div>'
+        + '<div class="phc-sub">' + dt(r.createdAt) + ' · รหัสอ้างอิง <span class="mono">' + esc(r.ref) + '</span></div>'
+        + '<dl class="phc-grid">' + facts.map(([k, v]) => '<div><dt>' + k + '</dt><dd>' + v + '</dd></div>').join('') + '</dl>'
+        + note + action + '</article>';
+    }
+    function grantCard(g) {
+      const period = entitlementText({ startAt: g.startAt, expiresAt: g.expiresAt, revokedAt: g.revokedAt });
+      const facts = [['วันที่ให้สิทธิ์', dOnly(g.createdAt)], ['ช่วงสิทธิ์', period]];
+      return '<article class="pay-hist-card">'
+        + '<div class="phc-top"><div class="phc-title"><span class="badge badge-info">ได้รับสิทธิ์</span>'
+        + '<strong>' + esc(g.packageName) + '</strong></div>'
+        + (g.amount > 0 ? '<div class="phc-amount">฿' + money(g.amount) + '</div>' : '') + '</div>'
+        + '<dl class="phc-grid">' + facts.map(([k, v]) => '<div><dt>' + k + '</dt><dd>' + v + '</dd></div>').join('') + '</dl>'
+        + '</article>';
+    }
+    async function loadHistory() {
+      const listEl = document.getElementById('payHistoryList');
+      try {
+        const res = await fetch('/api/my-payments/history');
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.message || 'โหลดประวัติไม่สำเร็จ');
+
+        const pays = data.payments || [];
+        const paid = pays.filter((p) => p.status === 'paid');
+        const paidTotal = paid.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+        const left = data.currentExpiresAt ? daysLeft(data.currentExpiresAt) : null;
+        document.getElementById('payStats').innerHTML = [
+          statCard('สิทธิ์การใช้งานปัจจุบัน',
+            data.currentExpiresAt ? 'ถึง ' + dOnly(data.currentExpiresAt) : 'ยังไม่มีสิทธิ์',
+            left != null ? (left > 0 ? 'เหลือ ' + left + ' วัน' : 'หมดอายุแล้ว') : 'ซื้อแพ็กเกจเพื่อเปิดร้าน'),
+          statCard('ชำระเงินสำเร็จ', '฿' + money(paidTotal), paid.length + ' รายการ'),
+          statCard('รายการทั้งหมด', String(pays.length), 'รวมทุกรายการที่เคยสร้าง'),
+        ].join('');
+
+        listEl.innerHTML = pays.length
+          ? '<div class="pay-hist-list">' + pays.map(payCard).join('') + '</div>'
+          : '<div class="pay-empty">ยังไม่มีประวัติการชำระเงิน — เมื่อคุณซื้อแพ็กเกจ รายการจะมาแสดงที่นี่'
+            + '<br><a class="btn btn-small btn-primary" style="margin-top:14px;" href="/shop/purchase.html">ดูแพ็กเกจร้านค้า</a></div>';
+
+        const grants = data.grants || [];
+        document.getElementById('payGrantsWrap').style.display = grants.length ? '' : 'none';
+        document.getElementById('payGrantsList').innerHTML = grants.length
+          ? '<div class="pay-hist-list">' + grants.map(grantCard).join('') + '</div>'
+          : '';
+      } catch (err) {
+        listEl.innerHTML = '<div class="pay-empty">โหลดประวัติไม่สำเร็จ: ' + esc(err.message) + '</div>';
+      }
+    }
+
     loadMe();
+    if (activePanel === 'history') loadHistory();
+    // กลับมาที่แท็บนี้ข้อมูลอาจเปลี่ยน (เช่น ผู้ดูแลระบบเพิ่งยืนยันยอด) → โหลดประวัติใหม่
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && activePanel === 'history') loadHistory();
+    });
   </script>
 </body>
 </html>

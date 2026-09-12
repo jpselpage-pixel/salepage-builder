@@ -1190,6 +1190,40 @@ async function listPackagePayments({ status = null, userId = null, limit = 100 }
   return rows;
 }
 
+/**
+ * ประวัติการชำระเงินของลูกค้าหนึ่งคน — ทุกสถานะ
+ * ต่อกับ shop_purchases ผ่าน payment_id เพื่อบอกว่าแต่ละครั้งได้สิทธิ์ช่วงใด
+ */
+async function listMyPayments(userId, limit = 100) {
+  const n = Math.min(Math.max(Math.trunc(Number(limit)) || 100, 1), 500);
+  const [rows] = await pool.execute(
+    `SELECT pp.id, pp.ref, pp.package_name, pp.duration_months, pp.amount, pp.method,
+            pp.status, pp.notified, pp.created_at, pp.confirmed_at, pp.note,
+            pp.slip_url, pp.slip_status,
+            sp.id AS purchase_id, sp.start_at, sp.expires_at, sp.revoked_at
+       FROM package_payments pp
+       LEFT JOIN shop_purchases sp ON sp.payment_id = pp.id
+      WHERE pp.user_id = ?
+      ORDER BY pp.id DESC LIMIT ${n}`,
+    [userId]
+  );
+  return rows;
+}
+
+/** แพ็กเกจที่ลูกค้าได้สิทธิ์โดยไม่มีรายการชำระเงิน (เช่น ผู้ดูแลระบบเปิดให้) */
+async function listMyGrants(userId, limit = 50) {
+  const n = Math.min(Math.max(Math.trunc(Number(limit)) || 50, 1), 200);
+  const [rows] = await pool.execute(
+    `SELECT sp.id, sp.package AS package_name, sp.amount, sp.created_at,
+            sp.start_at, sp.expires_at, sp.revoked_at
+       FROM shop_purchases sp
+      WHERE sp.user_id = ? AND sp.payment_id IS NULL
+      ORDER BY sp.id DESC LIMIT ${n}`,
+    [userId]
+  );
+  return rows;
+}
+
 async function markPackagePaymentNotified(id, { slipUrl = '', slipStatus = '', slipDetail = '', slipHash = '' } = {}) {
   await pool.execute(
     `UPDATE package_payments
@@ -1517,6 +1551,8 @@ module.exports = {
   findPackagePaymentById,
   findPendingPackagePaymentByUser,
   listPackagePayments,
+  listMyPayments,
+  listMyGrants,
   markPackagePaymentNotified,
   findPaymentBySlipHash,
   setPackagePaymentSlip,

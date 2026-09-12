@@ -126,6 +126,48 @@ router.get('/api/my-payments', requireLogin, wrap(async (req, res) => {
   res.json({ ok: true, payments: rows.map((r) => paymentInstructions(r)) });
 }));
 
+// ประวัติการชำระเงินของฉัน — ทุกสถานะ + สิทธิ์ที่ได้ในแต่ละครั้ง + ของที่ได้โดยไม่ผ่านการชำระเงิน
+// ส่งเฉพาะข้อมูลที่ลูกค้าดูได้ (ไม่ส่ง slip_hash / slip_detail ที่มีข้อความสำหรับผู้ดูแลระบบ)
+router.get('/api/my-payments/history', requireLogin, wrap(async (req, res) => {
+  await db.expireStalePayments();
+  const [payments, grants, current] = await Promise.all([
+    db.listMyPayments(req.user.id),
+    db.listMyGrants(req.user.id),
+    db.maxActiveEntitlement(req.user.id),
+  ]);
+  res.json({
+    ok: true,
+    currentExpiresAt: current || null,
+    payments: payments.map((r) => ({
+      id: r.id,
+      ref: r.ref,
+      packageName: r.package_name,
+      durationMonths: r.duration_months,
+      amount: Number(r.amount) || 0,
+      method: r.method,
+      status: r.status,
+      notified: r.notified === 1,
+      createdAt: r.created_at,
+      confirmedAt: r.confirmed_at,
+      note: r.note || '',
+      hasSlip: Boolean(r.slip_url),
+      slipStatus: r.slip_status || '',
+      entitlement: r.purchase_id
+        ? { startAt: r.start_at, expiresAt: r.expires_at, revokedAt: r.revoked_at }
+        : null,
+    })),
+    grants: grants.map((r) => ({
+      id: r.id,
+      packageName: r.package_name,
+      amount: Number(r.amount) || 0,
+      createdAt: r.created_at,
+      startAt: r.start_at,
+      expiresAt: r.expires_at,
+      revokedAt: r.revoked_at,
+    })),
+  });
+}));
+
 // แจ้งว่าโอนเงินแล้ว (แนบสลิปได้) — ถ้าตั้งค่าตรวจสลิปไว้ ระบบจะตรวจและอนุมัติให้อัตโนมัติ
 router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) => {
   const rec = await db.findPackagePaymentById(Number(req.params.id));
