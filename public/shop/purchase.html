@@ -225,6 +225,8 @@
         alert(err.message);
         btn.disabled = false;
         btn.textContent = oriText; // คืนข้อความปุ่ม ให้กดแจ้งใหม่ได้
+        // รายการอาจถูกยกเลิก/หมดเวลาไปแล้ว — ดึงสถานะจริงมาแสดงใหม่ให้ตรง
+        await loadMineAndRender();
       }
     }
 
@@ -304,12 +306,39 @@
       else await loadPackages();
     }
 
+    // ตรวจสถานะรายการเป็นระยะ — ถ้าผู้ดูแลระบบยกเลิก/ยืนยัน หรือรายการหมดเวลา หน้าจะอัปเดตให้เอง
+    let statusPoll = null;
+    let lastSig = null;
+    function signatureOf(p) {
+      return p ? [p.id, p.status, p.notified ? 1 : 0, p.slipStatus || ''].join(':') : 'none';
+    }
+    function startStatusPoll() {
+      if (statusPoll) clearInterval(statusPoll);
+      statusPoll = setInterval(async () => {
+        if (document.hidden) return;
+        // อย่ารบกวนระหว่างลูกค้าเลือกไฟล์สลิป (จะทำให้ไฟล์ที่เลือกหาย) หรือกำลังเปิดหน้าต่างเลือกตัวเลือก
+        const fi = document.getElementById('slipFile');
+        if (fi && fi.files && fi.files.length) return;
+        try {
+          const mine = await api('/api/my-payments');
+          const list = mine.payments || [];
+          const p = list.find((x) => x.status === 'pending') || null;
+          const sig = signatureOf(p);
+          if (sig === lastSig) return;   // ไม่มีอะไรเปลี่ยน → ไม่ต้องวาดใหม่
+          lastSig = sig;
+          await loadMineAndRender();
+        } catch (err) { /* ข้ามได้ */ }
+      }, 12000);
+    }
+
     (async function init() {
       try {
         const info = await api('/api/payment-info');
         payEnabled = Boolean(info.payment && info.payment.enabled);
       } catch (err) { /* ถ้าอ่านไม่ได้ให้ถือว่าโหมดทดลอง */ }
       await loadMineAndRender();
+      lastSig = signatureOf(payment);
+      startStatusPoll();
     })();
   </script>
 </body>
