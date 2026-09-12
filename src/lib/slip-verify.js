@@ -27,16 +27,34 @@ const ERROR_MAP = {
   VALIDATION_ERROR: 'invalid_image',
   SLIP_NOT_FOUND: 'slip_not_found',
   SLIP_PENDING: 'slip_pending',
+  IP_NOT_ALLOWED: 'ip_not_allowed',
+  UNAUTHORIZED: 'unauthorized',
+  INVALID_API_KEY: 'unauthorized',
+  AUTHENTICATION_ERROR: 'unauthorized',
+  QUOTA_EXCEEDED: 'quota',
+  USAGE_LIMIT_EXCEEDED: 'quota',
+  INSUFFICIENT_BALANCE: 'quota',
 };
 
-/** ข้อความภาษาไทยที่ลูกค้าควรเห็น */
-const ERROR_TEXT = {
+/** ข้อความสำหรับเจ้าของระบบ (ในคิวตรวจสอบ) */
+const OWNER_TEXT = {
+  image_too_large: 'รูปสลิปใหญ่เกิน 4MB',
+  invalid_image: 'อ่านรูปสลิปไม่ได้',
+  slip_not_found: 'ไม่พบ QR Code ในรูปสลิป',
+  slip_pending: 'สลิปธนาคารกรุงเทพเพิ่งโอนไม่เกิน 5 นาที — ให้ลูกค้ารอแล้วแนบใหม่',
+  ip_not_allowed: 'IP ของเซิร์ฟเวอร์ไม่ได้รับอนุญาต — ต้องเพิ่ม 118.27.151.243 ใน whitelist ของ EasySlip',
+  unauthorized: 'API key ของ EasySlip ไม่ถูกต้องหรือถูกยกเลิก — ตรวจสอบที่หน้าเว็บ EasySlip',
+  quota: 'โควต้าตรวจสลิปของ EasySlip หมด — กรุณาเติมเครดิตหรืออัปเกรดแพ็กเกจ',
+  verify_failed: 'ตรวจสลิปไม่สำเร็จ',
+  error: 'เชื่อมต่อผู้ให้บริการตรวจสลิปไม่สำเร็จ',
+};
+
+/** ข้อความที่บอกลูกค้าได้ (เฉพาะกรณีที่ลูกค้าแก้ไขเองได้) — กรณีตั้งค่าผิดจะไม่โชว์ให้ลูกค้าเห็น */
+const CUSTOMER_TEXT = {
   image_too_large: 'รูปสลิปใหญ่เกิน 4MB กรุณาย่อรูปก่อนแนบ',
   invalid_image: 'อ่านรูปสลิปไม่ได้ กรุณาแนบรูปสลิปที่ชัดเจน',
   slip_not_found: 'ไม่พบ QR Code ในรูปสลิป กรุณาแนบรูปที่เห็น QR ชัด ๆ',
   slip_pending: 'สลิปธนาคารกรุงเทพที่เพิ่งโอนไม่เกิน 5 นาที ต้องรอสักครู่แล้วแจ้งใหม่',
-  verify_failed: 'ตรวจสลิปไม่สำเร็จ',
-  error: 'เชื่อมต่อผู้ให้บริการตรวจสลิปไม่สำเร็จ',
 };
 
 function getSlipSettings() {
@@ -81,7 +99,7 @@ function accountMatches(wantRaw, gotRaw) {
 /** เรียก EasySlip ตรวจสลิปธนาคาร (ส่งรูปเป็น base64) → ผลลัพธ์รูปแบบเดียว */
 async function verifySlip(buffer, expectedAmount) {
   const s = getSlipSettings();
-  if (!s.apiKey) return { ok: false, code: 'not_configured', message: 'ยังไม่ได้ตั้งค่า API key ของ EasySlip' };
+  if (!s.apiKey) return { ok: false, code: 'not_configured', message: 'ยังไม่ได้ตั้งค่า API key ของ EasySlip', customerMessage: '' };
 
   const body = { base64: buffer.toString('base64'), checkDuplicate: true, matchAccount: true };
   const amount = Number(expectedAmount);
@@ -97,15 +115,21 @@ async function verifySlip(buffer, expectedAmount) {
 
     if (!json) {
       console.error('⚠️ EasySlip ตอบกลับไม่ใช่ JSON (HTTP ' + res.status + ')');
-      return { ok: false, code: 'verify_failed', message: ERROR_TEXT.verify_failed };
+      return { ok: false, code: 'verify_failed', message: OWNER_TEXT.verify_failed, customerMessage: '' };
     }
 
     if (json.success !== true) {
       const code = (json.error && json.error.code) || 'HTTP_' + res.status;
-      const message = (json.error && json.error.message) || ERROR_TEXT.verify_failed;
+      const providerMessage = (json.error && json.error.message) || '';
       const mapped = ERROR_MAP[code] || 'verify_failed';
-      console.error('⚠️ EasySlip [' + code + '] ' + message);
-      return { ok: false, code: mapped, providerCode: code, message: ERROR_TEXT[mapped] || String(message).slice(0, 200) };
+      console.error('⚠️ EasySlip [' + code + '] ' + providerMessage);
+      return {
+        ok: false,
+        code: mapped,
+        providerCode: code,
+        message: (OWNER_TEXT[mapped] || OWNER_TEXT.verify_failed) + (providerMessage ? ' (' + providerMessage + ')' : ''),
+        customerMessage: CUSTOMER_TEXT[mapped] || '',
+      };
     }
 
     const d = json.data || {};
@@ -131,7 +155,7 @@ async function verifySlip(buffer, expectedAmount) {
     };
   } catch (err) {
     console.error('⚠️ เชื่อมต่อ EasySlip ไม่สำเร็จ:', err.message);
-    return { ok: false, code: 'error', message: ERROR_TEXT.error };
+    return { ok: false, code: 'error', message: OWNER_TEXT.error, customerMessage: '' };
   }
 }
 

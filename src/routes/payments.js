@@ -130,6 +130,7 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
   let slipUrl = '';
   let slipStatus = 'manual';
   let slipDetail = 'ลูกค้าแจ้งโอน (ไม่มีสลิป) — รอผู้ดูแลระบบตรวจสอบ';
+  let customerNote = ''; // ข้อความถึงลูกค้า (เฉพาะกรณีที่ลูกค้าแก้เองได้)
 
   if (slipData) {
     let parsed;
@@ -146,6 +147,7 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
       const decision = decideAutoApprove({ settings, record: rec, result });
       slipStatus = decision.status;
       slipDetail = decision.detail;
+      customerNote = result.customerMessage || '';
 
       if (decision.approve) {
         await db.markPackagePaymentNotified(rec.id, { slipUrl, slipStatus, slipDetail });
@@ -169,7 +171,7 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
   res.json({
     ok: true,
     autoApproved: false,
-    message: 'แจ้งชำระเงินแล้ว รอผู้ดูแลระบบตรวจสอบยอด',
+    message: customerNote || 'แจ้งชำระเงินแล้ว รอผู้ดูแลระบบตรวจสอบยอด',
   });
 }));
 

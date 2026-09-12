@@ -140,7 +140,6 @@
         </div>` : ''}
         ${p.payNote ? `<p class="pay-note">${esc(p.payNote)}</p>` : ''}
         ${activeMsg ? `<p class="pay-msg">${esc(activeMsg)}</p>` : ''}
-        ${p.slipDetail && !p.notified ? '' : (p.slipDetail ? `<p class="pay-msg">${esc(p.slipDetail)}</p>` : '')}
         ${p.slipUrl && p.notified ? `<div class="pay-qr"><img src="${esc(p.slipUrl)}" alt="สลิป" style="width:auto;max-height:220px;"></div>` : ''}
         ${p.notified ? '' : `<div class="pay-slip">
           <label for="slipFile">แนบสลิปโอนเงิน (แนะนำ — ระบบจะตรวจให้อัตโนมัติ)</label>
