@@ -323,6 +323,12 @@
           const mine = await api('/api/my-payments');
           const list = mine.payments || [];
           const p = list.find((x) => x.status === 'pending') || null;
+          // รายการที่รอชำระถูก "ยืนยันแล้ว" → พาไปที่ร้านของลูกค้าเลย (ไม่ต้องเลือกแพ็กเกจใหม่)
+          if (payment && list.some((x) => x.id === payment.id && x.status === 'paid')) {
+            stopCountdown();
+            window.location.replace('/shop');
+            return;
+          }
           const sig = signatureOf(p);
           if (sig === lastSig) return;   // ไม่มีอะไรเปลี่ยน → ไม่ต้องวาดใหม่
           lastSig = sig;

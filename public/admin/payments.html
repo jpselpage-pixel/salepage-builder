@@ -391,11 +391,16 @@
               ? `<div class="pill" style="margin-top:5px;" title="${esc(p.slipDetail || '')}">ยืนยันยอดเอง</div>`
               : `<div class="pill ${SLIP_CLASS[p.slipStatus] || ''}" style="margin-top:5px;">${esc(SLIP_LABEL[p.slipStatus] || p.slipStatus)}</div>`;
           const link = p.slipUrl ? `<a href="${esc(p.slipUrl)}" target="_blank" rel="noopener" class="icon-btn" style="padding:5px 10px;">ดูสลิป</a>` : '';
-          return (link || pill) ? link + pill : '<span style="color:var(--muted);font-size:12px;">—</span>';
+          if (link || pill) return link + pill;
+          // รายการที่ปิดแล้วและไม่มีสลิป → บอกให้ชัดว่าไม่มี (ไม่ปล่อยว่าง)
+          if (p.status === 'paid') return '<span style="color:var(--muted);font-size:12px;">ไม่มีสลิป</span>';
+          return '<span style="color:var(--muted);font-size:12px;">—</span>';
         })()}</td>
         <td>${(p.status === 'pending' || p.status === 'expired')
           ? `<div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="icon-btn" data-slip="${p.id}" type="button" title="แนบสลิปแทนลูกค้า แล้วให้ระบบตรวจให้">แนบสลิปตรวจ</button><button class="icon-btn primary" data-confirm="${p.id}" type="button">ยืนยันยอด</button><button class="icon-btn danger" data-reject="${p.id}" type="button">ยกเลิก</button></div>`
-          : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
+          : p.status === 'paid'
+            ? `<span style="color:var(--success);font-size:12px;">ยืนยันแล้ว${p.confirmedAt ? '<br>' + fmtTime(p.confirmedAt) : ''}</span>`
+            : `<span style="color:var(--muted);font-size:12px;">ยกเลิก${p.note ? '<br>' + esc(p.note) : ''}</span>`}</td>
       </tr>`).join('');
 
       queueRows = rows;
