@@ -343,7 +343,7 @@
         <td><strong>฿${money(p.amount)}</strong></td>
         <td><span class="mono">${esc(p.ref)}</span></td>
         <td><span class="pill ${STATUS_CLASS[p.status] || ''}">${STATUS_LABEL[p.status] || esc(p.status)}</span></td>
-        <td>${p.status === 'pending' && p.secondsLeft != null
+        <td>${p.status === 'pending' && !p.notified && p.secondsLeft != null
           ? `<span class="cd" data-left="${Number(p.secondsLeft)}">–</span>`
           : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
         <td>${p.slipUrl
