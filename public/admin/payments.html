@@ -169,6 +169,7 @@
           รายการชำระเงิน <span id="queueCount" style="color:var(--muted);font-weight:600;"></span>
           <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
             <button class="icon-btn" data-tab="pending" type="button">รอตรวจสอบ</button>
+            <button class="icon-btn" data-tab="expired" type="button">หมดเวลา</button>
             <button class="icon-btn" data-tab="paid" type="button">ยืนยันแล้ว</button>
             <button class="icon-btn" data-tab="rejected" type="button">ยกเลิก</button>
           </div>
@@ -228,8 +229,8 @@
       return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
 
-    const STATUS_LABEL = { pending: 'รอตรวจสอบ', paid: 'ยืนยันแล้ว', rejected: 'ยกเลิก' };
-    const STATUS_CLASS = { pending: 'pill-warning', paid: 'pill-valid', rejected: 'pill-expired' };
+    const STATUS_LABEL = { pending: 'รอตรวจสอบ', expired: 'หมดเวลา', paid: 'ยืนยันแล้ว', rejected: 'ยกเลิก' };
+    const STATUS_CLASS = { pending: 'pill-warning', expired: 'pill-warning', paid: 'pill-valid', rejected: 'pill-expired' };
     // ผลตรวจสลิปอัตโนมัติ
     const SLIP_LABEL = {
       verified: 'สลิปผ่าน', duplicate: 'สลิปซ้ำ', amount_mismatch: 'ยอดไม่ตรง',
@@ -342,7 +343,7 @@
         <td>${p.slipUrl
           ? `<a href="${esc(p.slipUrl)}" target="_blank" rel="noopener" class="icon-btn" style="padding:5px 10px;">ดูสลิป</a>${p.slipStatus ? `<div class="pill ${SLIP_CLASS[p.slipStatus] || ''}" style="margin-top:5px;">${esc(SLIP_LABEL[p.slipStatus] || p.slipStatus)}</div>` : ''}`
           : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
-        <td>${p.status === 'pending'
+        <td>${(p.status === 'pending' || p.status === 'expired')
           ? `<div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="icon-btn primary" data-confirm="${p.id}" type="button">ยืนยันยอด</button><button class="icon-btn danger" data-reject="${p.id}" type="button">ยกเลิก</button></div>`
           : '<span style="color:var(--muted);font-size:12px;">—</span>'}</td>
       </tr>`).join('');
@@ -354,7 +355,7 @@
     async function act(btn, kind) {
       const id = kind === 'confirm' ? btn.dataset.confirm : btn.dataset.reject;
       const ask = kind === 'confirm'
-        ? 'ยืนยันว่าลูกค้ารายนี้โอนเงินแล้ว และเปิดสิทธิ์เจ้าของร้านให้เลย?'
+        ? 'ยืนยันว่าลูกค้ารายนี้โอนเงินแล้ว และเปิดสิทธิ์เจ้าของร้านให้เลย?\n(กรุณาตรวจยอดในแอปธนาคารก่อน — ใช้ได้ทั้งรายการที่รอตรวจสอบและรายการที่หมดเวลา)'
         : 'ยกเลิกรายการนี้ (เช่น ไม่พบยอดโอน)?';
       if (!confirm(ask)) return;
       let reason = '';

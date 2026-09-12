@@ -61,7 +61,7 @@
     const ICON_ARROW = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
     let payment = null;      // รายการที่รอชำระเงินอยู่
-    let rejected = null;     // รายการล่าสุดที่ถูกยกเลิก (ถ้ามี)
+    let cancelled = null;    // รายการล่าสุดที่ถูกยกเลิก/หมดเวลา (ถ้ามี)
     let packages = [];       // แพ็กเกจที่เปิดขาย
     let payEnabled = false;  // เปิดรับชำระเงินจริงหรือไม่ (ปิด = โหมดทดลอง)
     let confirmPkg = null;   // แพ็กเกจที่รอลูกค้ายืนยันในโหมดทดลอง
@@ -287,13 +287,14 @@
         const mine = await api('/api/my-payments');
         const list = mine.payments || [];
         payment = list.find((p) => p.status === 'pending') || null;
-        rejected = list.find((p) => p.status === 'rejected') || null;
+        cancelled = list.find((p) => p.status === 'rejected' || p.status === 'expired') || null;
       } catch (err) { payment = null; }
 
-      if (rejected && !payment) {
-        document.getElementById('notice').innerHTML = `<div class="pkg-notice">
-          รายการก่อนหน้า (รหัส ${esc(rejected.ref)}) ถูกยกเลิก: ${esc(rejected.note || 'ไม่ระบุเหตุผล')} — เลือกแพ็กเกจใหม่ได้เลย
-        </div>`;
+      if (cancelled && !payment) {
+        const msg = cancelled.status === 'expired'
+          ? `รายการก่อนหน้า (รหัส ${esc(cancelled.ref)}) <b>หมดเวลาชำระเงิน</b> — ถ้าโอนไปแล้วและมีสลิป ให้เลือกแพ็กเกจใหม่แล้วแนบสลิปเดิมอีกครั้ง ระบบจะตรวจและเปิดสิทธิ์ให้อัตโนมัติ`
+          : `รายการก่อนหน้า (รหัส ${esc(cancelled.ref)}) ถูกยกเลิก: ${esc(cancelled.note || 'ไม่ระบุเหตุผล')} — เลือกแพ็กเกจใหม่ได้เลย`;
+        document.getElementById('notice').innerHTML = `<div class="pkg-notice">${msg}</div>`;
       }
       if (payment) renderPayment();
       else await loadPackages();

@@ -126,10 +126,14 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
   if (rec.status !== 'pending') {
     return res.status(400).json({ ok: false, message: 'รายการนี้ถูกตรวจสอบไปแล้ว' });
   }
-  // หมดเวลาแล้ว (ยังไม่แนบสลิป) → ยกเลิกรายการ ให้ลูกค้าสร้างใหม่
+  // หมดเวลาแล้ว (ยังไม่แนบสลิป) → ปิดรายการนี้ ให้ลูกค้าสร้างใหม่
   if (rec.seconds_left != null && Number(rec.seconds_left) <= 0) {
-    await db.setPackagePaymentStatus(rec.id, 'rejected', { note: 'หมดเวลาชำระเงิน — กรุณาสร้างรายการใหม่' });
-    return res.status(400).json({ ok: false, expired: true, message: 'หมดเวลาชำระเงินแล้ว (เกินเวลาที่กำหนด) กรุณาเลือกแพ็กเกจและสร้างรายการใหม่' });
+    await db.setPackagePaymentStatus(rec.id, 'expired', { note: 'หมดเวลาชำระเงิน — กรุณาสร้างรายการใหม่' });
+    return res.status(400).json({
+      ok: false,
+      expired: true,
+      message: 'หมดเวลาชำระเงินแล้ว — ถ้าโอนไปแล้วและมีสลิป กรุณาสร้างรายการใหม่แล้วแนบสลิปเดิม',
+    });
   }
 
   const slipData = String(req.body?.slip || '');
@@ -193,9 +197,9 @@ router.post('/api/my-payments/:id/expire', requireLogin, wrap(async (req, res) =
   if (rec.notified === 1) {
     return res.json({ ok: true, message: 'แจ้งโอนแล้ว — รอผู้ดูแลระบบตรวจสอบยอด' });
   }
-  await db.setPackagePaymentStatus(rec.id, 'rejected', { note: 'หมดเวลาชำระเงิน — กรุณาเลือกแพ็กเกจและสร้างรายการใหม่' });
-  console.log(`⏱️ หมดเวลาชำระเงิน #${rec.id} (${rec.ref}) — ยกเลิกรายการอัตโนมัติ`);
-  res.json({ ok: true, message: 'หมดเวลาชำระเงิน — ยกเลิกรายการแล้ว' });
+  await db.setPackagePaymentStatus(rec.id, 'expired', { note: 'หมดเวลาชำระเงิน — กรุณาเลือกแพ็กเกจและสร้างรายการใหม่' });
+  console.log(`⏱️ หมดเวลาชำระเงิน #${rec.id} (${rec.ref}) — ปิดรายการอัตโนมัติ`);
+  res.json({ ok: true, message: 'หมดเวลาชำระเงิน — กรุณาสร้างรายการใหม่' });
 }));
 
 // ---------------------------------------------------------------------------
@@ -271,7 +275,7 @@ router.post('/api/owner/payment-settings', requireOwner, wrap(async (req, res) =
 // ---------------------------------------------------------------------------
 router.get('/api/owner/package-payments', requireOwner, wrap(async (req, res) => {
   await db.expireStalePayments();
-  const status = ['pending', 'paid', 'rejected'].includes(req.query.status) ? req.query.status : null;
+  const status = ['pending', 'paid', 'rejected', 'expired'].includes(req.query.status) ? req.query.status : null;
   const rows = await db.listPackagePayments({ status, limit: Number(req.query.limit) || 100 });
   const users = await Promise.all(rows.map((r) => db.findUserById(r.user_id)));
   res.json({
@@ -340,7 +344,10 @@ router.post('/api/owner/shop-access/:userId/revoke', requireOwner, wrap(async (r
 router.post('/api/owner/package-payments/:id/confirm', requireOwner, wrap(async (req, res) => {
   const rec = await db.findPackagePaymentById(Number(req.params.id));
   if (!rec) return res.status(404).json({ ok: false, message: 'ไม่พบรายการชำระเงิน' });
-  if (rec.status !== 'pending') return res.status(400).json({ ok: false, message: 'รายการนี้ถูกตรวจสอบไปแล้ว' });
+  // ยืนยันได้ทั้งรายการที่รอตรวจสอบ และรายการที่หมดเวลาแล้ว (กรณีลูกค้าโอนช้า/แนบสลิปไม่ทัน)
+  if (!['pending', 'expired'].includes(rec.status)) {
+    return res.status(400).json({ ok: false, message: 'รายการนี้ถูกตรวจสอบไปแล้ว' });
+  }
 
   const granted = await grantPackage(rec, req.owner.id);
   if (!granted) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้ของรายการนี้' });
@@ -353,7 +360,9 @@ router.post('/api/owner/package-payments/:id/confirm', requireOwner, wrap(async 
 router.post('/api/owner/package-payments/:id/reject', requireOwner, wrap(async (req, res) => {
   const rec = await db.findPackagePaymentById(Number(req.params.id));
   if (!rec) return res.status(404).json({ ok: false, message: 'ไม่พบรายการชำระเงิน' });
-  if (rec.status !== 'pending') return res.status(400).json({ ok: false, message: 'รายการนี้ถูกตรวจสอบไปแล้ว' });
+  if (!['pending', 'expired'].includes(rec.status)) {
+    return res.status(400).json({ ok: false, message: 'รายการนี้ถูกตรวจสอบไปแล้ว' });
+  }
 
   const reason = clip(req.body?.reason, 200) || 'ไม่พบยอดโอน';
   await db.setPackagePaymentStatus(rec.id, 'rejected', { confirmedBy: req.owner.id, note: reason });

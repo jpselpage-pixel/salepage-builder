@@ -1105,10 +1105,11 @@ function secondsLeftSql(alias = '') {
  */
 async function expireStalePayments() {
   const mins = getPaymentExpireMinutes();
+  // ใช้สถานะ 'expired' แยกจาก 'rejected' — เจ้าของระบบยังกดยืนยันยอดได้ถ้าเงินเข้าจริง
   const [res] = await pool.execute(
     `UPDATE package_payments
-        SET status = 'rejected',
-            note = 'หมดเวลาชำระเงิน (${mins} นาที) — กรุณาเลือกแพ็กเกจและสร้างรายการใหม่'
+        SET status = 'expired',
+            note = 'หมดเวลาชำระเงิน (${mins} นาที) — ถ้าโอนแล้วแต่แนบสลิปไม่ทัน กรุณาแจ้งผู้ดูแลระบบ'
       WHERE status = 'pending' AND notified = 0
         AND created_at < DATE_SUB(NOW(), INTERVAL ${mins} MINUTE)`
   );
