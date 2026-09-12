@@ -218,7 +218,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         });
-        if (data.autoApproved) { window.location.replace('/shop/setup.html'); return; }
+        if (data.autoApproved) { window.location.replace('/settings/profile?purchased=1'); return; }
         payment.notified = true;
         renderPayment(data.message);
       } catch (err) {
@@ -254,7 +254,7 @@
           body: JSON.stringify({ packageId: Number(pkg.id) }),
         });
         if (data.pending && data.payment) { payment = data.payment; renderPayment(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
-        window.location.replace(data.redirect || '/shop/setup.html');
+        window.location.replace(data.redirect || '/settings/profile?purchased=1');
       } catch (err) {
         const errEl = document.querySelector('[data-err="' + pkg.id + '"]');
         if (errEl) { errEl.textContent = err.message; errEl.style.display = 'block'; }
@@ -329,7 +329,7 @@
           // รายการที่รอชำระถูก "ยืนยันแล้ว" → พาไปที่ร้านของลูกค้าเลย (ไม่ต้องเลือกแพ็กเกจใหม่)
           if (payment && list.some((x) => x.id === payment.id && x.status === 'paid')) {
             stopCountdown();
-            window.location.replace('/shop');
+            window.location.replace('/settings/profile?purchased=1');
             return;
           }
           const sig = signatureOf(p);

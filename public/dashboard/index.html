@@ -59,6 +59,8 @@
           <p>ข้อมูลส่วนตัวและสถานะการยืนยันบัญชีของคุณ</p>
         </div>
 
+        <div class="success-box" id="purchaseSuccess" style="display:none;"></div>
+
         <div class="settings-profile-head">
           <div class="avatar" id="avatar">?</div>
           <div>
@@ -184,6 +186,22 @@
         el.classList.add('active');
       }
     });
+
+    // ---------- แจ้งผลหลังซื้อแพ็กเกจสำเร็จ (เด้งมาจากหน้าซื้อแพ็กเกจ ?purchased=1) ----------
+    (function showPurchaseSuccess() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('purchased') !== '1') return;
+      const box = document.getElementById('purchaseSuccess');
+      if (box) {
+        box.style.display = 'block';
+        box.innerHTML = ICON_CHECK + '<strong>ชำระเงินสำเร็จ</strong> — ระบบเปิดสิทธิ์เจ้าของร้านและต่ออายุการใช้งานให้แล้ว '
+          + 'ดู “วันหมดอายุ” ด้านล่าง และเมนูร้านค้าที่แถบด้านซ้ายได้เลย';
+      }
+      // ลบพารามิเตอร์ออกจาก URL เพื่อไม่ให้แบนเนอร์เด้งซ้ำเมื่อรีเฟรช
+      params.delete('purchased');
+      const qs = params.toString();
+      history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+    })();
 
     // ---------- แสดง/ซ่อนรหัสผ่าน ----------
     document.querySelectorAll('.toggle-password').forEach((btn) => {

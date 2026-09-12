@@ -215,7 +215,7 @@ async function verifySlip(buffer, expectedAmount) {
 function decideAutoApprove({ settings, record, result }) {
   if (!settings.autoApprove) return { approve: false, status: 'manual', detail: 'ปิดโหมดอนุมัติอัตโนมัติ — รอตรวจสอบเอง' };
   if (!result || !result.ok) {
-    return { approve: false, status: (result && result.code) || 'error', detail: (result && result.message) || ERROR_TEXT.verify_failed };
+    return { approve: false, status: (result && result.code) || 'error', detail: (result && result.message) || OWNER_TEXT.verify_failed };
   }
   if (result.duplicate) return { approve: false, status: 'duplicate', detail: 'สลิปนี้เคยถูกใช้ไปแล้ว' };
 

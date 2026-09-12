@@ -147,7 +147,7 @@ router.post('/api/shop/purchase', requireLogin, async (req, res) => {
     message: `ซื้อแพ็กเกจ "${pkg.name}" สำเร็จ ตอนนี้คุณเป็นเจ้าของร้านแล้ว`,
     role: 'shop',
     expiresAt,
-    redirect: '/shop/setup.html',
+    redirect: '/settings/profile?purchased=1',
   });
 });
 
