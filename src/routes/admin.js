@@ -146,8 +146,19 @@ router.post('/api/admin/google-settings', requireAdmin, async (req, res) => {
   if (clientId && !clientId.endsWith('.apps.googleusercontent.com')) {
     return res.status(400).json({ ok: false, field: 'clientId', message: 'Client ID ไม่ถูกต้อง — ต้องลงท้ายด้วย .apps.googleusercontent.com' });
   }
-  if (redirectUri && !/^https?:\/\/.+/i.test(redirectUri)) {
-    return res.status(400).json({ ok: false, field: 'redirectUri', message: 'Redirect URI ต้องขึ้นต้นด้วย http:// หรือ https://' });
+  if (redirectUri) {
+    let host = '';
+    try { host = new URL(redirectUri).host; } catch (err) {
+      return res.status(400).json({ ok: false, field: 'redirectUri', message: 'Redirect URI ไม่ถูกต้อง' });
+    }
+    // กันบันทึกโดเมนผิด (เช่น ตั้งค่าจากเครื่อง local แล้วเผลอบันทึกค่า localhost ลง production)
+    if (host !== req.get('host')) {
+      return res.status(400).json({
+        ok: false,
+        field: 'redirectUri',
+        message: `Redirect URI ต้องเป็นโดเมนของเว็บที่คุณตั้งค่าอยู่ — ค่าที่ถูกต้องคือ ${req.protocol}://${req.get('host')}/api/auth/google/callback`,
+      });
+    }
   }
 
   let changed = 0;
