@@ -110,8 +110,9 @@ router.get('/api/payment/promptpay-qr', requireLogin, wrap(async (req, res) => {
   res.type('png').set('Cache-Control', 'no-store').send(png);
 }));
 
-// รายการชำระเงินของฉัน
+// รายการชำระเงินของฉัน (ยกเลิกรายการที่หมดเวลาก่อน แล้วค่อยส่งข้อมูล)
 router.get('/api/my-payments', requireLogin, wrap(async (req, res) => {
+  await db.expireStalePayments();
   const rows = await db.listPackagePayments({ userId: req.user.id, limit: 20 });
   res.json({ ok: true, payments: rows.map((r) => paymentInstructions(r)) });
 }));
@@ -124,6 +125,11 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
   }
   if (rec.status !== 'pending') {
     return res.status(400).json({ ok: false, message: 'รายการนี้ถูกตรวจสอบไปแล้ว' });
+  }
+  // หมดเวลาแล้ว (ยังไม่แนบสลิป) → ยกเลิกรายการ ให้ลูกค้าสร้างใหม่
+  if (rec.seconds_left != null && Number(rec.seconds_left) <= 0) {
+    await db.setPackagePaymentStatus(rec.id, 'rejected', { note: 'หมดเวลาชำระเงิน — กรุณาสร้างรายการใหม่' });
+    return res.status(400).json({ ok: false, expired: true, message: 'หมดเวลาชำระเงินแล้ว (เกินเวลาที่กำหนด) กรุณาเลือกแพ็กเกจและสร้างรายการใหม่' });
   }
 
   const slipData = String(req.body?.slip || '');
@@ -175,6 +181,23 @@ router.post('/api/my-payments/:id/notify', requireLogin, wrap(async (req, res) =
   });
 }));
 
+// หมดเวลา (ลูกค้ายังไม่แนบสลิป) → ยกเลิกรายการ ให้สร้างใหม่ได้
+router.post('/api/my-payments/:id/expire', requireLogin, wrap(async (req, res) => {
+  const rec = await db.findPackagePaymentById(Number(req.params.id));
+  if (!rec || Number(rec.user_id) !== Number(req.user.id)) {
+    return res.status(404).json({ ok: false, message: 'ไม่พบรายการชำระเงิน' });
+  }
+  if (rec.status !== 'pending') {
+    return res.json({ ok: true, message: 'รายการนี้ถูกดำเนินการไปแล้ว' });
+  }
+  if (rec.notified === 1) {
+    return res.json({ ok: true, message: 'แจ้งโอนแล้ว — รอผู้ดูแลระบบตรวจสอบยอด' });
+  }
+  await db.setPackagePaymentStatus(rec.id, 'rejected', { note: 'หมดเวลาชำระเงิน — กรุณาเลือกแพ็กเกจและสร้างรายการใหม่' });
+  console.log(`⏱️ หมดเวลาชำระเงิน #${rec.id} (${rec.ref}) — ยกเลิกรายการอัตโนมัติ`);
+  res.json({ ok: true, message: 'หมดเวลาชำระเงิน — ยกเลิกรายการแล้ว' });
+}));
+
 // ---------------------------------------------------------------------------
 // เจ้าของระบบ — ตั้งค่าช่องทางรับเงิน
 // ---------------------------------------------------------------------------
@@ -185,6 +208,7 @@ router.get('/api/owner/payment-settings', requireOwner, (req, res) => {
     ok: true,
     settings: s,
     ready: hasAnyChannel(s),
+    expireMinutes: db.getPaymentExpireMinutes(),
     slip: {
       configured: slip.configured,
       hasKey: Boolean(slip.apiKey),
@@ -203,6 +227,7 @@ router.post('/api/owner/payment-settings', requireOwner, wrap(async (req, res) =
   const bankAccount = clip(String(body.bankAccount || '').replace(/[^\d-]/g, ''), 25);
   const bankHolder = clip(body.bankHolder, 80);
   const note = clip(body.note, 255);
+  const expireMinutes = Number(body.expireMinutes);
 
   if (promptpayId && ![10, 13, 15].includes(promptpayId.length)) {
     return res.status(400).json({ ok: false, field: 'promptpayId', message: 'หมายเลข PromptPay ต้องเป็นเบอร์มือถือ 10 หลัก หรือเลขบัตรประชาชน 13 หลัก' });
@@ -228,6 +253,9 @@ router.post('/api/owner/payment-settings', requireOwner, wrap(async (req, res) =
   await db.setSetting('pay_bank_holder', bankHolder);
   await db.setSetting('pay_note', note);
   await db.setSetting('pay_enabled', String(enabled));
+  if (Number.isFinite(expireMinutes) && expireMinutes >= 1 && expireMinutes <= 60) {
+    await db.setSetting('pay_expire_minutes', String(Math.trunc(expireMinutes)));
+  }
   await db.setSetting('slip_provider', 'easyslip');
   if (slipApiKey) await db.setSetting('slip_api_key', slipApiKey); // เว้นว่าง = ใช้ค่าเดิม
   await db.setSetting('slip_auto_approve', String(slipAutoApprove));
@@ -242,6 +270,7 @@ router.post('/api/owner/payment-settings', requireOwner, wrap(async (req, res) =
 // เจ้าของระบบ — คิวตรวจสอบยอด
 // ---------------------------------------------------------------------------
 router.get('/api/owner/package-payments', requireOwner, wrap(async (req, res) => {
+  await db.expireStalePayments();
   const status = ['pending', 'paid', 'rejected'].includes(req.query.status) ? req.query.status : null;
   const rows = await db.listPackagePayments({ status, limit: Number(req.query.limit) || 100 });
   const users = await Promise.all(rows.map((r) => db.findUserById(r.user_id)));

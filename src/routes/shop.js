@@ -113,6 +113,7 @@ router.post('/api/shop/purchase', requireLogin, async (req, res) => {
   // เปิดรับชำระเงินจริง → สร้างรายการรอโอน แล้วให้เจ้าของระบบกดยืนยันยอด (ยังไม่ให้สิทธิ์ทันที)
   const pay = getPaymentSettings();
   if (pay.enabled && hasAnyChannel(pay)) {
+    await db.expireStalePayments(); // ล้างรายการที่หมดเวลา ให้ลูกค้าสร้างใหม่ได้
     const existing = await db.findPendingPackagePaymentByUser(user.id);
     if (existing) {
       return res.json({ ok: true, pending: true, message: 'คุณมีรายการที่รอตรวจสอบยอดอยู่แล้ว', payment: paymentInstructions(existing) });

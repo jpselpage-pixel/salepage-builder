@@ -117,10 +117,17 @@
             <input type="text" id="bankHolder" maxlength="80" placeholder="เช่น นายสมชาย ใจดี">
           </div>
         </div>
-        <div class="settings-field" style="margin-top:16px;">
-          <label for="payNote">ข้อความถึงลูกค้า (ไม่บังคับ)</label>
-          <input type="text" id="payNote" maxlength="255" placeholder="เช่น โอนแล้วแจ้งใน LINE @ร้าน ภายใน 24 ชม.">
+        <div class="settings-grid" style="margin-top:16px;">
+          <div class="settings-field">
+            <label for="payNote">ข้อความถึงลูกค้า (ไม่บังคับ)</label>
+            <input type="text" id="payNote" maxlength="255" placeholder="เช่น โอนแล้วแจ้งใน LINE @ร้าน ภายใน 24 ชม.">
+          </div>
+          <div class="settings-field">
+            <label for="payExpire">หมดเวลาใน (นาที)</label>
+            <input type="number" id="payExpire" min="1" max="60" value="5">
+          </div>
         </div>
+        <p class="switch-desc" style="margin-top:8px;">ถ้าลูกค้ายังไม่แนบสลิปภายในเวลานี้ ระบบจะยกเลิกรายการให้อัตโนมัติ (ลูกค้าสร้างใหม่ได้)</p>
 
         <div class="settings-section">② ตรวจสลิปอัตโนมัติ (EasySlip) <span>— ตรวจว่าลูกค้าโอนจริง ยอดตรง และเข้าบัญชีคุณ แล้วอนุมัติให้เอง</span></div>
 
@@ -243,13 +250,14 @@
         : '<span class="pill pill-expired">ยังไม่ได้ใส่ API key</span>';
     }
 
-    function renderSettings(s, ready) {
+    function renderSettings(s, ready, expireMinutes) {
       document.getElementById('payEnabled').checked = Boolean(s.enabled);
       document.getElementById('promptpayId').value = s.promptpayId || '';
       document.getElementById('bankName').value = s.bankName || '';
       document.getElementById('bankAccount').value = s.bankAccount || '';
       document.getElementById('bankHolder').value = s.bankHolder || '';
       document.getElementById('payNote').value = s.note || '';
+      document.getElementById('payExpire').value = expireMinutes || 5;
 
       const badge = document.getElementById('payBadge');
       const detail = document.getElementById('payDetail');
@@ -270,7 +278,7 @@
 
     async function loadSettings() {
       const data = await api('/api/owner/payment-settings');
-      renderSettings(data.settings, data.ready);
+      renderSettings(data.settings, data.ready, data.expireMinutes);
       if (data.slip) renderSlip(data.slip);
     }
 
@@ -293,6 +301,7 @@
             bankAccount: document.getElementById('bankAccount').value.trim(),
             bankHolder: document.getElementById('bankHolder').value.trim(),
             note: document.getElementById('payNote').value.trim(),
+            expireMinutes: Number(document.getElementById('payExpire').value) || 5,
             slipApiKey: document.getElementById('slipApiKey').value.trim(),
             slipAutoApprove: document.getElementById('slipAutoApprove').checked,
           }),

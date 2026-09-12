@@ -1087,15 +1087,48 @@ async function createPackagePayment({ userId, packageId, packageName, durationMo
   return Number(result.insertId);
 }
 
+/** นาทีที่ลูกค้าต้องชำระเงินก่อนรายการหมดอายุ (ค่าเริ่มต้น 5 นาที) */
+function getPaymentExpireMinutes() {
+  const v = Number(getSetting('pay_expire_minutes'));
+  return Number.isFinite(v) && v > 0 ? Math.min(Math.trunc(v), 60) : 5;
+}
+
+/** คอลัมน์เวลาที่เหลือก่อนหมดอายุ — คิดใน SQL เพื่อไม่ให้มีปัญหาเขตเวลา */
+function secondsLeftSql(alias = '') {
+  const col = alias ? alias + '.created_at' : 'created_at';
+  return `TIMESTAMPDIFF(SECOND, NOW(), DATE_ADD(${col}, INTERVAL ${getPaymentExpireMinutes()} MINUTE))`;
+}
+
+/**
+ * ยกเลิกรายการที่หมดเวลาและยังไม่ได้แจ้งโอน (ลูกค้าแนบสลิปไม่ทัน)
+ * รายการที่แจ้งโอนแล้ว (notified = 1) จะไม่ถูกแตะ — ให้เจ้าของระบบตรวจเอง
+ */
+async function expireStalePayments() {
+  const mins = getPaymentExpireMinutes();
+  const [res] = await pool.execute(
+    `UPDATE package_payments
+        SET status = 'rejected',
+            note = 'หมดเวลาชำระเงิน (${mins} นาที) — กรุณาเลือกแพ็กเกจและสร้างรายการใหม่'
+      WHERE status = 'pending' AND notified = 0
+        AND created_at < DATE_SUB(NOW(), INTERVAL ${mins} MINUTE)`
+  );
+  return res.affectedRows || 0;
+}
+
 async function findPackagePaymentById(id) {
-  const [rows] = await pool.execute('SELECT * FROM package_payments WHERE id = ?', [id]);
+  const [rows] = await pool.execute(
+    `SELECT pp.*, ${secondsLeftSql('pp')} AS seconds_left FROM package_payments pp WHERE pp.id = ?`,
+    [id]
+  );
   return rows[0] || null;
 }
 
 /** รายการที่ยังรอตรวจสอบของผู้ใช้คนหนึ่ง (กันสร้างซ้ำ) */
 async function findPendingPackagePaymentByUser(userId) {
   const [rows] = await pool.execute(
-    "SELECT * FROM package_payments WHERE user_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1",
+    `SELECT pp.*, ${secondsLeftSql('pp')} AS seconds_left
+       FROM package_payments pp
+      WHERE pp.user_id = ? AND pp.status = 'pending' ORDER BY pp.id DESC LIMIT 1`,
     [userId]
   );
   return rows[0] || null;
@@ -1109,7 +1142,9 @@ async function listPackagePayments({ status = null, userId = null, limit = 100 }
   // LIMIT ต้องใส่เป็นตัวเลขในสตริง — MySQL ไม่รับค่า ? ใน prepared statement (ER_WRONG_ARGUMENTS)
   const n = Math.min(Math.max(Math.trunc(Number(limit)) || 100, 1), 500);
   const [rows] = await pool.execute(
-    `SELECT * FROM package_payments ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY id DESC LIMIT ${n}`,
+    `SELECT pp.*, ${secondsLeftSql('pp')} AS seconds_left FROM package_payments pp
+      ${where.length ? 'WHERE ' + where.map((w) => 'pp.' + w).join(' AND ') : ''}
+      ORDER BY pp.id DESC LIMIT ${n}`,
     args
   );
   return rows;
@@ -1421,6 +1456,8 @@ module.exports = {
   listPackagePayments,
   markPackagePaymentNotified,
   setPackagePaymentStatus,
+  getPaymentExpireMinutes,
+  expireStalePayments,
   listTables,
   findTableById,
   findTableByCode,

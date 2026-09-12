@@ -40,6 +40,8 @@ function paymentInstructions(rec) {
     createdAt: rec.created_at,
     qrUrl: s.promptpayId ? '/api/payment/promptpay-qr?amount=' + amount.toFixed(2) + '&ref=' + encodeURIComponent(rec.ref) : null,
     bank: s.bankAccount ? { name: s.bankName, account: s.bankAccount, holder: s.bankHolder } : null,
+    // เวลาที่เหลือก่อนหมดอายุ (วินาที) — คิดจากเซิร์ฟเวอร์/ฐานข้อมูล จึงรีเฟรชแล้วยังนับต่อถูกต้อง
+    secondsLeft: rec.seconds_left != null ? Math.max(0, Number(rec.seconds_left)) : null,
     note: rec.note || '',      // หมายเหตุของรายการนั้น ๆ (เช่น เหตุผลที่ถูกยกเลิก)
     payNote: s.note || '',     // ข้อความถึงลูกค้าจากการตั้งค่าช่องทางรับเงิน
     slipUrl: rec.slip_url || null,       // รูปสลิปที่ลูกค้าแนบ

@@ -125,6 +125,7 @@
           <h2>${esc(p.packageName)} · ${esc(p.durationMonths)} เดือน</h2>
           <div class="pay-amount">฿${money(p.amount)}</div>
           <div class="pay-ref">รหัสอ้างอิง <strong class="mono">${esc(p.ref)}</strong></div>
+          ${!p.notified && p.secondsLeft != null ? `<div class="pay-countdown">เหลือเวลา <b id="payCountdown">–</b></div>` : ''}
         </div>
         ${p.qrUrl ? `<div class="pay-qr">
           <img src="${esc(p.qrUrl)}" alt="PromptPay QR" width="230" height="230">
@@ -156,6 +157,39 @@
       });
       const btn = document.getElementById('notifyBtn');
       if (btn && !p.notified) btn.addEventListener('click', notifyPaid);
+
+      // นับถอยหลัง — ค่าเริ่มต้นมาจากเซิร์ฟเวอร์ จึงรีเฟรชแล้วยังนับต่อได้ถูกต้อง
+      if (!p.notified && p.secondsLeft != null) startCountdown(p.secondsLeft);
+      else stopCountdown();
+    }
+
+    let countdownTimer = null;
+    function stopCountdown() { if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; } }
+
+    function startCountdown(secondsLeft) {
+      stopCountdown();
+      let left = Math.max(0, Number(secondsLeft) || 0);
+      const paint = () => {
+        const el = document.getElementById('payCountdown');
+        if (!el) { stopCountdown(); return; }
+        el.textContent = Math.floor(left / 60) + ':' + String(left % 60).padStart(2, '0');
+        el.classList.toggle('low', left <= 60);
+      };
+      paint();
+      countdownTimer = setInterval(() => {
+        left -= 1;
+        if (left < 0) { stopCountdown(); onPaymentExpired(); return; }
+        paint();
+      }, 1000);
+    }
+
+    // หมดเวลา → ให้เซิร์ฟเวอร์ยกเลิกรายการ แล้วกลับไปหน้ารายการแพ็กเกจ
+    async function onPaymentExpired() {
+      const id = payment && payment.id;
+      try { if (id) await api('/api/my-payments/' + id + '/expire', { method: 'POST' }); } catch (e) { /* ข้ามได้ */ }
+      payment = null;
+      await loadMineAndRender();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     function readFileAsDataUrl(file) {
@@ -246,17 +280,15 @@
       document.getElementById('mockBackBtn').addEventListener('click', () => { confirmPkg = null; loadPackages(); });
     }
 
-    (async function init() {
-      try {
-        const info = await api('/api/payment-info');
-        payEnabled = Boolean(info.payment && info.payment.enabled);
-      } catch (err) { /* ถ้าอ่านไม่ได้ให้ถือว่าโหมดทดลอง */ }
+    // โหลดสถานะการชำระเงินของฉันแล้ววาดหน้าตามสถานะ (ใช้ซ้ำได้ เช่นตอนหมดเวลา)
+    async function loadMineAndRender() {
+      document.getElementById('notice').innerHTML = '';
       try {
         const mine = await api('/api/my-payments');
         const list = mine.payments || [];
         payment = list.find((p) => p.status === 'pending') || null;
         rejected = list.find((p) => p.status === 'rejected') || null;
-      } catch (err) { /* การแจ้งเตือนไม่บล็อกการซื้อ */ }
+      } catch (err) { payment = null; }
 
       if (rejected && !payment) {
         document.getElementById('notice').innerHTML = `<div class="pkg-notice">
@@ -265,6 +297,14 @@
       }
       if (payment) renderPayment();
       else await loadPackages();
+    }
+
+    (async function init() {
+      try {
+        const info = await api('/api/payment-info');
+        payEnabled = Boolean(info.payment && info.payment.enabled);
+      } catch (err) { /* ถ้าอ่านไม่ได้ให้ถือว่าโหมดทดลอง */ }
+      await loadMineAndRender();
     })();
   </script>
 </body>
