@@ -205,11 +205,11 @@
     const ICON_CHECK = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     const ICON_ALERT = '<svg viewBox="0 0 24 24" fill="none" width="13" height="13" style="vertical-align:-2px;margin-right:5px;"><path d="M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     let toastTimer = null;
-    function showToast(msg) {
+    function showToast(msg, duration) {
       toast.innerHTML = msg;
       toast.classList.add('show');
       clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => toast.classList.remove('show'), 4200);
+      toastTimer = setTimeout(() => toast.classList.remove('show'), duration || 4200);
     }
     async function api(path, opts) {
       const res = await fetch(path, opts);
@@ -454,6 +454,7 @@
       });
     }
 
+    let slipBusy = false;
     document.getElementById('ownerSlipFile').addEventListener('change', async (e) => {
       const f = e.target.files && e.target.files[0];
       e.target.value = '';
@@ -461,7 +462,13 @@
       slipTargetId = null;
       if (!f || !id) return;
       if (f.size > 2 * 1024 * 1024) { showToast(ICON_ALERT + 'ไฟล์สลิปใหญ่เกิน 2MB กรุณาย่อรูปก่อน'); return; }
-      showToast('กำลังส่งสลิปให้ระบบตรวจ...');
+      if (slipBusy) { showToast(ICON_ALERT + 'กำลังตรวจสลิปอยู่ กรุณารอสักครู่'); return; }
+
+      slipBusy = true;
+      const btn = document.querySelector('[data-slip="' + id + '"]');
+      if (btn) { btn.disabled = true; btn.textContent = 'กำลังตรวจ...'; }
+      // แสดงสถานะค้างไว้จนกว่าจะได้ผล (การตรวจกับ EasySlip อาจใช้เวลาถึง 30 วินาที)
+      showToast('⏳ กำลังส่งสลิปให้ EasySlip ตรวจ... กรุณารอ (อาจใช้เวลาถึง 30 วินาที)', 60000);
       try {
         const dataUrl = await readFileAsDataUrl(f);
         const data = await api('/api/owner/package-payments/' + id + '/verify-slip', {
@@ -472,8 +479,10 @@
         showToast(ICON_CHECK + esc(data.message));
       } catch (err) {
         showToast(ICON_ALERT + esc(err.message));
+      } finally {
+        slipBusy = false;
+        await loadQueue(true);
       }
-      await loadQueue();
     });
 
     document.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => {

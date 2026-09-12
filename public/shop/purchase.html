@@ -207,6 +207,9 @@
       const file = input && input.files && input.files[0];
       if (file && file.size > 2 * 1024 * 1024) { alert('ไฟล์สลิปใหญ่เกิน 2MB กรุณาย่อรูปก่อน'); return; }
       btn.disabled = true;
+      const oriText = btn.textContent;
+      // การตรวจสลิปกับ EasySlip อาจใช้เวลาถึง 30 วินาที — แสดงสถานะให้ชัด กันลูกค้ากดซ้ำ
+      if (file) btn.textContent = '⏳ กำลังตรวจสลิป... กรุณารอสักครู่';
       try {
         const body = {};
         if (file) body.slip = await readFileAsDataUrl(file);
@@ -221,6 +224,7 @@
       } catch (err) {
         alert(err.message);
         btn.disabled = false;
+        btn.textContent = oriText; // คืนข้อความปุ่ม ให้กดแจ้งใหม่ได้
       }
     }
 
