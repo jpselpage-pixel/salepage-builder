@@ -90,6 +90,8 @@
           <span id="payDetail" style="color:var(--muted);"></span>
         </div>
 
+        <div class="settings-section">① ช่องทางให้ลูกค้าจ่ายเงิน <span>— ใช้สร้าง QR และแสดงเลขบัญชีให้ลูกค้าโอน (จำเป็น)</span></div>
+
         <div class="switch-row" style="margin-bottom:18px;">
           <div>
             <div style="font-weight:600;font-size:14px;">เปิดรับชำระเงินจริง</div>
@@ -124,9 +126,11 @@
           <input type="text" id="payNote" maxlength="255" placeholder="เช่น โอนแล้วแจ้งใน LINE @ร้าน ภายใน 24 ชม.">
         </div>
 
-        <div class="switch-row" style="margin:24px 0 14px;border-top:1px solid var(--border);padding-top:20px;">
+        <div class="settings-section">② ตรวจสลิปอัตโนมัติ (EasySlip) <span>— ตรวจว่าลูกค้าโอนจริง ยอดตรง และเข้าบัญชีคุณ แล้วอนุมัติให้เอง</span></div>
+
+        <div class="switch-row" style="margin:0 0 14px;">
           <div>
-            <div style="font-weight:600;font-size:14px;">ตรวจสลิปอัตโนมัติ (EasySlip)</div>
+            <div style="font-weight:600;font-size:14px;">เปิดตรวจสลิปอัตโนมัติ</div>
             <div class="switch-desc">เปิด = ลูกค้าแนบสลิป แล้วระบบตรวจกับ EasySlip ให้เอง ถ้าเป็นสลิปจริงและยอดตรง จะเปิดสิทธิ์เจ้าของร้านให้ทันทีโดยไม่ต้องกดยืนยัน</div>
           </div>
           <label class="switch">
@@ -139,16 +143,12 @@
             <label for="slipApiKey">EasySlip API Key</label>
             <input type="password" id="slipApiKey" placeholder="วาง API key ที่นี่ (เว้นว่าง = ใช้ค่าเดิม)" autocomplete="new-password">
           </div>
-          <div class="settings-field">
-            <label for="slipReceiverAccount">บัญชีผู้รับที่ต้องตรง (พร้อมเพย์/เลขบัญชี)</label>
-            <input type="text" id="slipReceiverAccount" maxlength="25" placeholder="เช่น 0613242012">
-          </div>
         </div>
         <p class="switch-desc" style="margin-top:10px;line-height:1.9;">
           สถานะ API key: <span id="slipKeyStatus">—</span><br>
           วิธีทำให้อนุมัติอัตโนมัติได้ครบ: <b>1)</b> เพิ่ม IP เซิร์ฟเวอร์ <span class="mono">118.27.151.243</span> ใน whitelist ของ EasySlip ·
-          <b>2)</b> ยืนยันบัญชีผู้รับ — เลือกอย่างใดอย่างหนึ่ง: <b>(ก)</b> ลงทะเบียนบัญชีรับเงินไว้ในระบบ EasySlip (แม่นยำสุด ระบบจะจับคู่ให้เอง) หรือ <b>(ข)</b> กรอกเลขพร้อมเพย์/เลขบัญชีในช่อง “บัญชีผู้รับที่ต้องตรง” ด้านบน ระบบจะเทียบให้เอง โดยเทียบจาก <b>4 หลักท้าย</b> เพราะ EasySlip ส่งเลขบัญชีกลับมาแบบปิดบางหลัก (เช่น <span class="mono">xxx-x-x5678-x</span>) ·
-          <b>3)</b> ใส่ API key ที่นี่แล้วเปิดสวิตช์<br>
+          <b>2)</b> ใส่ API key ที่นี่แล้วเปิดสวิตช์<br>
+          การยืนยันบัญชีผู้รับ ระบบทำให้อัตโนมัติ 2 ชั้น — ชั้นแรกจับคู่กับ <b>บัญชีที่ลงทะเบียนไว้ใน EasySlip</b> (ถ้ามี ระบบจะใช้ชั้นนี้) ชั้นที่สองเทียบกับ <b>พร้อมเพย์/เลขบัญชีที่กรอกในข้อ ①</b> โดยเทียบ 4 หลักท้าย เพราะ EasySlip ส่งเลขบัญชีกลับมาแบบปิดบางหลัก (เช่น <span class="mono">xxx-x-x5678-x</span>) — <b>ไม่ต้องกรอกเลขบัญชีซ้ำที่นี่</b><br>
           ปลายทางที่ใช้: <span class="mono">POST https://api.easyslip.com/v2/verify/bank</span> (แบบ base64) · รูปสลิปไม่เกิน 2MB
         </p>
 
@@ -240,7 +240,6 @@
     let currentTab = 'pending';
 
     function renderSlip(slip) {
-      document.getElementById('slipReceiverAccount').value = slip.receiverAccount || '';
       document.getElementById('slipAutoApprove').checked = Boolean(slip.autoApprove);
       document.getElementById('slipKeyStatus').innerHTML = slip.hasKey
         ? '<span class="pill pill-valid">ตั้งค่าแล้ว</span> <span class="mono">' + esc(slip.keyMasked || '') + '</span>'
@@ -298,7 +297,6 @@
             bankHolder: document.getElementById('bankHolder').value.trim(),
             note: document.getElementById('payNote').value.trim(),
             slipApiKey: document.getElementById('slipApiKey').value.trim(),
-            slipReceiverAccount: document.getElementById('slipReceiverAccount').value.trim(),
             slipAutoApprove: document.getElementById('slipAutoApprove').checked,
           }),
         });

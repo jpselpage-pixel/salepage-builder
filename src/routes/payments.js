@@ -187,7 +187,7 @@ router.get('/api/owner/payment-settings', requireOwner, (req, res) => {
       configured: slip.configured,
       hasKey: Boolean(slip.apiKey),
       keyMasked: slip.apiKey ? '••••' + slip.apiKey.slice(-4) : null,
-      receiverAccount: slip.receiverAccount,
+      receiverAccounts: slip.receiverAccounts,
       autoApprove: slip.autoApprove,
     },
   });
@@ -214,7 +214,6 @@ router.post('/api/owner/payment-settings', requireOwner, wrap(async (req, res) =
 
   // ---- ตรวจสลิปอัตโนมัติ (EasySlip) ----
   const slipApiKey = String(body.slipApiKey || '').trim();
-  const slipReceiverAccount = clip(String(body.slipReceiverAccount || '').replace(/[^\d-]/g, ''), 25);
   const slipAutoApprove = Boolean(body.slipAutoApprove);
   const currentSlip = getSlipSettings();
   if (slipAutoApprove && !currentSlip.apiKey && !slipApiKey) {
@@ -229,8 +228,9 @@ router.post('/api/owner/payment-settings', requireOwner, wrap(async (req, res) =
   await db.setSetting('pay_enabled', String(enabled));
   await db.setSetting('slip_provider', 'easyslip');
   if (slipApiKey) await db.setSetting('slip_api_key', slipApiKey); // เว้นว่าง = ใช้ค่าเดิม
-  await db.setSetting('slip_receiver_account', slipReceiverAccount);
   await db.setSetting('slip_auto_approve', String(slipAutoApprove));
+  // เลิกใช้ช่องบัญชีผู้รับแยกแล้ว — ระบบดึงจากช่องทางรับเงินข้อ ① (พร้อมเพย์/เลขบัญชี) แทน
+  await db.setSetting('slip_receiver_account', '');
 
   console.log(`💳 [owner] บันทึกการตั้งค่ารับเงิน (เปิดใช้=${enabled}${promptpayId ? ' · PromptPay' : ''}${bankAccount ? ' · โอนธนาคาร' : ''} · ตรวจสลิปอัตโนมัติ=${slipAutoApprove})`);
   res.json({ ok: true, message: enabled ? 'บันทึกแล้ว — เปิดรับชำระเงินจริง' : 'บันทึกแล้ว — ยังปิดรับชำระเงิน (ใช้โหมดจำลอง)' });

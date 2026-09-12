@@ -40,10 +40,17 @@ const ERROR_TEXT = {
 };
 
 function getSlipSettings() {
+  const digits = (v) => String(v == null ? '' : v).replace(/\D/g, '');
+  // บัญชีผู้รับที่คาดหวัง — ใช้ค่าที่ตั้งไว้เอง ถ้าไม่มีก็ดึงจากช่องทางรับเงินที่กรอกไว้ (ไม่ต้องกรอกซ้ำ)
+  const candidates = [
+    db.getSetting('slip_receiver_account'),
+    db.getSetting('pay_bank_account'),
+    db.getSetting('pay_promptpay_id'),
+  ].map(digits).filter(Boolean);
   return {
     provider: db.getSetting('slip_provider') || 'easyslip',
     apiKey: db.getSetting('slip_api_key') || '',
-    receiverAccount: db.getSetting('slip_receiver_account') || '',
+    receiverAccounts: [...new Set(candidates)],
     autoApprove: db.getSetting('slip_auto_approve') === 'true',
     configured: Boolean(db.getSetting('slip_api_key')),
   };
@@ -151,15 +158,18 @@ function decideAutoApprove({ settings, record, result }) {
   // ยืนยันบัญชีผู้รับ: ผู้ให้บริการจับคู่กับบัญชีที่ลงทะเบียนไว้ให้ ถ้าไม่ได้ให้เทียบกับเลขที่ตั้งค่าเอง
   let receiverOk = Boolean(result.matchedAccount);
   let extra = receiverOk ? 'บัญชีผู้รับตรงกับที่ลงทะเบียนใน EasySlip' : '';
-  if (!receiverOk && settings.receiverAccount && accountMatches(settings.receiverAccount, result.receiverAccount)) {
-    receiverOk = true;
-    extra = 'บัญชีผู้รับตรงกับที่ตั้งค่าไว้ (เทียบ 4 หลักท้าย)';
+  if (!receiverOk) {
+    const wanted = Array.isArray(settings.receiverAccounts) ? settings.receiverAccounts : [];
+    if (wanted.some((acc) => accountMatches(acc, result.receiverAccount))) {
+      receiverOk = true;
+      extra = 'บัญชีผู้รับตรงกับช่องทางรับเงินที่ตั้งไว้ (เทียบ 4 หลักท้าย)';
+    }
   }
   if (!receiverOk) {
     return {
       approve: false,
       status: 'receiver_unverified',
-      detail: 'ยืนยันบัญชีผู้รับไม่ได้ — ลงทะเบียนบัญชีรับเงินในหน้า EasySlip (แม่นยำสุด) หรือใส่เลขบัญชีผู้รับในช่องตั้งค่า แล้วระบบจะอนุมัติอัตโนมัติได้',
+      detail: 'ยืนยันบัญชีผู้รับไม่ได้ — ตรวจว่าบัญชีที่ลงทะเบียนใน EasySlip หรือเลขพร้อมเพย์/เลขบัญชีในช่องทางรับเงิน ตรงกับบัญชีที่ลูกค้าโอนเข้า',
     };
   }
 

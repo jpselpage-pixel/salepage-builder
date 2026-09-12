@@ -277,3 +277,7 @@ table.admin-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 .pkg-item-details li { margin-bottom: 7px; }
 .pkg-item-details strong { display: block; }
 @media (max-width: 640px) { .pkg-detail-row { grid-template-columns: 1fr; } }
+
+/* ---------- หัวข้อแบ่งส่วนในหน้าตั้งค่า ---------- */
+.settings-section { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 14px; font-weight: 800; margin: 22px 0 14px; padding-top: 18px; border-top: 1px solid var(--border); }
+.settings-section span { font-weight: 500; font-size: 12.5px; color: var(--muted); }
