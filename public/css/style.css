@@ -596,3 +596,11 @@ input.valid { border-color: var(--success); box-shadow: 0 0 0 4px rgba(5, 150, 1
 .otp-block .dev-banner { margin-bottom: 12px; }
 #emailStep .otp-inputs { margin-bottom: 18px; }
 #emailStep .resend-row { text-align: center; }
+
+/* ปุ่มข้อความ (เหมือนลิงก์) ในขั้นตอน OTP */
+.back-row button {
+  background: none; border: none; color: var(--accent); font-weight: 700;
+  font-size: 13px; font-family: var(--font); cursor: pointer; padding: 4px 6px;
+  text-decoration: underline;
+}
+.back-row button:hover { color: var(--accent-hover, var(--accent)); opacity: .85; }

@@ -146,6 +146,7 @@
               <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 6">
             </div>
             <p class="resend-row">ไม่ได้รับรหัส? <button type="button" id="smsResendBtn" disabled>ส่งรหัสใหม่</button> <span id="smsResendTimer"></span></p>
+            <p class="back-row" style="text-align:center;"><button type="button" id="smsBackBtn">แก้ข้อมูล / เริ่มสมัครใหม่</button></p>
           </div>
 
           <label class="checkbox-row" for="terms">
@@ -186,6 +187,7 @@
           <button class="btn btn-primary" id="verifyEmailBtn" type="button">ยืนยันอีเมล</button>
 
           <p class="resend-row">ไม่ได้รับรหัส? <button type="button" id="emailResendBtn" disabled>ส่งรหัสใหม่</button> <span id="emailResendTimer"></span></p>
+          <p class="back-row" style="text-align:center;"><button type="button" id="emailBackBtn">← ยกเลิกและเริ่มสมัครใหม่</button></p>
         </div>
 
         <p class="auth-switch">
@@ -580,6 +582,39 @@
       if (hint && fields.password.value) hint.style.display = 'none';
     });
 
+    // ปุ่มย้อนกลับ (ทั้งสองขั้น) — กดแล้วกลับไปฟอร์มสมัครได้เสมอ ไม่ค้างอยู่กับ OTP
+    document.getElementById('smsBackBtn').addEventListener('click', () => {
+      if (confirm('ยกเลิกการยืนยัน OTP และกลับไปแก้ข้อมูลการสมัคร?')) backToForm();
+    });
+    document.getElementById('emailBackBtn').addEventListener('click', () => {
+      if (confirm('ยกเลิกและเริ่มสมัครใหม่?')) backToForm();
+    });
+
+    // ย้อนกลับไปหน้าแบบฟอร์มสมัคร — ใช้เมื่อผู้ใช้กดยกเลิกเอง หรือพบบัญชีถูกลบไประหว่างทำขั้นตอน
+    function backToForm(message) {
+      pendingUserId = null;
+      clearPending();
+      smsOtp.clear();
+      emailOtp.clear();
+      showSmsError('');
+      const emailErr = document.getElementById('emailErrorMsg');
+      if (emailErr) emailErr.style.display = 'none';
+      showDevBanner('sms', null);
+      showDevBanner('email', null);
+      smsBlock.style.display = 'none';
+      document.getElementById('emailStep').style.display = 'none';
+      const authSwitch = document.querySelector('.auth-switch');
+      if (authSwitch) authSwitch.style.display = '';
+      form.style.display = '';
+      // ให้ตรวจอีเมลซ้ำใหม่ (สถานะเดิมอาจไม่จริงแล้ว เช่น บัญชีเพิ่งถูกทำให้ใช้งานได้)
+      emailAvailable = null;
+      const emailResult = document.getElementById('emailCheckResult');
+      if (emailResult) emailResult.style.display = 'none';
+      updateSubmitState();
+      if (message) showActionError(message);
+      if (form.scrollIntoView) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     // ---------- ขั้นที่ 1: ขอ OTP ทาง SMS ----------
     sendOtpBtn.addEventListener('click', async () => {
       errorMsg.style.display = 'none';
@@ -699,6 +734,8 @@
         const data = await readJson(res);
 
         if (!data.ok) {
+          // บัญชีถูกลบไประหว่างทำขั้นตอน (เช่น แอดมินลบผู้ใช้) → กลับไปเริ่มสมัครใหม่ ไม่ค้างอยู่หน้าเดิม
+          if (res.status === 404) { backToForm('บัญชีนี้ถูกลบหรือถูกยกเลิกไประหว่างทำขั้นตอน — กรุณาสมัครใหม่อีกครั้ง'); return; }
           smsOtp.invalid(true);
           showSmsError(data.message || 'ยืนยันรหัส OTP ไม่สำเร็จ');
           return;
@@ -762,6 +799,7 @@
         });
         const data = await readJson(res);
         if (!data.ok) {
+          if (res.status === 404) { backToForm('บัญชีนี้ถูกลบหรือถูกยกเลิกระหว่างทำขั้นตอน — กรุณาสมัครใหม่อีกครั้ง'); return; }
           emailOtp.invalid(true);
           emailErrorMsg.textContent = data.message || 'ยืนยันอีเมลไม่สำเร็จ';
           emailErrorMsg.style.display = 'block';
@@ -814,6 +852,7 @@
           });
           const data = await readJson(res);
           if (!data.ok) {
+            if (res.status === 404) { backToForm('บัญชีนี้ถูกลบหรือถูกยกเลิกระหว่างทำขั้นตอน — กรุณาสมัครใหม่อีกครั้ง'); return; }
             const wait = (data.message || '').match(/(\d+)\s*วินาที/);
             if (wait) { remaining = Number(wait[1]); paint(); clearInterval(timerId); timerId = setInterval(tick, 1000); }
             else {
