@@ -99,6 +99,7 @@
               <div class="strength-label" id="strengthLabel"></div>
             </div>
             <span class="field-error" id="passwordError"></span>
+            <span class="field-hint" id="passwordRestoreHint" style="display:none;">หลังรีเฟรช เบราว์เซอร์ไม่เก็บรหัสผ่านไว้เพื่อความปลอดภัย — กรุณากรอกรหัสผ่านอีกครั้ง (รหัส OTP ที่ขอไว้ยังใช้ได้ ไม่ต้องขอใหม่)</span>
           </div>
 
           <div class="field">
@@ -466,6 +467,9 @@
         const termsErr = document.getElementById('termsError');
         if (termsErr) termsErr.style.display = 'none';
       }
+      // รหัสผ่านไม่ถูกเก็บไว้ (ความปลอดภัย) → ถ้าช่องว่าง ให้บอกผู้ใช้ตรงจุดว่าต้องกรอกอีกครั้ง
+      const pwHint = document.getElementById('passwordRestoreHint');
+      if (pwHint) pwHint.style.display = fields.password.value ? 'none' : 'block';
       if (saved.step === 'email') {
         document.getElementById('emailLabel').textContent = saved.emailMasked || 'อีเมลของคุณ';
         showDevBanner('email', saved.emailDevOtp);
@@ -569,6 +573,11 @@
       el.addEventListener('input', () => {
         if (pendingUserId) resetOtpStep('ข้อมูลถูกแก้ไขแล้ว — กรุณากด “ขอ OTP” ใหม่เพื่อรับรหัสสำหรับข้อมูลล่าสุด');
       });
+    });
+    // เริ่มพิมพ์รหัสผ่านอีกครั้ง → ซ่อนข้อความอธิบายเรื่องรีเฟรช
+    fields.password.addEventListener('input', () => {
+      const hint = document.getElementById('passwordRestoreHint');
+      if (hint && fields.password.value) hint.style.display = 'none';
     });
 
     // ---------- ขั้นที่ 1: ขอ OTP ทาง SMS ----------
