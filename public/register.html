@@ -131,10 +131,11 @@
           <!-- ขั้นยืนยัน OTP ทาง SMS (แสดงหลังกด "ขอ OTP") -->
           <div class="otp-block" id="smsOtpBlock" style="display:none;">
             <div class="dev-banner" id="smsDevBanner" style="display:none;">
-              <svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="vertical-align:-2px;margin-right:6px;"><path d="M9 3h6M10 3v6.5L4.6 18.4A2 2 0 006.5 22h11a2 2 0 001.9-3.6L14 9.5V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> <strong>โหมดทดสอบ (dev)</strong><br>
+              <svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="vertical-align:-2px;margin-right:6px;"><path d="M9 3h6M10 3v6.5L4.6 18.4A2 2 0 006.5 22h11a2 2 0 001.9-3.6L14 9.5V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> <strong>โหมดทดสอบ (dev)</strong> — ยังไม่ได้ตั้งค่า SMS จริง<br>
               รหัส OTP ของคุณ: <span class="code" id="smsDevCode">—</span>
             </div>
             <p class="otp-hint">กรอกรหัส 6 หลักที่ส่งไปยัง <strong id="smsPhoneLabel">—</strong></p>
+            <div class="error-msg" id="smsErrorMsg"></div>
             <div class="otp-inputs" id="smsOtpInputs">
               <input type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="หลักที่ 1">
               <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 2">
@@ -166,7 +167,7 @@
           </div>
 
           <div class="dev-banner" id="emailDevBanner" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="vertical-align:-2px;margin-right:6px;"><path d="M9 3h6M10 3v6.5L4.6 18.4A2 2 0 006.5 22h11a2 2 0 001.9-3.6L14 9.5V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> <strong>โหมดทดสอบ (dev)</strong><br>
+            <svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="vertical-align:-2px;margin-right:6px;"><path d="M9 3h6M10 3v6.5L4.6 18.4A2 2 0 006.5 22h11a2 2 0 001.9-3.6L14 9.5V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> <strong>โหมดทดสอบ (dev)</strong> — ยังไม่ได้ตั้งค่า SMTP<br>
             รหัส OTP ของคุณ: <span class="code" id="emailDevCode">—</span>
           </div>
 
@@ -301,7 +302,7 @@
       checkEmailBtn.textContent = 'กำลังตรวจ...';
       try {
         const res = await fetch('/api/check-email?email=' + encodeURIComponent(email));
-        const data = await res.json();
+        const data = await readJson(res);
         if (data.ok) {
           emailCheckResult.style.display = 'block';
           fields.email.classList.remove('valid', 'invalid');
@@ -352,13 +353,23 @@
       errorMsg.textContent = message;
       errorMsg.style.display = 'block';
     }
+    // แจ้งข้อผิดพลาดจากการกดปุ่ม แล้วเลื่อนให้เห็นแน่ ๆ (กล่องข้อความอยู่บนฟอร์ม ซึ่งอาจพ้นจอบนมือถือ)
+    function showActionError(message) {
+      showFormError(message);
+      if (errorMsg.scrollIntoView) errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    // อ่านคำตอบแบบ JSON — ถ้าเซิร์ฟเวอร์ตอบไม่ใช่ JSON ให้ข้อความที่อ่านรู้เรื่อง
+    async function readJson(res) {
+      const text = await res.text();
+      try { return JSON.parse(text); } catch { throw new Error('เซิร์ฟเวอร์ตอบสนองผิดปกติ (HTTP ' + res.status + ') กรุณาลองใหม่'); }
+    }
 
     // ---------- reCAPTCHA v2 (โหลดเมื่อตั้ง site key ใน .env เท่านั้น) ----------
     let recaptchaWidgetId = null;
     (async () => {
       try {
         const res = await fetch('/api/config');
-        const cfg = await res.json();
+        const cfg = await readJson(res);
         if (cfg.recaptchaSiteKey) {
           const box = document.getElementById('recaptchaBox');
           const div = document.createElement('div');
@@ -411,9 +422,17 @@
 
     const sendOtpBtn = document.getElementById('sendOtpBtn');
     const smsBlock = document.getElementById('smsOtpBlock');
-    const smsOtp = otpWidget('smsOtpInputs', updateSubmitState);
+    const smsOtp = otpWidget('smsOtpInputs', () => { updateSubmitState(); showSmsError(''); });
     const emailOtp = otpWidget('emailOtpInputs');
     let pendingUserId = null; // ได้จากขั้น "ขอ OTP" — ผูกกับข้อมูลที่กรอกตอนนั้น
+
+    // ข้อความผิดพลาดที่แสดงในกล่อง OTP (ใกล้จุดที่ผู้ใช้กำลังทำอยู่ ไม่ต้องเลื่อนขึ้นไปบนฟอร์ม)
+    function showSmsError(message) {
+      const el = document.getElementById('smsErrorMsg');
+      if (!el) return;
+      el.textContent = message || '';
+      el.style.display = message ? 'block' : 'none';
+    }
 
     // ---------- ปุ่ม "สมัครสมาชิก" กดได้เมื่อกรอกรหัส SMS ครบ 6 หลักเท่านั้น ----------
     function updateSubmitState() {
@@ -484,6 +503,7 @@
       smsBlock.style.display = 'none';
       document.getElementById('smsDevBanner').style.display = 'none';
       updateSubmitState();
+      showSmsError('');
       if (message) showFormError(message);
     }
     [fields.email, fields.password, fields.confirmPassword, fields.phone].forEach((el) => {
@@ -516,7 +536,7 @@
       if (recaptchaWidgetId !== null && typeof grecaptcha !== 'undefined') {
         payload.gRecaptchaResponse = grecaptcha.getResponse(recaptchaWidgetId);
         if (!payload.gRecaptchaResponse) {
-          showFormError('กรุณายืนยันว่าไม่ใช่บอท (reCAPTCHA)');
+          showActionError('กรุณายืนยันว่าไม่ใช่บอท (reCAPTCHA)');
           return;
         }
       }
@@ -531,20 +551,20 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        const data = await res.json();
+        const data = await readJson(res);
 
         if (!data.ok) {
           if (data.field && fieldErrors[data.field]) {
             showFieldError(data.field, data.message);
             fields[data.field].focus();
           } else {
-            showFormError(data.message || 'ขอรหัส OTP ไม่สำเร็จ กรุณาลองใหม่');
+            showActionError(data.message || 'ขอรหัส OTP ไม่สำเร็จ กรุณาลองใหม่');
           }
           return;
         }
         // ตอบแบบ honeypot (กรอกเร็วเกินไป/บอท) → ไม่มี userId จริง
         if (data.honeypot || !data.userId) {
-          showFormError('ขอรหัส OTP ไม่สำเร็จ กรุณาตรวจข้อมูลแล้วลองใหม่อีกครั้ง');
+          showActionError('ขอรหัส OTP ไม่สำเร็จ กรุณาตรวจข้อมูลแล้วลองใหม่อีกครั้ง');
           return;
         }
 
@@ -556,12 +576,13 @@
         document.getElementById('smsDevCode').textContent = devCode || '—';
         smsBlock.style.display = '';
         smsOtp.clear();
+        showSmsError('');
         updateSubmitState();
         smsBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
         smsOtp.focusFirst();
         startCooldown('sms');
-      } catch {
-        showFormError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      } catch (err) {
+        showActionError(err && err.message ? err.message : 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
       } finally {
         sendOtpBtn.disabled = false;
         sendOtpBtn.textContent = oldText;
@@ -576,14 +597,14 @@
       errorMsg.style.display = 'none';
 
       if (!pendingUserId) {
-        showFormError('กรุณากด “ขอ OTP” ที่ช่องเบอร์โทร แล้วกรอกรหัสให้ครบก่อน');
+        showActionError('กรุณากด “ขอ OTP” ที่ช่องเบอร์โทร แล้วกรอกรหัสให้ครบก่อน');
         return;
       }
       if (validateForm()) return;
       const code = smsOtp.code();
       if (code.length !== 6) {
         smsOtp.invalid(true);
-        showFormError('กรุณากรอกรหัส OTP ให้ครบ 6 หลัก');
+        showSmsError('กรุณากรอกรหัส OTP ให้ครบ 6 หลัก');
         return;
       }
 
@@ -596,11 +617,11 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: pendingUserId, code }),
         });
-        const data = await res.json();
+        const data = await readJson(res);
 
         if (!data.ok) {
           smsOtp.invalid(true);
-          showFormError(data.message || 'ยืนยันรหัส OTP ไม่สำเร็จ');
+          showSmsError(data.message || 'ยืนยันรหัส OTP ไม่สำเร็จ');
           return;
         }
         // กรณียืนยันอีเมลไว้แล้ว → เข้าสู่ระบบต่อได้เลย
@@ -619,8 +640,8 @@
         emailOtp.focusFirst();
         startCooldown('email');
         document.getElementById('emailStep').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      } catch {
-        showFormError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      } catch (err) {
+        showSmsError(err && err.message ? err.message : 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
       } finally {
         submitBtn.classList.remove('loading');
         updateSubmitState();
@@ -647,7 +668,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: pendingUserId, code }),
         });
-        const data = await res.json();
+        const data = await readJson(res);
         if (!data.ok) {
           emailOtp.invalid(true);
           emailErrorMsg.textContent = data.message || 'ยืนยันอีเมลไม่สำเร็จ';
@@ -694,7 +715,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId: pendingUserId, purpose: kind === 'email' ? 'email_verify' : 'signup' }),
           });
-          const data = await res.json();
+          const data = await readJson(res);
           if (!data.ok) {
             const wait = (data.message || '').match(/(\d+)\s*วินาที/);
             if (wait) { remaining = Number(wait[1]); paint(); clearInterval(timerId); timerId = setInterval(tick, 1000); }
@@ -705,7 +726,7 @@
                 el.textContent = data.message || 'ขอรหัสใหม่ไม่สำเร็จ';
                 el.style.display = 'block';
               } else {
-                showFormError(data.message || 'ขอรหัสใหม่ไม่สำเร็จ');
+                showSmsError(data.message || 'ขอรหัสใหม่ไม่สำเร็จ');
               }
             }
             return;
@@ -725,7 +746,7 @@
             el.textContent = 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่';
             el.style.display = 'block';
           } else {
-            showFormError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+            showSmsError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
           }
         }
       });
@@ -733,6 +754,17 @@
     }
     const cooldowns = { sms: makeCooldown('sms'), email: makeCooldown('email') };
     function startCooldown(kind) { if (cooldowns[kind]) cooldowns[kind].start(); }
+
+    // กัน autofill ของเบราว์เซอร์ไปเติมช่อง honeypot (จนถูกมองว่าเป็นบอท) — ล้างเมื่อผู้ใช้เริ่มใช้งานจริง
+    (function clearHoneypotOnUse() {
+      const events = ['keydown', 'pointerdown', 'touchstart', 'input'];
+      const clear = () => {
+        const hp = document.getElementById('website');
+        if (hp) hp.value = '';
+        events.forEach((e) => document.removeEventListener(e, clear));
+      };
+      events.forEach((e) => document.addEventListener(e, clear, { passive: true }));
+    })();
   </script>
 </body>
 </html>

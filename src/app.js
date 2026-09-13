@@ -61,7 +61,13 @@ app.use(shopRoutes);
 app.use(orderRoutes);
 app.use(publicRoutes);
 
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// ไฟล์หน้าเว็บ (.html) บังคับให้ตรวจสอบของใหม่ทุกครั้ง (no-cache) — กันเบราว์เซอร์ (โดยเฉพาะมือถือ)
+// ใช้หน้าเก่าที่ cache ไว้หลัง deploy ทำให้ผู้ใช้เห็นพฤติกรรมเก่า/ปุ่มไม่มี
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
 
 // config ให้หน้าเว็บใช้ (reCAPTCHA site key + โหมด dev + เปิดใช้ Google login หรือยัง)
 app.get('/api/config', (req, res) => {
