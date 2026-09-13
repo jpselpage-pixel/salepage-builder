@@ -303,3 +303,32 @@ button.cart-info strong { color: var(--text); }
   .gate-item { flex-wrap: wrap; }
   .gate-item .btn { width: 100%; }
 }
+
+/* ---------- ปุ่ม "ดูรายการที่เลือก" + หน้าต่างรายการที่เลือก (ฝั่งลูกค้า) ---------- */
+.cart-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.cart-bar .btn-primary { width: auto; }
+.cart-detail-btn {
+  display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+  padding: 12px 15px; font-size: 13.5px; font-weight: 700; font-family: var(--font);
+  border-radius: var(--radius-sm); border: 1px solid var(--border-strong);
+  background: var(--surface); color: var(--text); cursor: pointer;
+}
+.cart-detail-btn:hover:not(:disabled) { background: var(--surface-hover); }
+.cart-detail-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+.cart-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px dashed var(--border); }
+.cart-row:last-child { border-bottom: none; }
+.cart-row .cr-name { font-size: 14px; font-weight: 700; word-break: break-word; }
+.cart-row .cr-opt { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.55; }
+.cart-row .cr-side { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.cart-row .cr-line { font-weight: 700; font-size: 13.5px; min-width: 58px; text-align: right; }
+.cart-row .cr-edit { border: none; background: none; color: var(--accent); font-family: var(--font); font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 2px 4px; }
+@media (max-width: 430px) {
+  .cart-bar { flex-wrap: wrap; row-gap: 8px; }
+  .cart-info { width: 100%; text-align: center; }
+  .cart-actions { width: 100%; }
+  .cart-actions > * { flex: 1; justify-content: center; }
+  .pub-body { padding-bottom: 108px; }
+  .cart-row { flex-wrap: wrap; }
+  .cart-row .cr-side { width: 100%; justify-content: space-between; }
+}

@@ -14,7 +14,29 @@
 
   <div class="cart-bar" id="orderBar" style="display:none;">
     <div class="cart-info"><span id="orderCount">0</span> รายการ · <strong id="orderTotal">฿0</strong></div>
-    <button class="btn btn-primary" id="orderBtn" type="button">สั่งออเดอร์</button>
+    <div class="cart-actions">
+      <button class="cart-detail-btn" id="cartDetailBtn" type="button">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 5h11M9 12h11M9 19h11M4 5h.01M4 12h.01M4 19h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        ดูรายการที่เลือก
+      </button>
+      <button class="btn btn-primary" id="orderBtn" type="button">สั่งออเดอร์</button>
+    </div>
+  </div>
+
+  <!-- Modal รายการที่เลือกไว้ (ยังไม่สั่ง) -->
+  <div class="modal-overlay" id="cartModal">
+    <div class="modal">
+      <h3>รายการที่เลือกไว้ <span id="cartModalCount" style="color:var(--muted);font-size:13px;font-weight:600;"></span></h3>
+      <p class="sub">ตรวจสอบรายการก่อนกด “สั่งออเดอร์” — ปรับจำนวน แก้ไขตัวเลือก หรือลบได้จากตรงนี้</p>
+      <div id="cartModalList" style="max-height:52vh;overflow:auto;margin:8px 0;"></div>
+      <div class="bill-head" style="border-top:1px solid var(--border);padding-top:10px;">
+        <span style="color:var(--muted);font-size:13px;">ยอดรวมที่เลือก</span><span class="bill-total" id="cartModalTotal">฿0</span>
+      </div>
+      <div class="modal-actions">
+        <button class="mini-btn danger" id="cartClear" type="button">ล้างทั้งหมด</button>
+        <button class="mini-btn primary" id="cartModalClose" type="button">ปิด</button>
+      </div>
+    </div>
   </div>
 
   <!-- Modal รายการทั้งหมด (บิลของโต๊ะ) -->
@@ -196,7 +218,68 @@
       document.getElementById('orderTotal').textContent = money(total);
       bar.style.display = count ? '' : 'none';
       document.getElementById('orderBtn').disabled = !count;
+      const detailBtn = document.getElementById('cartDetailBtn');
+      if (detailBtn) detailBtn.disabled = !count;
+      // ถ้าเปิดหน้าต่างรายการที่เลือกอยู่ ให้อัปเดตตามการเปลี่ยนแปลงทันที
+      if (cartModal && cartModal.classList.contains('show')) renderCartModal();
     }
+
+    // ---------- โมดัล "รายการที่เลือกไว้" (ตะกร้าก่อนกดสั่ง) ----------
+    const cartModal = document.getElementById('cartModal');
+
+    function renderCartModal() {
+      const box = document.getElementById('cartModalList');
+      if (!box) return;
+      const entries = Object.values(sel).filter((x) => x.quantity > 0);
+      const count = entries.reduce((s, x) => s + x.quantity, 0);
+      const total = entries.reduce((s, x) => s + x.quantity * x.unitPrice, 0);
+      document.getElementById('cartModalCount').textContent = count ? '(' + count + ' รายการ)' : '';
+      document.getElementById('cartModalTotal').textContent = money(total);
+      document.getElementById('cartClear').disabled = !entries.length;
+      if (!entries.length) {
+        box.innerHTML = '<div style="color:var(--muted);font-size:13px;">ยังไม่มีรายการที่เลือก — แตะเมนูในรายการเพื่อเลือกก่อนสั่ง</div>';
+        return;
+      }
+      box.innerHTML = entries.map((c) => `
+        <div class="cart-row">
+          <div style="min-width:0;">
+            <div class="cr-name">${esc(c.name)}</div>
+            <div class="cr-opt">${c.optionsText ? esc(c.optionsText) + ' · ' : ''}${money(c.unitPrice)} × ${c.quantity}</div>
+          </div>
+          <div class="cr-side">
+            <span class="qty-ctl"><button type="button" data-cdec="${c.menuId}">−</button><span class="q">${c.quantity}</span><button type="button" data-cinc="${c.menuId}">+</button></span>
+            <span class="cr-line">${money(f2(c.unitPrice * c.quantity))}</span>
+            <button class="cr-edit" type="button" data-cedit="${c.menuId}">แก้ไข</button>
+            <button class="mini-btn danger" type="button" data-cremove="${c.menuId}">ลบ</button>
+          </div>
+        </div>`).join('');
+      box.querySelectorAll('[data-cinc]').forEach((b) => b.addEventListener('click', () => incQty(Number(b.dataset.cinc))));
+      box.querySelectorAll('[data-cdec]').forEach((b) => b.addEventListener('click', () => decQty(Number(b.dataset.cdec))));
+      box.querySelectorAll('[data-cremove]').forEach((b) => b.addEventListener('click', () => removeSel(Number(b.dataset.cremove))));
+      box.querySelectorAll('[data-cedit]').forEach((b) => b.addEventListener('click', () => openItem(Number(b.dataset.cedit))));
+    }
+
+    // ลบเมนูนี้ออกจากรายการที่เลือก
+    function removeSel(id) {
+      if (!sel[id]) return;
+      delete sel[id];
+      setRowQty(id, 0);
+      renderOrderBar();
+    }
+
+    function openCart() { renderCartModal(); cartModal.classList.add('show'); }
+    function closeCart() { cartModal.classList.remove('show'); renderOrderBar(); }
+
+    document.getElementById('cartDetailBtn').addEventListener('click', openCart);
+    document.getElementById('cartModalClose').addEventListener('click', closeCart);
+    cartModal.addEventListener('click', (e) => { if (e.target === cartModal) closeCart(); });
+    document.getElementById('cartClear').addEventListener('click', () => {
+      if (!Object.keys(sel).length) return;
+      if (!confirm('ล้างรายการที่เลือกไว้ทั้งหมด?')) return;
+      Object.keys(sel).forEach((id) => setRowQty(Number(id), 0));
+      sel = {};
+      renderOrderBar();
+    });
 
     // ---------- โมดัลเลือกตัวเลือก ----------
     const itemModal = document.getElementById('itemModal');
@@ -286,6 +369,7 @@
         const data = await api('/api/public/order/' + encodeURIComponent(token) + '/items', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         sel = {};
         S.bill = data.bill;
+        if (cartModal.classList.contains('show')) closeCart();
         render();
         alert('ส่งออเดอร์แล้ว ✓');
       } catch (err) {
