@@ -425,6 +425,63 @@
     const smsOtp = otpWidget('smsOtpInputs', () => { updateSubmitState(); showSmsError(''); });
     const emailOtp = otpWidget('emailOtpInputs');
     let pendingUserId = null; // ได้จากขั้น "ขอ OTP" — ผูกกับข้อมูลที่กรอกตอนนั้น
+    let pending = null;       // สถานะที่บันทึกไว้ใน sessionStorage (รีเฟรชแล้วทำต่อได้)
+
+    // ---------- จำสถานะขั้นตอนไว้ (sessionStorage) — กดรีเฟรชแล้วไม่ต้องเริ่มใหม่ ----------
+    const PENDING_KEY = 'pendingSignup';
+    function savePending() {
+      if (!pendingUserId || !pending) {
+        try { sessionStorage.removeItem(PENDING_KEY); } catch { /* ข้าม */ }
+        return;
+      }
+      try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(pending)); } catch { /* โหมดส่วนตัวบางตัวปิดการเก็บ */ }
+    }
+    function clearPending() {
+      pending = null;
+      try { sessionStorage.removeItem(PENDING_KEY); } catch { /* ข้าม */ }
+    }
+    // แสดง/ซ่อนกล่องรหัสทดสอบ (โหมด dev / ยังไม่ตั้ง SMTP)
+    function showDevBanner(kind, code) {
+      const banner = document.getElementById(kind === 'email' ? 'emailDevBanner' : 'smsDevBanner');
+      const text = document.getElementById(kind === 'email' ? 'emailDevCode' : 'smsDevCode');
+      if (!banner || !text) return;
+      banner.style.display = code ? 'block' : 'none';
+      text.textContent = code || '—';
+    }
+    // คืนสถานะที่ค้างไว้ตอนเปิด/รีเฟรชหน้า
+    function restorePending() {
+      let saved = null;
+      try { saved = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null'); } catch { saved = null; }
+      if (!saved || !saved.userId || !saved.savedAt) return;
+      if (Date.now() - Number(saved.savedAt) > 24 * 60 * 60 * 1000) { clearPending(); return; } // เก่าเกินไป ทิ้ง
+      pending = saved;
+      pendingUserId = Number(saved.userId);
+      // คืนค่าช่องอีเมล/เบอร์ (ไม่กระตุ้น event เพื่อไม่ให้ถือว่า "แก้ข้อมูล" แล้วล้างขั้นตอน)
+      if (saved.email) fields.email.value = saved.email;
+      if (saved.phone) fields.phone.value = saved.phone;
+      // ผู้ใช้ยอมรับข้อกำหนดไปแล้วตอนกด "ขอ OTP" → คืนค่าให้ ไม่ต้องติ๊กซ้ำหลังรีเฟรช
+      const termsBox = document.getElementById('terms');
+      if (termsBox) {
+        termsBox.checked = true;
+        const termsErr = document.getElementById('termsError');
+        if (termsErr) termsErr.style.display = 'none';
+      }
+      if (saved.step === 'email') {
+        document.getElementById('emailLabel').textContent = saved.emailMasked || 'อีเมลของคุณ';
+        showDevBanner('email', saved.emailDevOtp);
+        form.style.display = 'none';
+        const sw = document.querySelector('.auth-switch');
+        if (sw) sw.style.display = 'none';
+        document.getElementById('emailStep').style.display = '';
+        if (saved.emailResendAt) cooldowns.email.setEnd(saved.emailResendAt);
+      } else {
+        document.getElementById('smsPhoneLabel').textContent = saved.phoneMasked || 'เบอร์ของคุณ';
+        showDevBanner('sms', saved.devOtp);
+        smsBlock.style.display = '';
+        if (saved.resendAt) cooldowns.sms.setEnd(saved.resendAt);
+      }
+      updateSubmitState();
+    }
 
     // ข้อความผิดพลาดที่แสดงในกล่อง OTP (ใกล้จุดที่ผู้ใช้กำลังทำอยู่ ไม่ต้องเลื่อนขึ้นไปบนฟอร์ม)
     function showSmsError(message) {
@@ -496,17 +553,19 @@
       return firstError;
     }
 
-    // แก้ข้อมูลที่ใช้สมัคร → รหัส OTP เดิมใช้ไม่ได้แล้ว ต้องขอใหม่
+    // แก้ "อีเมล/เบอร์" ที่ใช้สมัคร → รหัส OTP เดิมใช้ไม่ได้แล้ว ต้องขอใหม่
+    // (รหัสผ่านแก้ได้ระหว่างขั้นตอน — ระบบจะบันทึกค่าล่าสุดตอนกด "สมัครสมาชิก")
     function resetOtpStep(message) {
       pendingUserId = null;
       smsOtp.clear();
       smsBlock.style.display = 'none';
       document.getElementById('smsDevBanner').style.display = 'none';
+      clearPending();
       updateSubmitState();
       showSmsError('');
       if (message) showFormError(message);
     }
-    [fields.email, fields.password, fields.confirmPassword, fields.phone].forEach((el) => {
+    [fields.email, fields.phone].forEach((el) => {
       el.addEventListener('input', () => {
         if (pendingUserId) resetOtpStep('ข้อมูลถูกแก้ไขแล้ว — กรุณากด “ขอ OTP” ใหม่เพื่อรับรหัสสำหรับข้อมูลล่าสุด');
       });
@@ -570,14 +629,24 @@
 
         // แสดงช่องกรอก OTP ในหน้านี้เลย (ไม่ต้องไปหน้าอื่น)
         pendingUserId = data.userId;
-        document.getElementById('smsPhoneLabel').textContent = data.phoneMasked || 'เบอร์ของคุณ';
         const devCode = data.dev && data.dev.devOtp;
-        document.getElementById('smsDevBanner').style.display = devCode ? 'block' : 'none';
-        document.getElementById('smsDevCode').textContent = devCode || '—';
+        // จำสถานะไว้ → รีเฟรชหน้าแล้วกลับมาที่ขั้นนี้ต่อได้
+        pending = {
+          userId: data.userId,
+          email: fields.email.value.trim(),
+          phone: normalizeThaiPhone(fields.phone.value),
+          phoneMasked: data.phoneMasked || '',
+          devOtp: devCode || null,
+          step: 'sms',
+          savedAt: Date.now(),
+        };
+        document.getElementById('smsPhoneLabel').textContent = data.phoneMasked || 'เบอร์ของคุณ';
+        showDevBanner('sms', devCode);
         smsBlock.style.display = '';
         smsOtp.clear();
         showSmsError('');
         updateSubmitState();
+        savePending();
         smsBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
         smsOtp.focusFirst();
         startCooldown('sms');
@@ -615,7 +684,8 @@
         const res = await fetch('/api/register/verify-sms', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: pendingUserId, code }),
+          // ส่งรหัสผ่านล่าสุดไปด้วย — ผู้ใช้อาจแก้รหัสผ่านระหว่างขั้นตอน (เช่นรีเฟรชหน้าแล้วพิมพ์ใหม่)
+          body: JSON.stringify({ userId: pendingUserId, code, password: fields.password.value }),
         });
         const data = await readJson(res);
 
@@ -630,12 +700,17 @@
         // ไปขั้นที่ 3: กรอกรหัส OTP ที่ส่งไปทางอีเมล
         const devCode = data.dev && data.dev.devOtp;
         document.getElementById('emailLabel').textContent = data.emailMasked || 'อีเมลของคุณ';
-        document.getElementById('emailDevBanner').style.display = devCode ? 'block' : 'none';
-        document.getElementById('emailDevCode').textContent = devCode || '—';
+        showDevBanner('email', devCode);
         form.style.display = 'none';
         const authSwitch = document.querySelector('.auth-switch');
         if (authSwitch) authSwitch.style.display = 'none';
         document.getElementById('emailStep').style.display = '';
+        // จำขั้นตอนนี้ไว้ด้วย → รีเฟรชแล้วกลับมาที่ขั้นยืนยันอีเมลต่อได้
+        if (pending) {
+          pending.step = 'email';
+          pending.emailMasked = data.emailMasked || '';
+          pending.emailDevOtp = devCode || null;
+        }
         emailOtp.clear();
         emailOtp.focusFirst();
         startCooldown('email');
@@ -675,6 +750,7 @@
           emailErrorMsg.style.display = 'block';
           return;
         }
+        clearPending(); // สมัครครบขั้นตอนแล้ว ไม่ต้องจำสถานะอีก
         window.location.href = data.redirect || '/settings/profile';
       } catch {
         emailErrorMsg.textContent = 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่';
@@ -690,8 +766,6 @@
     function makeCooldown(kind) {
       const btn = document.getElementById(kind + 'ResendBtn');
       const timerEl = document.getElementById(kind + 'ResendTimer');
-      const devCodeEl = document.getElementById(kind === 'email' ? 'emailDevCode' : 'smsDevCode');
-      const devBanner = document.getElementById(kind === 'email' ? 'emailDevBanner' : 'smsDevBanner');
       let remaining = 0;
       let timerId = null;
 
@@ -704,7 +778,13 @@
         paint();
         if (remaining <= 0) { clearInterval(timerId); timerId = null; }
       }
-      function start() { remaining = RESEND_WAIT_SECONDS; paint(); clearInterval(timerId); timerId = setInterval(tick, 1000); }
+      function setEnd(at) {
+        remaining = Math.max(0, Math.ceil((Number(at) - Date.now()) / 1000));
+        paint();
+        clearInterval(timerId);
+        timerId = remaining > 0 ? setInterval(tick, 1000) : null;
+      }
+      function start() { setEnd(Date.now() + RESEND_WAIT_SECONDS * 1000); }
 
       btn.addEventListener('click', async () => {
         if (remaining > 0) return;
@@ -731,14 +811,16 @@
             }
             return;
           }
-          if (data.dev && data.dev.devOtp) {
-            devCodeEl.textContent = data.dev.devOtp;
-            document.getElementById(devBanner).style.display = 'block';
+          if (data.dev && data.dev.devOtp) showDevBanner(kind, data.dev.devOtp);
+          if (pending) {
+            if (kind === 'email') { if (data.dev && data.dev.devOtp) pending.emailDevOtp = data.dev.devOtp; }
+            else if (data.dev && data.dev.devOtp) pending.devOtp = data.dev.devOtp;
+            pending.savedAt = Date.now();
           }
           const widget = kind === 'email' ? emailOtp : smsOtp;
           widget.clear();
           widget.focusFirst();
-          start();
+          startCooldown(kind);
         } catch {
           btn.disabled = false;
           if (kind === 'email') {
@@ -750,10 +832,19 @@
           }
         }
       });
-      return { start };
+      return { start, setEnd };
     }
     const cooldowns = { sms: makeCooldown('sms'), email: makeCooldown('email') };
-    function startCooldown(kind) { if (cooldowns[kind]) cooldowns[kind].start(); }
+    // เริ่มนับถอยหลัง + จำเวลาปลุกไว้ในสถานะที่บันทึก (รีเฟรชแล้วนับต่อ ไม่เริ่ม 60 ใหม่)
+    function startCooldown(kind) {
+      const at = Date.now() + RESEND_WAIT_SECONDS * 1000;
+      if (cooldowns[kind]) cooldowns[kind].setEnd(at);
+      if (pending) {
+        if (kind === 'email') pending.emailResendAt = at; else pending.resendAt = at;
+        pending.savedAt = Date.now();
+        savePending();
+      }
+    }
 
     // กัน autofill ของเบราว์เซอร์ไปเติมช่อง honeypot (จนถูกมองว่าเป็นบอท) — ล้างเมื่อผู้ใช้เริ่มใช้งานจริง
     (function clearHoneypotOnUse() {
@@ -765,6 +856,9 @@
       };
       events.forEach((e) => document.addEventListener(e, clear, { passive: true }));
     })();
+
+    // รีเฟรชหน้าแล้วกลับมาที่ขั้นตอนเดิม (ถ้ามีค้างไว้)
+    restorePending();
   </script>
 </body>
 </html>

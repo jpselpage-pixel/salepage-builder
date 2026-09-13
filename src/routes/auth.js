@@ -151,7 +151,7 @@ router.post('/api/register/verify-sms', wrap(async (req, res) => {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
   }
 
-  const { userId, code } = req.body || {};
+  const { userId, code, password } = req.body || {};
   const user = await db.findUserById(Number(userId));
   if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้ กรุณาสมัครใหม่' });
 
@@ -160,6 +160,14 @@ router.post('/api/register/verify-sms', wrap(async (req, res) => {
     if (!result.ok) return res.status(400).json({ ok: false, message: result.message });
     await db.setUserStatus(user.id, 'active');
     console.log(`✅ ยืนยันเบอร์โทรแล้ว: ${user.email} → ${user.phone}`);
+  }
+
+  // ผู้ใช้อาจแก้รหัสผ่านระหว่างขั้นตอน (เช่น รีเฟรชหน้าแล้วพิมพ์ใหม่) → บันทึกค่าล่าสุดให้
+  if (password) {
+    if (passwordStrengthScore(String(password)) < 3) {
+      return res.status(400).json({ ok: false, field: 'password', message: 'รหัสผ่านอ่อนเกินไป ต้องมีอย่างน้อย 8 ตัว และผ่านอย่างน้อย 3 เกณฑ์' });
+    }
+    await db.updateUserPassword(user.id, await bcrypt.hash(String(password), 10));
   }
 
   // ยืนยันอีเมลไว้แล้ว (ไม่ควรเกิดในเส้นทางสมัคร) → เข้าสู่ระบบให้เลย
