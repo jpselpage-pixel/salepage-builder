@@ -33,7 +33,6 @@
         <span style="color:var(--muted);font-size:13px;">ยอดรวมที่เลือก</span><span class="bill-total" id="cartModalTotal">฿0</span>
       </div>
       <div class="modal-actions">
-        <button class="mini-btn danger" id="cartClear" type="button">ล้างทั้งหมด</button>
         <button class="mini-btn primary" id="cartModalClose" type="button">ปิด</button>
       </div>
     </div>
@@ -235,7 +234,6 @@
       const total = entries.reduce((s, x) => s + x.quantity * x.unitPrice, 0);
       document.getElementById('cartModalCount').textContent = count ? '(' + count + ' รายการ)' : '';
       document.getElementById('cartModalTotal').textContent = money(total);
-      document.getElementById('cartClear').disabled = !entries.length;
       if (!entries.length) {
         box.innerHTML = '<div style="color:var(--muted);font-size:13px;">ยังไม่มีรายการที่เลือก — แตะเมนูในรายการเพื่อเลือกก่อนสั่ง</div>';
         return;
@@ -248,14 +246,11 @@
             <div class="cr-opt">${c.optionsText ? esc(c.optionsText) + ' · ' : ''}${money(c.unitPrice)} × ${c.quantity}</div>
           </div>
           <div class="cr-side">
-            <span class="qty-ctl"><button type="button" data-cdec="${c.menuId}">−</button><span class="q">${c.quantity}</span><button type="button" data-cinc="${c.menuId}">+</button></span>
             <span class="cr-line">${money(f2(c.unitPrice * c.quantity))}</span>
             <button class="cr-edit" type="button" data-cedit="${c.menuId}">แก้ไข</button>
             <button class="mini-btn danger" type="button" data-cremove="${c.menuId}">ลบ</button>
           </div>
         </div>`).join('');
-      box.querySelectorAll('[data-cinc]').forEach((b) => b.addEventListener('click', () => incQty(Number(b.dataset.cinc))));
-      box.querySelectorAll('[data-cdec]').forEach((b) => b.addEventListener('click', () => decQty(Number(b.dataset.cdec))));
       box.querySelectorAll('[data-cremove]').forEach((b) => b.addEventListener('click', () => removeSel(Number(b.dataset.cremove))));
       box.querySelectorAll('[data-cedit]').forEach((b) => b.addEventListener('click', () => openItem(Number(b.dataset.cedit))));
     }
@@ -274,13 +269,6 @@
     document.getElementById('cartDetailBtn').addEventListener('click', openCart);
     document.getElementById('cartModalClose').addEventListener('click', closeCart);
     cartModal.addEventListener('click', (e) => { if (e.target === cartModal) closeCart(); });
-    document.getElementById('cartClear').addEventListener('click', () => {
-      if (!Object.keys(sel).length) return;
-      if (!confirm('ล้างรายการที่เลือกไว้ทั้งหมด?')) return;
-      Object.keys(sel).forEach((id) => setRowQty(Number(id), 0));
-      sel = {};
-      renderOrderBar();
-    });
 
     // ---------- โมดัลเลือกตัวเลือก ----------
     const itemModal = document.getElementById('itemModal');
