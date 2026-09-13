@@ -5,7 +5,6 @@
 
 const path = require('node:path');
 const express = require('express');
-const db = require('./db');
 const { devMode } = require('./lib/settings');
 const { getGoogleConfig } = require('./lib/google-oauth');
 const { adminGuard, accountGuard, shopGuard, ownerGuard } = require('./middleware/guards');
@@ -77,9 +76,6 @@ app.get('/api/config', (req, res) => {
     devMode: devMode(),
     // ยังไม่ตั้งค่า key ของ Google → ซ่อนปุ่มล็อกอินด้วย Google (ไม่ให้ผู้ใช้สับสน)
     googleEnabled: getGoogleConfig().configured,
-    // [ชั่วคราว] สถานะการส่งอีเมลล่าสุด — ใช้ตรวจว่าอีเมล OTP ออกจริงไหม แล้วจะเอาออก
-    mailDbg: db.getSetting('mail_debug') || null,
-    smtpSet: Boolean(db.getSetting('smtp_host')),
   });
 });
 
