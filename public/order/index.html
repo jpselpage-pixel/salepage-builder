@@ -195,7 +195,7 @@
       if (!menu) return;
       // เมนูที่มีกลุ่มตัวเลือก และยังไม่เคยเลือก → เปิดหน้าต่างเลือกตัวเลือกอัตโนมัติเมื่อเริ่มกด +
       if (groupsForMenu(id).length > 0 && !sel[id]) { openItem(id, 1); return; }
-      if (!sel[id]) sel[id] = { menuId: id, name: menu.name, unitPrice: f2(Number(menu.price)), quantity: 0, optionItemIds: [], optionsText: '' };
+      if (!sel[id]) sel[id] = { menuId: id, name: menu.name, unitPrice: f2(Number(menu.price)), quantity: 0, optionItemIds: [], optionsText: '', imageUrl: menu.image_url || '' };
       sel[id].quantity = Math.min(99, sel[id].quantity + 1);
       setRowQty(id, sel[id].quantity);
       renderOrderBar();
@@ -242,8 +242,9 @@
       }
       box.innerHTML = entries.map((c) => `
         <div class="cart-row">
-          <div style="min-width:0;">
-            <div class="cr-name">${esc(c.name)}</div>
+          ${c.imageUrl ? `<img class="cr-thumb" src="${esc(c.imageUrl)}" alt="" loading="lazy">` : '<span class="cr-thumb cr-thumb-empty"></span>'}
+          <div class="cr-main">
+            <div class="cr-name" title="${esc(c.name)}">${esc(c.name)}</div>
             <div class="cr-opt">${c.optionsText ? esc(c.optionsText) + ' · ' : ''}${money(c.unitPrice)} × ${c.quantity}</div>
           </div>
           <div class="cr-side">
@@ -343,6 +344,7 @@
         menuId: editing.id, name: editing.name,
         unitPrice: f2(Number(editing.price) + extra),
         quantity: qty, optionItemIds: chosenIds, optionsText: chosen.join(', '),
+        imageUrl: editing.image_url || '',
       };
       const id = editing.id;
       const name = editing.name;
