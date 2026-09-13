@@ -10,7 +10,7 @@ const otp = require('../lib/otp');
 const mailer = require('../lib/mailer');
 const { sha256, randomToken } = require('../lib/crypto');
 const { futureSql } = require('../lib/time');
-const { maskPhone, isValidEmail, isValidThaiPhone, normalizeThaiPhone, passwordStrengthScore } = require('../lib/validators');
+const { maskPhone, maskEmail, isValidEmail, isValidThaiPhone, normalizeThaiPhone, passwordStrengthScore } = require('../lib/validators');
 const { devMode } = require('../lib/settings');
 const { rateLimit } = require('../middleware/rate-limit');
 const { isRecaptchaValid } = require('../middleware/recaptcha');
@@ -21,7 +21,13 @@ const { isAdminRole, isOwner, isShop } = require('../lib/roles');
 // ข้อความต่อท้าย log ตามบทบาท (ใช้แสดงใน console)
 const roleNote = (role) => (isOwner(role) ? ' (เจ้าของระบบ)' : role === 'admin' ? ' (แอดมิน)' : isShop(role) ? ' (เจ้าของร้าน)' : '');
 
+// ปลายทางหลังเข้าสู่ระบบ ตามบทบาทผู้ใช้
+const homeFor = (user) => (isAdminRole(user.role) ? '/admin/' : isShop(user.role) ? '/shop' : '/settings/profile');
+
 const router = express.Router();
+
+// Express 4 ไม่ดัก error จาก async handler ให้เอง — ถ้าไม่ดัก คำขอจะค้างโดยไม่มี response
+const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 // ---------------------------------------------------------------------------
 // API: ตรวจสอบอีเมลซ้ำ
@@ -45,8 +51,8 @@ router.get('/api/check-email', async (req, res) => {
 // ---------------------------------------------------------------------------
 // API: สมัครสมาชิก
 // ---------------------------------------------------------------------------
-router.post('/api/register', async (req, res) => {
-  const rl = rateLimit(req, { max: 10, windowMs: 60 * 1000 });
+router.post('/api/register', wrap(async (req, res) => {
+  const rl = rateLimit(req, { max: 10, windowMs: 60 * 1000, bucket: 'register' });
   if (rl.limited) {
     return res.status(429).json({
       ok: false,
@@ -127,68 +133,101 @@ router.post('/api/register', async (req, res) => {
   res.json({
     ok: true,
     message: continuePending
-      ? 'อีเมลนี้เคยสมัครค้างไว้ เราส่งรหัสยืนยันใหม่ให้แล้ว กรุณายืนยันเบอร์โทร'
-      : 'สมัครสมาชิกสำเร็จ กรุณายืนยันเบอร์โทรด้วยรหัส OTP',
-    redirect: '/otp.html',
+      ? 'อีเมลนี้เคยสมัครค้างไว้ — เราส่งรหัส OTP ใหม่ไปที่เบอร์ของคุณแล้ว'
+      : 'ส่งรหัส OTP ไปที่เบอร์โทรของคุณแล้ว กรุณากรอกรหัส 6 หลักเพื่อสมัครต่อ',
     userId: user.id,
     phoneMasked: maskPhone(user.phone),
     otpExpiresAt: otpResult.expiresAt,
     dev: devMode() ? { devOtp: otpResult.code } : null, // โหมด dev: แสดงรหัสเพื่อทดสอบ
   });
-});
+}));
 
 // ---------------------------------------------------------------------------
-// API: ยืนยัน OTP → activate + ล็อกอินอัตโนมัติ
+// API: ยืนยัน OTP ทาง SMS (ขั้นที่ 1 ของการสมัคร) → เปิดบัญชี + ส่ง OTP ทางอีเมล
 // ---------------------------------------------------------------------------
-router.post('/api/verify-otp', async (req, res) => {
-  const { userId, code } = req.body || {};
-  const user = await db.findUserById(Number(userId));
-  if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้ กรุณาสมัครใหม่' });
-
-  const result = await otp.verifyOtp(user.id, String(code || ''));
-  if (!result.ok) return res.status(400).json({ ok: false, message: result.message });
-
-  await db.setUserStatus(user.id, 'active');
-
-  // ล็อกอินอัตโนมัติ
-  await startSession(res, user.id);
-
-  // ส่งลิงก์ยืนยันอีเมลอัตโนมัติหลังสมัคร
-  // แสดงลิงก์ให้ทดสอบเฉพาะเมื่อ "ยังไม่ได้ตั้งค่า SMTP" (ช่องทางอีเมล) — ไม่เกี่ยวกับโหมด dev ซึ่งมีผลกับ SMS
-  let devVerifyLink = null;
-  if (!user.is_email_verified) {
-    const token = randomToken();
-    await db.createEmailToken({ userId: user.id, tokenHash: sha256(token), expiresAt: futureSql(24 * 60 * 60 * 1000) });
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
-    const sent = mailer.sendVerificationEmail({ email: user.email, token, baseUrl });
-    if (!mailer.getSmtpConfig().configured) devVerifyLink = sent.link;
-  }
-
-  console.log(`✅ ผู้ใช้ยืนยัน OTP แล้ว: ${user.email} → ${user.phone}${roleNote(user.role)} (ล็อกอินอัตโนมัติ)`);
-
-  res.json({
-    ok: true,
-    message: 'ยืนยันเบอร์โทรสำเร็จ เข้าสู่ระบบแล้ว',
-    redirect: isAdminRole(user.role) ? '/admin/' : isShop(user.role) ? '/shop' : '/settings/profile',
-    // ที่นี่ไม่มีรหัส OTP ใหม่ให้แสดง (ผู้ใช้เพิ่งกรอกรหัส) — ส่งเฉพาะลิงก์ยืนยันอีเมลเมื่อยังไม่ตั้งค่า SMTP
-    dev: devVerifyLink ? { devVerifyLink } : null,
-  });
-});
-
-// ---------------------------------------------------------------------------
-// API: ขอ OTP ใหม่ (จำกัด 60 วินาที)
-// ---------------------------------------------------------------------------
-router.post('/api/resend-otp', async (req, res) => {
-  const rl = rateLimit(req, { max: 5, windowMs: 60 * 1000 });
+router.post('/api/register/verify-sms', wrap(async (req, res) => {
+  const rl = rateLimit(req, { max: 10, windowMs: 60 * 1000, bucket: 'verify-sms' });
   if (rl.limited) {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
   }
 
-  const { userId } = req.body || {};
+  const { userId, code } = req.body || {};
+  const user = await db.findUserById(Number(userId));
+  if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้ กรุณาสมัครใหม่' });
+
+  if (user.status !== 'active') {
+    const result = await otp.verifyOtp(user.id, String(code || ''));
+    if (!result.ok) return res.status(400).json({ ok: false, message: result.message });
+    await db.setUserStatus(user.id, 'active');
+    console.log(`✅ ยืนยันเบอร์โทรแล้ว: ${user.email} → ${user.phone}`);
+  }
+
+  // ยืนยันอีเมลไว้แล้ว (ไม่ควรเกิดในเส้นทางสมัคร) → เข้าสู่ระบบให้เลย
+  if (user.is_email_verified === 1) {
+    await startSession(res, user.id);
+    return res.json({ ok: true, alreadyVerified: true, message: 'ยืนยันตัวตนครบแล้ว เข้าสู่ระบบแล้ว', redirect: homeFor(user) });
+  }
+
+  const sent = await otp.issueOtp(user.id, user.email, 'email_verify');
+  console.log(`📧 ส่งรหัสยืนยันอีเมลไปที่ ${user.email}`);
+
+  res.json({
+    ok: true,
+    message: 'ยืนยันเบอร์โทรสำเร็จ — เราส่งรหัส OTP ไปที่อีเมลของคุณแล้ว',
+    emailMasked: maskEmail(user.email),
+    otpExpiresAt: sent.expiresAt,
+    // แสดงรหัสให้ทดสอบเฉพาะเมื่อ "ยังไม่ได้ตั้งค่า SMTP" (ช่องทางอีเมลทำงานอิสระจากโหมด dev)
+    dev: mailer.getSmtpConfig().configured ? null : { devOtp: sent.code },
+  });
+}));
+
+// ---------------------------------------------------------------------------
+// API: ยืนยัน OTP ทางอีเมล (ขั้นที่ 2) → ยืนยันอีเมล + ล็อกอินอัตโนมัติ
+// ---------------------------------------------------------------------------
+router.post('/api/register/verify-email', wrap(async (req, res) => {
+  const rl = rateLimit(req, { max: 10, windowMs: 60 * 1000, bucket: 'verify-email' });
+  if (rl.limited) {
+    return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
+  }
+
+  const { userId, code } = req.body || {};
+  const user = await db.findUserById(Number(userId));
+  if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้ กรุณาสมัครใหม่' });
+
+  const result = await otp.verifyOtp(user.id, String(code || ''), 'email_verify');
+  if (!result.ok) return res.status(400).json({ ok: false, message: result.message });
+
+  await db.setEmailVerified(user.id, 1);
+  await startSession(res, user.id); // ล็อกอินอัตโนมัติเมื่อสมัครครบขั้นตอน
+  console.log(`🎉 สมัครสมาชิกครบขั้นตอน: ${user.email} (ยืนยันเบอร์ + อีเมลแล้ว)${roleNote(user.role)}`);
+
+  res.json({
+    ok: true,
+    message: 'ยืนยันอีเมลสำเร็จ เข้าสู่ระบบแล้ว',
+    redirect: homeFor(user),
+  });
+}));
+
+// ---------------------------------------------------------------------------
+// API: ขอ OTP ใหม่ (จำกัด 60 วินาที)
+// ---------------------------------------------------------------------------
+router.post('/api/resend-otp', wrap(async (req, res) => {
+  const rl = rateLimit(req, { max: 5, windowMs: 60 * 1000, bucket: 'resend-otp' });
+  if (rl.limited) {
+    return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
+  }
+
+  const { userId, purpose } = req.body || {};
   const user = await db.findUserById(Number(userId));
   if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้' });
 
-  const last = await db.findLatestOtp(user.id);
+  // ขอรหัสใหม่ได้ทั้งรหัสทาง SMS (สมัครสมาชิก) และรหัสทางอีเมล (ยืนยันอีเมล)
+  const which = purpose === 'email_verify' ? 'email_verify' : 'signup';
+  if (which === 'email_verify' && user.is_email_verified === 1) {
+    return res.status(400).json({ ok: false, message: 'อีเมลนี้ยืนยันแล้ว' });
+  }
+
+  const last = await db.findLatestOtp(user.id, which);
   if (last) {
     const lastCreated = new Date(last.created_at).getTime();
     const wait = RESEND_COOLDOWN_MS - (Date.now() - lastCreated);
@@ -200,20 +239,22 @@ router.post('/api/resend-otp', async (req, res) => {
     }
   }
 
-  const otpResult = await otp.issueOtp(user.id, user.phone);
+  const contact = which === 'email_verify' ? user.email : user.phone;
+  const otpResult = await otp.issueOtp(user.id, contact, which);
   res.json({
     ok: true,
-    message: 'ส่งรหัส OTP ใหม่แล้ว',
+    message: which === 'email_verify' ? 'ส่งรหัสยืนยันอีเมลใหม่แล้ว' : 'ส่งรหัส OTP ใหม่แล้ว',
     otpExpiresAt: otpResult.expiresAt,
-    dev: devMode() ? { devOtp: otpResult.code } : null,
+    // รหัสทางอีเมลแสดงได้เมื่อยังไม่ได้ตั้งค่า SMTP / รหัสทาง SMS แสดงเมื่ออยู่ในโหมด dev
+    dev: (which === 'email_verify' ? !mailer.getSmtpConfig().configured : devMode()) ? { devOtp: otpResult.code } : null,
   });
-});
+}));
 
 // ---------------------------------------------------------------------------
 // API: เข้าสู่ระบบ
 // ---------------------------------------------------------------------------
 router.post('/api/login', async (req, res) => {
-  const rl = rateLimit(req, { max: 10, windowMs: 60 * 1000 });
+  const rl = rateLimit(req, { max: 10, windowMs: 60 * 1000, bucket: 'login' });
   if (rl.limited) {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
   }
@@ -311,7 +352,7 @@ router.post('/api/send-verify-email', async (req, res) => {
 // API: เปลี่ยนรหัสผ่าน (ต้องล็อกอิน) — ตรวจรหัสเดิม + ตั้งใหม่ + ออกจากระบบทุกเครื่องยกเว้นเครื่องนี้
 // ---------------------------------------------------------------------------
 router.post('/api/change-password', async (req, res) => {
-  const rl = rateLimit(req, { max: 8, windowMs: 60 * 1000 });
+  const rl = rateLimit(req, { max: 8, windowMs: 60 * 1000, bucket: 'change-password' });
   if (rl.limited) {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
   }

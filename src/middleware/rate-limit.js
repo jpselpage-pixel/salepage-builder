@@ -8,8 +8,15 @@
 // ---------------------------------------------------------------------------
 const rateMap = new Map();
 
-function rateLimit(req, { max, windowMs }) {
-  const key = req.ip || 'unknown';
+/**
+ * จำกัดจำนวนคำขอต่อ IP (กันบอท)
+ * @param {object} req
+ * @param {{max:number, windowMs:number, bucket?:string}} opts
+ *   bucket = ชื่อกลุ่มการจำกัด — แยกตัวนับต่อ endpoint
+ *   (ถ้าไม่ส่ง จะใช้ตัวนับร่วมกันทั้งระบบ ซึ่งทำให้เพดานของ endpoint ที่เข้มที่สุดไปตัด endpoint อื่น)
+ */
+function rateLimit(req, { max, windowMs, bucket = 'global' }) {
+  const key = (req.ip || 'unknown') + '|' + bucket;
   const now = Date.now();
   const rec = rateMap.get(key);
   if (!rec || rec.resetAt <= now) {

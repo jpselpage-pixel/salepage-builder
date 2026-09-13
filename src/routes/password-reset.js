@@ -19,7 +19,7 @@ const router = express.Router();
 // API: กู้รหัสผ่าน — ขั้นที่ 1 ส่ง OTP ทางอีเมล
 // ---------------------------------------------------------------------------
 router.post('/api/forgot-password', async (req, res) => {
-  const rl = rateLimit(req, { max: 5, windowMs: 60 * 1000 });
+  const rl = rateLimit(req, { max: 5, windowMs: 60 * 1000, bucket: 'forgot' });
   if (rl.limited) {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
   }
@@ -69,7 +69,7 @@ router.post('/api/forgot-password', async (req, res) => {
 // API: กู้รหัสผ่าน — ขั้นที่ 2 ตรวจ OTP → คืน token สำหรับตั้งรหัสใหม่
 // ---------------------------------------------------------------------------
 router.post('/api/forgot-verify-otp', async (req, res) => {
-  const rl = rateLimit(req, { max: 10, windowMs: 60 * 1000 });
+  const rl = rateLimit(req, { max: 10, windowMs: 60 * 1000, bucket: 'forgot-verify' });
   if (rl.limited) {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
   }
@@ -100,7 +100,7 @@ router.post('/api/forgot-verify-otp', async (req, res) => {
 // API: กู้รหัสผ่าน — ขั้นที่ 3 ตั้งรหัสผ่านใหม่
 // ---------------------------------------------------------------------------
 router.post('/api/forgot-reset-password', async (req, res) => {
-  const rl = rateLimit(req, { max: 10, windowMs: 60 * 1000 });
+  const rl = rateLimit(req, { max: 10, windowMs: 60 * 1000, bucket: 'forgot-reset' });
   if (rl.limited) {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
   }
