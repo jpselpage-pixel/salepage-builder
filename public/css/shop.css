@@ -306,7 +306,7 @@ button.cart-info strong { color: var(--text); }
 
 /* ---------- ปุ่ม "ดูรายการที่เลือก" + หน้าต่างรายการที่เลือก (ฝั่งลูกค้า) ---------- */
 .cart-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.cart-bar .btn-primary { width: auto; }
+.cart-bar .btn { width: auto; }
 .cart-detail-btn {
   display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
   padding: 12px 15px; font-size: 13.5px; font-weight: 700; font-family: var(--font);
@@ -337,3 +337,14 @@ button.cart-info strong { color: var(--text); }
   .cart-row { flex-wrap: wrap; }
   .cart-row .cr-side { width: 100%; justify-content: space-between; }
 }
+
+/* ---------- ปุ่ม "สั่งออเดอร์" (สีเขียว = ยืนยันส่งออเดอร์) ---------- */
+.btn-order {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #fff;
+  border: none;
+  box-shadow: 0 8px 18px -8px rgba(5, 150, 105, .7);
+}
+.btn-order:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 22px -8px rgba(5, 150, 105, .8); }
+.btn-order:active:not(:disabled) { transform: translateY(0) scale(.98); }
+.btn-order:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
