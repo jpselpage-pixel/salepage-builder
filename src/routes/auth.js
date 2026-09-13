@@ -100,9 +100,7 @@ router.post('/api/register', wrap(async (req, res) => {
       message: 'เบอร์โทรศัพท์ไม่ถูกต้อง (เช่น 0812345678 หรือ 812345678)',
     });
   }
-  if (terms !== true && terms !== 'on' && terms !== 'true') {
-    return res.status(400).json({ ok: false, field: 'terms', message: 'กรุณายอมรับข้อกำหนดและนโยบายความเป็นส่วนตัว' });
-  }
+  // หมายเหตุ: ขั้น "ขอ OTP" ยังไม่บังคับติ๊กยอมรับข้อกำหนด — บังคับตอนกด "สมัครสมาชิก" (ยืนยัน OTP)
   if (!(await isRecaptchaValid(gRecaptchaResponse))) {
     return res.status(400).json({ ok: false, message: 'การยืนยันความเป็นมนุษย์ล้มเหลว กรุณาลองใหม่' });
   }
@@ -151,9 +149,14 @@ router.post('/api/register/verify-sms', wrap(async (req, res) => {
     return res.status(429).json({ ok: false, message: `ลองอีกครั้งในอีก ${rl.retryAfter} วินาที` });
   }
 
-  const { userId, code, password } = req.body || {};
+  const { userId, code, password, terms } = req.body || {};
   const user = await db.findUserById(Number(userId));
   if (!user) return res.status(404).json({ ok: false, message: 'ไม่พบผู้ใช้ กรุณาสมัครใหม่' });
+
+  // ขั้นสมัครจริงต้องยอมรับข้อกำหนดและนโยบายความเป็นส่วนตัวก่อน
+  if (terms !== true && terms !== 'on' && terms !== 'true') {
+    return res.status(400).json({ ok: false, field: 'terms', message: 'กรุณายอมรับข้อกำหนดและนโยบายความเป็นส่วนตัวก่อนกดสมัครสมาชิก' });
+  }
 
   if (user.status !== 'active') {
     const result = await otp.verifyOtp(user.id, String(code || ''));
@@ -214,6 +217,8 @@ router.post('/api/register/verify-email', wrap(async (req, res) => {
 
   await db.setEmailVerified(user.id, 1);
   await startSession(res, user.id); // ล็อกอินอัตโนมัติเมื่อสมัครครบขั้นตอน
+  // แจ้งเตือนลูกค้าว่าสมัครสมาชิกสำเร็จ (ส่งแบบไม่บล็อกคำตอบ)
+  mailer.sendWelcomeEmail({ email: user.email, baseUrl: `${req.protocol}://${req.get('host')}` });
   console.log(`🎉 สมัครสมาชิกครบขั้นตอน: ${user.email} (ยืนยันเบอร์ + อีเมลแล้ว)${roleNote(user.role)}`);
 
   res.json({

@@ -146,7 +146,6 @@
               <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 6">
             </div>
             <p class="resend-row">ไม่ได้รับรหัส? <button type="button" id="smsResendBtn" disabled>ส่งรหัสใหม่</button> <span id="smsResendTimer"></span></p>
-            <p class="back-row" style="text-align:center;"><button type="button" id="smsBackBtn">แก้ข้อมูล / เริ่มสมัครใหม่</button></p>
           </div>
 
           <label class="checkbox-row" for="terms">
@@ -187,7 +186,6 @@
           <button class="btn btn-primary" id="verifyEmailBtn" type="button">ยืนยันอีเมล</button>
 
           <p class="resend-row">ไม่ได้รับรหัส? <button type="button" id="emailResendBtn" disabled>ส่งรหัสใหม่</button> <span id="emailResendTimer"></span></p>
-          <p class="back-row" style="text-align:center;"><button type="button" id="emailBackBtn">← ยกเลิกและเริ่มสมัครใหม่</button></p>
         </div>
 
         <p class="auth-switch">
@@ -464,7 +462,8 @@
         if (saved.phone) fields.phone.value = saved.phone;
         const t = document.getElementById('terms');
         if (t) {
-          t.checked = true;
+          // คืนค่าตามที่ผู้ใช้ติ๊กไว้จริง (ไม่ได้ติ๊กตอนขอ OTP ก็ไม่ติ๊กให้)
+          t.checked = !!saved.terms;
           const te = document.getElementById('termsError');
           if (te) te.style.display = 'none';
         }
@@ -513,14 +512,20 @@
       el.style.display = message ? 'block' : 'none';
     }
 
-    // ---------- ปุ่ม "สมัครสมาชิก" กดได้เมื่อกรอกรหัส SMS ครบ 6 หลักเท่านั้น ----------
+    // ---------- ปุ่ม "สมัครสมาชิก" กดได้เมื่อกรอกรหัส SMS ครบ 6 หลัก + ยอมรับข้อกำหนดแล้ว ----------
     function updateSubmitState() {
-      submitBtn.disabled = !(pendingUserId && smsOtp.code().length === 6);
+      const termsOk = document.getElementById('terms').checked;
+      submitBtn.disabled = !(pendingUserId && smsOtp.code().length === 6 && termsOk);
+      // หลังขอ OTP แล้วแต่ยังไม่ติ๊กนโยบาย → แสดงเหตุผลไว้ใต้ช่องติ๊ก (ปุ่มจะกดไม่ได้)
+      const termsError = document.getElementById('termsError');
+      if (termsError) termsError.style.display = (pendingUserId && !termsOk) ? 'block' : 'none';
     }
     updateSubmitState();
+    document.getElementById('terms').addEventListener('change', updateSubmitState);
 
     // ---------- ตรวจความถูกต้องของฟอร์ม (ใช้ทั้งตอนกด "ขอ OTP" และตอนส่งฟอร์ม) ----------
-    function validateForm() {
+    // requireTerms = true เฉพาะตอนกด "สมัครสมาชิก" — ขอ OTP ยังไม่ต้องติ๊กนโยบาย
+    function validateForm({ requireTerms = true } = {}) {
       const validators = {
         email() {
           const v = fields.email.value.trim();
@@ -561,7 +566,10 @@
 
       const terms = document.getElementById('terms');
       const termsError = document.getElementById('termsError');
-      if (!terms.checked) {
+      if (!requireTerms) {
+        // ขั้นขอ OTP ไม่บังคับติ๊กนโยบาย (บังคับตอนกด "สมัครสมาชิก")
+        termsError.style.display = 'none';
+      } else if (!terms.checked) {
         termsError.style.display = 'block';
         if (!firstError) firstError = 'terms';
       } else {
@@ -598,14 +606,6 @@
       if (hint && fields.password.value) hint.style.display = 'none';
     });
 
-    // ปุ่มย้อนกลับ (ทั้งสองขั้น) — กดแล้วกลับไปฟอร์มสมัครได้เสมอ ไม่ค้างอยู่กับ OTP
-    document.getElementById('smsBackBtn').addEventListener('click', () => {
-      if (confirm('ยกเลิกการยืนยัน OTP และกลับไปแก้ข้อมูลการสมัคร?')) backToForm();
-    });
-    document.getElementById('emailBackBtn').addEventListener('click', () => {
-      if (confirm('ยกเลิกและเริ่มสมัครใหม่?')) backToForm();
-    });
-
     // ย้อนกลับไปหน้าแบบฟอร์มสมัคร — ใช้เมื่อผู้ใช้กดยกเลิกเอง หรือพบบัญชีถูกลบไประหว่างทำขั้นตอน
     function backToForm(message) {
       pendingUserId = null;
@@ -634,7 +634,7 @@
     // ---------- ขั้นที่ 1: ขอ OTP ทาง SMS ----------
     sendOtpBtn.addEventListener('click', async () => {
       errorMsg.style.display = 'none';
-      if (validateForm()) return;
+      if (validateForm({ requireTerms: false })) return;
 
       // ถ้ายังไม่เคยตรวจอีเมลซ้ำ ตรวจทันที
       if (emailAvailable === null) {
@@ -703,6 +703,7 @@
           phoneMasked: data.phoneMasked || '',
           devOtp: devCode || null,
           step: 'sms',
+          terms: document.getElementById('terms').checked,
           savedAt: Date.now(),
         };
         document.getElementById('smsPhoneLabel').textContent = data.phoneMasked || 'เบอร์ของคุณ';
@@ -750,7 +751,8 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           // ส่งรหัสผ่านล่าสุดไปด้วย — ผู้ใช้อาจแก้รหัสผ่านระหว่างขั้นตอน (เช่นรีเฟรชหน้าแล้วพิมพ์ใหม่)
-          body: JSON.stringify({ userId: pendingUserId, code, password: fields.password.value }),
+          // terms = ยอมรับข้อกำหนด (บังคับที่ขั้นนี้)
+          body: JSON.stringify({ userId: pendingUserId, code, password: fields.password.value, terms: document.getElementById('terms').checked }),
         });
         const data = await readJson(res);
 
