@@ -69,8 +69,8 @@ async function sendEmail({ to, subject, htmlBody, text }) {
         from: fromHeader,
         to,
         subject,
-        text: text || undefined,   // ฉบับข้อความล้วน (multipart/alternative) ช่วยเรื่องการกรองสแปม
-        html: htmlBody,
+        text: text || undefined,   // ส่งเฉพาะข้อความล้วนเมื่อไม่มี HTML (ผ่านตัวกรองสแปมง่ายที่สุด)
+        html: htmlBody || undefined,
         // Reply-To เป็นที่อยู่จริง (ไม่ใช่ no-reply) — ผู้ให้บริการเมลมองว่าเป็นเมลธุรกรรมที่น่าเชื่อถือกว่า
         replyTo: cfg.from && cfg.from.includes('<') === false ? cfg.from : undefined,
       });
@@ -81,11 +81,12 @@ async function sendEmail({ to, subject, htmlBody, text }) {
   }
 
   // ยังไม่ได้ตั้งค่า SMTP → จำลอง (บันทึกที่ console)
+  const preview = htmlBody ? htmlBody.replace(/<[^>]+>/g, '') : String(text || '');
   console.log('📧 [อีเมล — โหมดจำลอง: ยังไม่ได้ตั้งค่า SMTP]');
   console.log('   ถึง: ' + to);
   console.log('   หัวข้อ: ' + subject);
   console.log('   เนื้อหา:');
-  console.log('   ' + htmlBody.replace(/<[^>]+>/g, '').replace(/\n+/g, '\n   ').trim());
+  console.log('   ' + preview.replace(/\n+/g, '\n   ').trim());
   console.log('   ⚠️ เตือน: ยังไม่ได้ตั้งค่า SMTP → กรุณากรอกค่าที่หน้าแอดมิน');
   return { ok: true, simulated: true };
 }
@@ -138,46 +139,33 @@ function sendVerificationEmail({ email, token, baseUrl }) {
  * ส่งจริงทันทีเมื่อตั้งค่า SMTP ครบ — ไม่ขึ้นกับโหมด dev
  * @returns {Promise<{ok:boolean, simulated?:boolean, error?:string}>}
  */
+/**
+ * ส่งรหัส OTP ทางอีเมล — ข้อความสั้น ภาษาอังกฤษล้วน ส่งแบบ text-only (ไม่มี HTML)
+ * รูปแบบนี้ผ่านตัวกรองสแปมได้ดีที่สุด และใส่รหัสไว้ในหัวข้อเมลเพื่อให้เห็นได้แม้ตกถังขยะ
+ *  - purpose 'email_verify'  → ยืนยันอีเมลตอนสมัครสมาชิก
+ *  - purpose อื่น ๆ           → กู้รหัสผ่าน
+ * @returns {Promise<{ok:boolean, simulated?:boolean, error?:string}>}
+ */
 function sendOtpEmail({ email, code, purpose = 'password_reset' }) {
   const isVerify = purpose === 'email_verify';
-  // หัวข้ออังกฤษ ASCII + เนื้อหาธรรมดาไม่มีสี/ตัวใหญ่ — Gmail กรองเมลหัวข้อไทยและเมลตกแต่งจากผู้ส่งรายใหม่
-  const subject = isVerify ? 'Your QPage email verification code' : 'Verification code (OTP) - Member System';
-  const htmlBody = isVerify
-    ? `
-  <div style="font-family:'Noto Sans Thai',Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;padding:10px;color:#101828;line-height:1.7;font-size:15px;">
-    <p style="margin:0 0 14px;font-weight:800;font-size:16px;color:#4f46e5;">QPage</p>
-    <h2 style="font-size:18px;font-weight:800;margin:0 0 12px;">ยืนยันอีเมลของคุณ</h2>
-    <p style="margin:0 0 10px;">สวัสดีครับ/ค่ะ,</p>
-    <p style="margin:0 0 14px;">มีผู้ขอสมัครสมาชิกด้วยอีเมลนี้ รหัสยืนยันเพื่อยืนยันอีเมลของคุณคือ</p>
-    <p style="margin:0 0 14px;font-size:26px;font-weight:800;letter-spacing:6px;">${code}</p>
-    <p style="margin:0 0 8px;">รหัสนี้มีอายุ 5 นาที และใช้ได้ครั้งเดียว</p>
-    <p style="margin:0 0 8px;">กรอกรหัสนี้ในหน้าสมัครสมาชิกเพื่อยืนยันอีเมลให้เสร็จสิ้น</p>
-    <p style="margin:0 0 8px;font-size:13px;color:#667085;">เพื่อความปลอดภัย กรุณาอย่าบอกรหัสนี้กับผู้อื่น — เจ้าหน้าที่ของเราไม่ขอรหัสจากคุณ</p>
-    <hr style="border:none;border-top:1px solid #e4e7ec;margin:18px 0;">
-    <p style="margin:0;font-size:12.5px;color:#98a2b3;">อีเมลฉบับนี้ส่งอัตโนมัติจากระบบ QPage หากคุณไม่ได้เป็นผู้สมัคร กรุณาเพิกเฉยอีเมลนี้</p>
-  </div>`
-    : `
-    <p>สวัสดีครับ/ค่ะ,</p>
-    <p>คุณได้ขอรหัสยืนยันเพื่อกู้รหัสผ่านบัญชีของคุณ</p>
-    <p>รหัสยืนยันของคุณคือ: ${code}</p>
-    <p>รหัสนี้มีอายุ 5 นาที หากคุณไม่ได้เป็นผู้ขอ กรุณาเพิกเฉยอีเมลนี้</p>
-  `;
-  // ฉบับข้อความล้วน (multipart/alternative) — ช่วยให้ผู้ให้บริการเมลไม่ตีเป็นสแปม
-  const textBody = isVerify
-    ? ['QPage — ยืนยันอีเมลของคุณ', '',
-      'สวัสดีครับ/ค่ะ,', '',
-      'มีผู้ขอสมัครสมาชิกด้วยอีเมลนี้ รหัสยืนยันเพื่อยืนยันอีเมลของคุณคือ: ' + code, '',
-      'รหัสนี้มีอายุ 5 นาที และใช้ได้ครั้งเดียว',
-      'กรอกรหัสนี้ในหน้าสมัครสมาชิกเพื่อยืนยันอีเมลให้เสร็จสิ้น', '',
-      'เพื่อความปลอดภัย กรุณาอย่าบอกรหัสนี้กับผู้อื่น — เจ้าหน้าที่ของเราไม่ขอรหัสจากคุณ', '',
-      'อีเมลฉบับนี้ส่งอัตโนมัติจากระบบ QPage หากคุณไม่ได้เป็นผู้สมัคร กรุณาเพิกเฉยอีเมลนี้'].join('\n')
-    : ['สวัสดีครับ/ค่ะ,', '', 'คุณได้ขอรหัสยืนยันเพื่อกู้รหัสผ่านบัญชีของคุณ',
-      'รหัสยืนยันของคุณคือ: ' + code, '', 'รหัสนี้มีอายุ 5 นาที หากคุณไม่ได้เป็นผู้ขอ กรุณาเพิกเฉยอีเมลนี้'].join('\n');
+  const subject = (isVerify ? 'QPage email verification code: ' : 'QPage password reset code: ') + code;
+  const text = [
+    isVerify
+      ? 'Your QPage email verification code is ' + code + '.'
+      : 'Your QPage password reset code is ' + code + '.',
+    '',
+    isVerify
+      ? 'Enter it on the signup page to verify your email address.'
+      : 'Enter it on the password reset page to set a new password.',
+    'The code expires in 5 minutes.',
+    '',
+    'If you did not request this, you can safely ignore this email.',
+  ].join('\n');
   const label = isVerify ? 'รหัสยืนยันอีเมล' : 'OTP ทางอีเมล';
-  return sendEmail({ to: email, subject, htmlBody, text: textBody }).then((r) => {
+  return sendEmail({ to: email, subject, text }).then((r) => {
     if (!r || !r.ok) console.error(`❌ ส่ง${label}ไม่สำเร็จ:`, r && r.error ? r.error : 'ไม่ทราบสาเหตุ');
     else if (r.simulated) console.log(`📧 [${label} — โหมดจำลอง] ถึง ` + email);
-    else console.log(`📧 ส่ง${label}แล้ว → ` + email + ' (id=' + r.messageId + ')');
+    else console.log(`📧 ส่ง${label}แล้ว → ` + email + ' (id=' + r.messageId + ')' ) ;
     return r || { ok: false, error: 'ไม่ทราบสาเหตุ' };
   }).catch((err) => {
     console.error(`❌ ส่ง${label}ผิดพลาด:`, err.message);
@@ -268,41 +256,20 @@ function sendPackagePurchasedEmail(data) {
  * อีเมลต้อนรับหลังสมัครสมาชิกสำเร็จ (ยืนยันอีเมลครบแล้ว)
  * หัวข้ออังกฤษ ASCII ล้วน + มีฉบับข้อความล้วน — ลดโอกาสถูกกรองเป็นสแปม
  */
+/**
+ * อีเมลต้อนรับหลังสมัครสมาชิกสำเร็จ — ข้อความสั้น ภาษาอังกฤษล้วน text-only
+ */
 function sendWelcomeEmail({ email, baseUrl = '' }) {
   const subject = 'Welcome to QPage - your account is ready';
-  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const cta = baseUrl
-    ? `<p style="margin:22px 0;text-align:center;"><a href="${baseUrl}/shop/purchase.html" style="display:inline-block;background:#6366f1;color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:13px 30px;border-radius:10px;">ดูแพ็กเกจร้านค้า</a></p>`
-    : '';
-  const htmlBody = `
-  <div style="font-family:'Noto Sans Thai',Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;padding:10px;color:#101828;line-height:1.7;font-size:15px;">
-    <h2 style="font-size:18px;font-weight:800;margin:0 0 14px;">สมัครสมาชิกสำเร็จ — บัญชีของคุณพร้อมใช้งานแล้ว</h2>
-    <p style="margin:0 0 10px;">สวัสดีครับ/ค่ะ,</p>
-    <p style="margin:0 0 10px;">บัญชี <strong>${esc(email)}</strong> ได้รับการยืนยันเรียบร้อยแล้ว ทั้งเบอร์โทรศัพท์และอีเมล เริ่มใช้งานได้ทันที</p>
-    <p style="margin:0 0 6px;">สิ่งที่ทำได้ต่อไป</p>
-    <ul style="margin:0 0 14px;padding-left:20px;">
-      <li>เลือกแพ็กเกจร้านค้า เพื่อเปิดร้านและสร้างเมนูออนไลน์</li>
-      <li>ดูข้อมูลบัญชีและสถานะการยืนยันได้ที่หน้า “บัญชีของฉัน”</li>
-    </ul>
-    ${cta}
-    <p style="margin:0 0 6px;font-size:13px;color:#667085;">คุณได้รับอีเมลฉบับนี้เพราะได้สมัครสมาชิกและยืนยันอีเมลกับระบบ QPage สำเร็จ</p>
-    <hr style="border:none;border-top:1px solid #e4e7ec;margin:18px 0;">
-    <p style="margin:0;font-size:12.5px;color:#98a2b3;">อีเมลฉบับนี้ส่งอัตโนมัติจากระบบ QPage หากคุณไม่ได้เป็นผู้สมัคร กรุณาเพิกเฉยอีเมลนี้</p>
-  </div>`;
-  const textBody = [
-    'สมัครสมาชิกสำเร็จ — บัญชีของคุณพร้อมใช้งานแล้ว',
+  const text = [
+    'Welcome to QPage!',
     '',
-    'สวัสดีครับ/ค่ะ,',
-    'บัญชี ' + email + ' ได้รับการยืนยันเรียบร้อยแล้ว ทั้งเบอร์โทรศัพท์และอีเมล เริ่มใช้งานได้ทันที',
+    'Your email address has been verified and your account is now active.',
+    ...(baseUrl ? ['', 'Sign in or view your account: ' + baseUrl + '/settings/profile'] : []),
     '',
-    'สิ่งที่ทำได้ต่อไป',
-    '- เลือกแพ็กเกจร้านค้า เพื่อเปิดร้านและสร้างเมนูออนไลน์',
-    '- ดูข้อมูลบัญชีและสถานะการยืนยันได้ที่หน้า "บัญชีของฉัน"',
-    ...(baseUrl ? ['', 'ดูแพ็กเกจร้านค้า: ' + baseUrl + '/shop/purchase.html'] : []),
-    '',
-    'อีเมลฉบับนี้ส่งอัตโนมัติจากระบบ QPage',
+    'Thanks for signing up.',
   ].join('\n');
-  return sendEmail({ to: email, subject, htmlBody, text: textBody }).then((r) => {
+  return sendEmail({ to: email, subject, text }).then((r) => {
     if (!r || !r.ok) console.error('❌ ส่งอีเมลต้อนรับไม่สำเร็จ:', r && r.error ? r.error : 'ไม่ทราบสาเหตุ');
     else if (r.simulated) console.log('📧 [อีเมลต้อนรับ — โหมดจำลอง] ถึง ' + email);
     else console.log('📧 ส่งอีเมลต้อนรับแล้ว → ' + email + ' (id=' + r.messageId + ')');
