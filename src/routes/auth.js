@@ -176,13 +176,20 @@ router.post('/api/register/verify-sms', wrap(async (req, res) => {
     return res.json({ ok: true, alreadyVerified: true, message: 'ยืนยันตัวตนครบแล้ว เข้าสู่ระบบแล้ว', redirect: homeFor(user) });
   }
 
-  const sent = await otp.issueOtp(user.id, user.email, 'email_verify');
-  console.log(`📧 ส่งรหัสยืนยันอีเมลไปที่ ${user.email}`);
+  const sent = await otp.issueOtp(user.id, user.email, 'email_verify', { awaitDelivery: true });
+  const emailOk = !sent.delivered || sent.delivered.ok;
+  console.log(`📧 ${emailOk ? 'ส่ง' : 'ส่งไม่สำเร็จ'}รหัสยืนยันอีเมลไปที่ ${user.email}${emailOk ? '' : ' — ' + sent.delivered.error}`);
+  // บันทึกสถานะการส่งล่าสุด (ให้แอดมินตรวจได้ว่าอีเมลออกจริงไหม)
+  if (!emailOk) await db.setSetting('mail_debug', 'fail: ' + String(sent.delivered.error).slice(0, 160));
+  else await db.setSetting('mail_debug', 'ok');
 
   res.json({
     ok: true,
-    message: 'ยืนยันเบอร์โทรสำเร็จ — เราส่งรหัส OTP ไปที่อีเมลของคุณแล้ว',
+    message: emailOk
+      ? 'ยืนยันเบอร์โทรสำเร็จ — เราส่งรหัส OTP ไปที่อีเมลของคุณแล้ว'
+      : 'ยืนยันเบอร์โทรสำเร็จ แต่ส่งอีเมลไม่สำเร็จ — กรุณากด "ส่งรหัสใหม่" หรือแจ้งผู้ดูแลระบบ',
     emailMasked: maskEmail(user.email),
+    emailSent: emailOk,
     otpExpiresAt: sent.expiresAt,
     // แสดงรหัสให้ทดสอบเฉพาะเมื่อ "ยังไม่ได้ตั้งค่า SMTP" (ช่องทางอีเมลทำงานอิสระจากโหมด dev)
     dev: mailer.getSmtpConfig().configured ? null : { devOtp: sent.code },
@@ -248,10 +255,15 @@ router.post('/api/resend-otp', wrap(async (req, res) => {
   }
 
   const contact = which === 'email_verify' ? user.email : user.phone;
-  const otpResult = await otp.issueOtp(user.id, contact, which);
+  const otpResult = await otp.issueOtp(user.id, contact, which, { awaitDelivery: which === 'email_verify' });
+  const emailOk = which !== 'email_verify' || !otpResult.delivered || otpResult.delivered.ok;
+  if (which === 'email_verify') await db.setSetting('mail_debug', emailOk ? 'ok' : 'fail: ' + String(otpResult.delivered.error).slice(0, 160));
   res.json({
     ok: true,
-    message: which === 'email_verify' ? 'ส่งรหัสยืนยันอีเมลใหม่แล้ว' : 'ส่งรหัส OTP ใหม่แล้ว',
+    message: which === 'email_verify'
+      ? (emailOk ? 'ส่งรหัสยืนยันอีเมลใหม่แล้ว' : 'ส่งอีเมลไม่สำเร็จ — กรุณาลองใหม่หรือแจ้งผู้ดูแลระบบ')
+      : 'ส่งรหัส OTP ใหม่แล้ว',
+    emailSent: emailOk,
     otpExpiresAt: otpResult.expiresAt,
     // รหัสทางอีเมลแสดงได้เมื่อยังไม่ได้ตั้งค่า SMTP / รหัสทาง SMS แสดงเมื่ออยู่ในโหมด dev
     dev: (which === 'email_verify' ? !mailer.getSmtpConfig().configured : devMode()) ? { devOtp: otpResult.code } : null,

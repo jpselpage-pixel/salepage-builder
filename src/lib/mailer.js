@@ -134,6 +134,7 @@ function sendVerificationEmail({ email, token, baseUrl }) {
  *  - purpose 'email_verify'  → ใช้ยืนยันอีเมลตอนสมัครสมาชิก
  *  - purpose อื่น ๆ          → ใช้กู้รหัสผ่าน
  * ส่งจริงทันทีเมื่อตั้งค่า SMTP ครบ — ไม่ขึ้นกับโหมด dev
+ * @returns {Promise<{ok:boolean, simulated?:boolean, error?:string}>}
  */
 function sendOtpEmail({ email, code, purpose = 'password_reset' }) {
   const isVerify = purpose === 'email_verify';
@@ -153,12 +154,23 @@ function sendOtpEmail({ email, code, purpose = 'password_reset' }) {
     <p>รหัสยืนยันของคุณคือ: ${code}</p>
     <p>รหัสนี้มีอายุ 5 นาที หากคุณไม่ได้เป็นผู้ขอ กรุณาเพิกเฉยอีเมลนี้</p>
   `;
+  // ฉบับข้อความล้วน (multipart/alternative) — ช่วยให้ผู้ให้บริการเมลไม่ตีเป็นสแปม
+  const textBody = isVerify
+    ? ['สวัสดีครับ/ค่ะ,', '', 'รหัสยืนยันอีเมลสำหรับบัญชี QPage ของคุณคือ: ' + code, '',
+      'กรอกรหัสนี้ในหน้าสมัครสมาชิกเพื่อยืนยันอีเมล (รหัสมีอายุ 5 นาที)', '',
+      'หากคุณไม่ได้เป็นผู้สมัคร กรุณาเพิกเฉยอีเมลนี้'].join('\n')
+    : ['สวัสดีครับ/ค่ะ,', '', 'คุณได้ขอรหัสยืนยันเพื่อกู้รหัสผ่านบัญชีของคุณ',
+      'รหัสยืนยันของคุณคือ: ' + code, '', 'รหัสนี้มีอายุ 5 นาที หากคุณไม่ได้เป็นผู้ขอ กรุณาเพิกเฉยอีเมลนี้'].join('\n');
   const label = isVerify ? 'รหัสยืนยันอีเมล' : 'OTP ทางอีเมล';
-  sendEmail({ to: email, subject, htmlBody }).then((r) => {
+  return sendEmail({ to: email, subject, htmlBody, text: textBody }).then((r) => {
     if (!r || !r.ok) console.error(`❌ ส่ง${label}ไม่สำเร็จ:`, r && r.error ? r.error : 'ไม่ทราบสาเหตุ');
     else if (r.simulated) console.log(`📧 [${label} — โหมดจำลอง] ถึง ` + email);
     else console.log(`📧 ส่ง${label}แล้ว → ` + email + ' (id=' + r.messageId + ')');
-  }).catch((err) => console.error(`❌ ส่ง${label}ผิดพลาด:`, err.message));
+    return r || { ok: false, error: 'ไม่ทราบสาเหตุ' };
+  }).catch((err) => {
+    console.error(`❌ ส่ง${label}ผิดพลาด:`, err.message);
+    return { ok: false, error: err.message };
+  });
 }
 
 /**

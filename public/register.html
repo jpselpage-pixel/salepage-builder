@@ -714,6 +714,14 @@
         const authSwitch = document.querySelector('.auth-switch');
         if (authSwitch) authSwitch.style.display = 'none';
         document.getElementById('emailStep').style.display = '';
+        // ส่งอีเมลไม่สำเร็จ → บอกทันที ไม่ต้องรอเมลที่ไม่มีวันมา
+        const mailErr = document.getElementById('emailErrorMsg');
+        if (data.emailSent === false) {
+          mailErr.textContent = 'ส่งอีเมลไม่สำเร็จ — กรุณากด “ส่งรหัสใหม่” ด้านล่าง หรือแจ้งผู้ดูแลระบบ';
+          mailErr.style.display = 'block';
+        } else {
+          mailErr.style.display = 'none';
+        }
         // จำขั้นตอนนี้ไว้ด้วย → รีเฟรชแล้วกลับมาที่ขั้นยืนยันอีเมลต่อได้
         if (pending) {
           pending.step = 'email';
@@ -821,6 +829,16 @@
             return;
           }
           if (data.dev && data.dev.devOtp) showDevBanner(kind, data.dev.devOtp);
+          if (kind === 'email') {
+            const el = document.getElementById('emailErrorMsg');
+            if (data.emailSent === false) {
+              el.textContent = 'ส่งอีเมลไม่สำเร็จอีกครั้ง — กรุณาตรวจการตั้งค่าอีเมลหรือแจ้งผู้ดูแลระบบ';
+              el.style.display = 'block';
+            } else {
+              el.textContent = 'ส่งรหัสใหม่ไปที่อีเมลของคุณแล้ว';
+              el.style.display = 'block';
+            }
+          }
           if (pending) {
             if (kind === 'email') { if (data.dev && data.dev.devOtp) pending.emailDevOtp = data.dev.devOtp; }
             else if (data.dev && data.dev.devOtp) pending.devOtp = data.dev.devOtp;

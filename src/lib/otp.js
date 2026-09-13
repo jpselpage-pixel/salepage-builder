@@ -47,7 +47,7 @@ function generateOtp() {
  * @param {string} purpose  'signup' | 'password_reset' | 'email_verify'
  * @returns {{ code: string, expiresAt: string, otpId: number }}
  */
-async function issueOtp(userId, contact, purpose = 'signup') {
+async function issueOtp(userId, contact, purpose = 'signup', { awaitDelivery = false } = {}) {
   const code = generateOtp();
   const ttl = getOtpTtlMinutes();
   const expiresAt = futureSql(ttl * 60 * 1000);
@@ -62,12 +62,15 @@ async function issueOtp(userId, contact, purpose = 'signup') {
   });
 
   // ส่งจริง + บันทึกผลลง log — ทำแบบไม่บล็อก response (ผู้ใช้ไม่ต้องรอ SMS/อีเมล)
+  // ยกเว้นเมื่อผู้เรียกระบุ awaitDelivery (เช่น ขั้นสมัครที่ต้องรู้ว่าส่งอีเมลสำเร็จไหม เพื่อแจ้งผู้ใช้)
+  let delivered = null;
   if (EMAIL_PURPOSES.has(purpose)) {
-    deliverOtpEmail(otpId, contact, code, purpose);
+    if (awaitDelivery) delivered = await deliverOtpEmail(otpId, contact, code, purpose);
+    else deliverOtpEmail(otpId, contact, code, purpose);
   } else {
     deliverOtpSms(otpId, contact, code, ttl);
   }
-  return { code, expiresAt, otpId };
+  return { code, expiresAt, otpId, delivered };
 }
 
 /**
@@ -90,12 +93,19 @@ async function deliverOtpEmail(otpId, email, code, purpose = 'password_reset') {
     if (!mailer.getSmtpConfig().configured) {
       console.log(`🔐 [${label} — ยังไม่ได้ตั้งค่า SMTP] ${email} → รหัส ${code}`);
       await db.setOtpNote(otpId, 'ยังไม่ได้ตั้งค่า SMTP — ไม่ได้ส่งอีเมลจริง');
-      return;
+      return { ok: false, error: 'ยังไม่ได้ตั้งค่า SMTP' };
     }
-    mailer.sendOtpEmail({ email, code, purpose });
-    await db.setOtpNote(otpId, 'ส่งอีเมล OTP แล้ว (ตรวจอินบ็อกซ์)');
+    const sent = await mailer.sendOtpEmail({ email, code, purpose });
+    if (sent && sent.ok) {
+      await db.setOtpNote(otpId, 'ส่งอีเมล OTP แล้ว (ตรวจอินบ็อกซ์)');
+      return { ok: true };
+    }
+    const err = (sent && sent.error) || 'ไม่ทราบสาเหตุ';
+    await db.setOtpNote(otpId, 'ส่งอีเมลไม่สำเร็จ: ' + String(err).slice(0, 200));
+    return { ok: false, error: String(err).slice(0, 200) };
   } catch (err) {
     await db.setOtpNote(otpId, 'ส่งอีเมลผิดพลาด: ' + String(err.message || err).slice(0, 200));
+    return { ok: false, error: String(err.message || err).slice(0, 200) };
   }
 }
 
