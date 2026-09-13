@@ -130,23 +130,35 @@ function sendVerificationEmail({ email, token, baseUrl }) {
 }
 
 /**
- * ส่งรหัส OTP ทางอีเมล (ใช้กับฟังก์ชันกู้รหัสผ่าน)
+ * ส่งรหัส OTP ทางอีเมล
+ *  - purpose 'email_verify'  → ใช้ยืนยันอีเมลตอนสมัครสมาชิก
+ *  - purpose อื่น ๆ          → ใช้กู้รหัสผ่าน
  * ส่งจริงทันทีเมื่อตั้งค่า SMTP ครบ — ไม่ขึ้นกับโหมด dev
  */
-function sendOtpEmail({ email, code }) {
+function sendOtpEmail({ email, code, purpose = 'password_reset' }) {
+  const isVerify = purpose === 'email_verify';
   // หัวข้ออังกฤษ ASCII + เนื้อหาธรรมดาไม่มีสี/ตัวใหญ่ — Gmail กรองเมลหัวข้อไทยและเมลตกแต่งจากผู้ส่งรายใหม่
-  const subject = 'Verification code (OTP) - Member System';
-  const htmlBody = `
+  const subject = isVerify ? 'Your QPage email verification code' : 'Verification code (OTP) - Member System';
+  const htmlBody = isVerify
+    ? `
+    <p>สวัสดีครับ/ค่ะ,</p>
+    <p>รหัสยืนยันอีเมลสำหรับบัญชี QPage ของคุณคือ</p>
+    <p style="font-size:22px;font-weight:bold;letter-spacing:4px;">${code}</p>
+    <p>กรอกรหัสนี้ในหน้าสมัครสมาชิกเพื่อยืนยันอีเมล (รหัสมีอายุ 5 นาที)</p>
+    <p>หากคุณไม่ได้เป็นผู้สมัคร กรุณาเพิกเฉยอีเมลนี้</p>
+  `
+    : `
     <p>สวัสดีครับ/ค่ะ,</p>
     <p>คุณได้ขอรหัสยืนยันเพื่อกู้รหัสผ่านบัญชีของคุณ</p>
     <p>รหัสยืนยันของคุณคือ: ${code}</p>
     <p>รหัสนี้มีอายุ 5 นาที หากคุณไม่ได้เป็นผู้ขอ กรุณาเพิกเฉยอีเมลนี้</p>
   `;
+  const label = isVerify ? 'รหัสยืนยันอีเมล' : 'OTP ทางอีเมล';
   sendEmail({ to: email, subject, htmlBody }).then((r) => {
-    if (!r || !r.ok) console.error('❌ ส่ง OTP ทางอีเมลไม่สำเร็จ:', r && r.error ? r.error : 'ไม่ทราบสาเหตุ');
-    else if (r.simulated) console.log('📧 [OTP อีเมล — โหมดจำลอง] ถึง ' + email);
-    else console.log('📧 ส่ง OTP อีเมลแล้ว → ' + email + ' (id=' + r.messageId + ')');
-  }).catch((err) => console.error('❌ ส่ง OTP ทางอีเมลผิดพลาด:', err.message));
+    if (!r || !r.ok) console.error(`❌ ส่ง${label}ไม่สำเร็จ:`, r && r.error ? r.error : 'ไม่ทราบสาเหตุ');
+    else if (r.simulated) console.log(`📧 [${label} — โหมดจำลอง] ถึง ` + email);
+    else console.log(`📧 ส่ง${label}แล้ว → ` + email + ' (id=' + r.messageId + ')');
+  }).catch((err) => console.error(`❌ ส่ง${label}ผิดพลาด:`, err.message));
 }
 
 /**

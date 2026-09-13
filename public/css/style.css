@@ -581,3 +581,18 @@ input.valid { border-color: var(--success); box-shadow: 0 0 0 4px rgba(5, 150, 1
   .auth-head .mobile-brand .brand-logo { width: 40px; height: 40px; border-radius: 12px; background: #fff; }
   .auth-head .mobile-brand .brand-name { font-size: 18px; font-weight: 800; }
 }
+
+/* ---------- ขั้นยืนยัน OTP ในหน้าสมัครสมาชิก (SMS + อีเมล) ---------- */
+.otp-block {
+  margin: 2px 0 18px;
+  padding: 16px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.otp-block .otp-hint { font-size: 13px; color: var(--muted); text-align: center; line-height: 1.7; margin-bottom: 14px; }
+.otp-block .otp-inputs { margin-bottom: 8px; }
+.otp-block .resend-row { margin-top: 10px; text-align: center; }
+.otp-block .dev-banner { margin-bottom: 12px; }
+#emailStep .otp-inputs { margin-bottom: 18px; }
+#emailStep .resend-row { text-align: center; }

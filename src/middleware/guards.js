@@ -50,7 +50,7 @@ async function accountGuard(req, res, next) {
     return res.redirect('/login.html?next=' + encodeURIComponent(req.originalUrl || '/settings/profile'));
   }
   if (user.status !== 'active') {
-    const completeUrl = user.provider === 'google' ? '/google-setup.html' : '/otp.html';
+    const completeUrl = user.provider === 'google' ? '/google-setup.html' : '/register.html';
     return res.redirect(completeUrl);
   }
   next();
@@ -63,7 +63,7 @@ async function shopGuard(req, res, next) {
     return res.redirect('/login.html?next=' + encodeURIComponent(req.originalUrl || '/shop'));
   }
   if (user.status !== 'active') {
-    const completeUrl = user.provider === 'google' ? '/google-setup.html' : '/otp.html';
+    const completeUrl = user.provider === 'google' ? '/google-setup.html' : '/register.html';
     return res.redirect(completeUrl);
   }
   next();

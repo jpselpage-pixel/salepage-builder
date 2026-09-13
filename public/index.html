@@ -182,7 +182,7 @@
 
         // บัญชียังยืนยันไม่ครบ → พาไปทำขั้นตอนให้จบก่อน
         if (u.status !== 'active') {
-          const target = u.provider === 'google' ? '/google-setup.html' : '/otp.html';
+          const target = u.provider === 'google' ? '/google-setup.html' : '/register.html';
           auth.innerHTML = '<a class="btn btn-primary btn-small" href="' + target + '">ทำขั้นตอนสมัครให้ครบ</a>';
           hero.innerHTML = '<a class="btn btn-white" href="' + target + '">ทำขั้นตอนสมัครให้ครบ</a>';
           band.innerHTML = '<a class="btn btn-white" href="' + target + '">ทำขั้นตอนสมัครให้ครบ</a>';

@@ -27,7 +27,7 @@
         <div class="brand-features">
           <div class="brand-feature">
             <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-            ยืนยันตัวตนด้วย OTP ทาง SMS กันบัญชีปลอม
+            ยืนยันตัวตนด้วย OTP ทั้งทาง SMS และอีเมล กันบัญชีปลอม
           </div>
           <div class="brand-feature">
             <span class="check"><svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -117,12 +117,33 @@
 
           <div class="field">
             <label for="phone">เบอร์โทรศัพท์</label>
-            <div class="phone-group">
-              <span class="phone-prefix">+66</span>
-              <input type="tel" id="phone" name="phone" placeholder="เช่น 812345678 หรือ 0812345678" autocomplete="tel" inputmode="tel">
+            <div class="check-email-row">
+              <div class="phone-group" style="flex:1;min-width:0;">
+                <span class="phone-prefix">+66</span>
+                <input type="tel" id="phone" name="phone" placeholder="เช่น 812345678 หรือ 0812345678" autocomplete="tel" inputmode="tel">
+              </div>
+              <button type="button" class="check-email-btn" id="sendOtpBtn">ขอ OTP</button>
             </div>
-            <span class="field-hint">🇹🇭 เบอร์โทรศัพท์ในประเทศไทย (มีหรือไม่มี 0 นำหน้าก็ได้) — ใช้ยืนยันตัวตนด้วยรหัส OTP ทาง SMS</span>
+            <span class="field-hint">🇹🇭 เบอร์โทรศัพท์ในประเทศไทย (มีหรือไม่มี 0 นำหน้าก็ได้) — กรอกแล้วกด “ขอ OTP” เพื่อรับรหัส 6 หลักทาง SMS</span>
             <span class="field-error" id="phoneError"></span>
+          </div>
+
+          <!-- ขั้นยืนยัน OTP ทาง SMS (แสดงหลังกด "ขอ OTP") -->
+          <div class="otp-block" id="smsOtpBlock" style="display:none;">
+            <div class="dev-banner" id="smsDevBanner" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="vertical-align:-2px;margin-right:6px;"><path d="M9 3h6M10 3v6.5L4.6 18.4A2 2 0 006.5 22h11a2 2 0 001.9-3.6L14 9.5V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> <strong>โหมดทดสอบ (dev)</strong><br>
+              รหัส OTP ของคุณ: <span class="code" id="smsDevCode">—</span>
+            </div>
+            <p class="otp-hint">กรอกรหัส 6 หลักที่ส่งไปยัง <strong id="smsPhoneLabel">—</strong></p>
+            <div class="otp-inputs" id="smsOtpInputs">
+              <input type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="หลักที่ 1">
+              <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 2">
+              <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 3">
+              <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 4">
+              <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 5">
+              <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 6">
+            </div>
+            <p class="resend-row">ไม่ได้รับรหัส? <button type="button" id="smsResendBtn" disabled>ส่งรหัสใหม่</button> <span id="smsResendTimer"></span></p>
           </div>
 
           <label class="checkbox-row" for="terms">
@@ -136,6 +157,34 @@
           <!-- reCAPTCHA v2 จะถูกโหลดตรงนี้เมื่อตั้ง RECAPTCHA_SITE_KEY ใน .env -->
           <div class="recaptcha-wrap" id="recaptchaBox" style="margin-top:14px;display:flex;justify-content:center;"></div>
         </form>
+
+        <!-- ขั้นที่ 2: ยืนยันอีเมลด้วยรหัส OTP ที่ส่งไปทางอีเมล -->
+        <div id="emailStep" style="display:none;">
+          <div class="auth-head" style="margin-bottom:16px;">
+            <h1 style="font-size:20px;">ยืนยันอีเมล</h1>
+            <p>เราส่งรหัส OTP 6 หลักไปที่ <strong id="emailLabel" style="font-weight:700;">—</strong></p>
+          </div>
+
+          <div class="dev-banner" id="emailDevBanner" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" width="16" height="16" style="vertical-align:-2px;margin-right:6px;"><path d="M9 3h6M10 3v6.5L4.6 18.4A2 2 0 006.5 22h11a2 2 0 001.9-3.6L14 9.5V3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg> <strong>โหมดทดสอบ (dev)</strong><br>
+            รหัส OTP ของคุณ: <span class="code" id="emailDevCode">—</span>
+          </div>
+
+          <div class="error-msg" id="emailErrorMsg"></div>
+
+          <div class="otp-inputs" id="emailOtpInputs">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code" aria-label="หลักที่ 1">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 2">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 3">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 4">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 5">
+            <input type="text" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="หลักที่ 6">
+          </div>
+
+          <button class="btn btn-primary" id="verifyEmailBtn" type="button">ยืนยันอีเมล</button>
+
+          <p class="resend-row">ไม่ได้รับรหัส? <button type="button" id="emailResendBtn" disabled>ส่งรหัสใหม่</button> <span id="emailResendTimer"></span></p>
+        </div>
 
         <p class="auth-switch">
           มีบัญชีอยู่แล้ว? <a href="login.html">เข้าสู่ระบบ</a>
@@ -327,11 +376,53 @@
       } catch { /* ไม่มี reCAPTCHA — ใช้ honeypot + rate limit แทน */ }
     })();
 
-    // ---------- ส่งฟอร์ม ----------
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      errorMsg.style.display = 'none';
+    // ---------- ช่องกรอกรหัส OTP 6 หลัก (ใช้ทั้งขั้น SMS และขั้นอีเมล) ----------
+    function otpWidget(containerId, onChange) {
+      const inputs = Array.from(document.getElementById(containerId).querySelectorAll('input'));
+      const widget = {
+        inputs,
+        code: () => inputs.map((i) => i.value).join(''),
+        clear() { inputs.forEach((i) => { i.value = ''; i.classList.remove('invalid'); }); },
+        invalid(on) { inputs.forEach((i) => i.classList.toggle('invalid', !!on)); },
+        focusFirst() { if (inputs[0]) inputs[0].focus(); },
+      };
+      inputs.forEach((input, index) => {
+        input.addEventListener('input', () => {
+          input.value = input.value.replace(/[^0-9]/g, '').slice(0, 1);
+          if (input.value && index < inputs.length - 1) inputs[index + 1].focus();
+          widget.invalid(false);
+          if (onChange) onChange();
+        });
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && !input.value && index > 0) inputs[index - 1].focus();
+          if (e.key === 'ArrowLeft' && index > 0) inputs[index - 1].focus();
+          if (e.key === 'ArrowRight' && index < inputs.length - 1) inputs[index + 1].focus();
+        });
+        input.addEventListener('paste', (e) => {
+          e.preventDefault();
+          const text = (e.clipboardData.getData('text') || '').replace(/[^0-9]/g, '').slice(0, 6);
+          text.split('').forEach((ch, i) => { if (inputs[i]) inputs[i].value = ch; });
+          inputs[Math.min(text.length, inputs.length - 1)].focus();
+          if (onChange) onChange();
+        });
+      });
+      return widget;
+    }
 
+    const sendOtpBtn = document.getElementById('sendOtpBtn');
+    const smsBlock = document.getElementById('smsOtpBlock');
+    const smsOtp = otpWidget('smsOtpInputs', updateSubmitState);
+    const emailOtp = otpWidget('emailOtpInputs');
+    let pendingUserId = null; // ได้จากขั้น "ขอ OTP" — ผูกกับข้อมูลที่กรอกตอนนั้น
+
+    // ---------- ปุ่ม "สมัครสมาชิก" กดได้เมื่อกรอกรหัส SMS ครบ 6 หลักเท่านั้น ----------
+    function updateSubmitState() {
+      submitBtn.disabled = !(pendingUserId && smsOtp.code().length === 6);
+    }
+    updateSubmitState();
+
+    // ---------- ตรวจความถูกต้องของฟอร์ม (ใช้ทั้งตอนกด "ขอ OTP" และตอนส่งฟอร์ม) ----------
+    function validateForm() {
       const validators = {
         email() {
           const v = fields.email.value.trim();
@@ -370,7 +461,6 @@
         }
       });
 
-      // ข้อกำหนด
       const terms = document.getElementById('terms');
       const termsError = document.getElementById('termsError');
       if (!terms.checked) {
@@ -383,10 +473,31 @@
       if (firstError) {
         if (firstError === 'terms') terms.focus();
         else fields[firstError].focus();
-        return;
       }
+      return firstError;
+    }
 
-      // ถ้ายังไม่เคยตรวจอีเมลซ้ำ ตรวจทันที (กัน submit ไปแล้วโดน reject)
+    // แก้ข้อมูลที่ใช้สมัคร → รหัส OTP เดิมใช้ไม่ได้แล้ว ต้องขอใหม่
+    function resetOtpStep(message) {
+      pendingUserId = null;
+      smsOtp.clear();
+      smsBlock.style.display = 'none';
+      document.getElementById('smsDevBanner').style.display = 'none';
+      updateSubmitState();
+      if (message) showFormError(message);
+    }
+    [fields.email, fields.password, fields.confirmPassword, fields.phone].forEach((el) => {
+      el.addEventListener('input', () => {
+        if (pendingUserId) resetOtpStep('ข้อมูลถูกแก้ไขแล้ว — กรุณากด “ขอ OTP” ใหม่เพื่อรับรหัสสำหรับข้อมูลล่าสุด');
+      });
+    });
+
+    // ---------- ขั้นที่ 1: ขอ OTP ทาง SMS ----------
+    sendOtpBtn.addEventListener('click', async () => {
+      errorMsg.style.display = 'none';
+      if (validateForm()) return;
+
+      // ถ้ายังไม่เคยตรวจอีเมลซ้ำ ตรวจทันที
       if (emailAvailable === null) {
         await checkEmail();
         if (emailAvailable === 'used') return;
@@ -410,8 +521,9 @@
         }
       }
 
-      submitBtn.disabled = true;
-      submitBtn.classList.add('loading');
+      const oldText = sendOtpBtn.textContent;
+      sendOtpBtn.disabled = true;
+      sendOtpBtn.textContent = 'กำลังส่ง...';
 
       try {
         const res = await fetch('/api/register', {
@@ -426,28 +538,201 @@
             showFieldError(data.field, data.message);
             fields[data.field].focus();
           } else {
-            showFormError(data.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่');
+            showFormError(data.message || 'ขอรหัส OTP ไม่สำเร็จ กรุณาลองใหม่');
           }
           return;
         }
+        // ตอบแบบ honeypot (กรอกเร็วเกินไป/บอท) → ไม่มี userId จริง
+        if (data.honeypot || !data.userId) {
+          showFormError('ขอรหัส OTP ไม่สำเร็จ กรุณาตรวจข้อมูลแล้วลองใหม่อีกครั้ง');
+          return;
+        }
 
-        // เก็บข้อมูลชั่วคราวเพื่อให้หน้า otp.html ใช้ยืนยันเบอร์โทร
-        sessionStorage.setItem('pendingSignup', JSON.stringify({
-          userId: data.userId,
-          phoneMasked: data.phoneMasked,
-          devOtp: data.dev ? data.dev.devOtp : null,
-          email: payload.email,
-          // เวลาปลุกให้กด "ส่งรหัสใหม่" ได้ (epoch ms) — ให้หน้านับถอยหลังต่อได้หลังรีเฟรช
-          resendAvailableAt: Date.now() + 60 * 1000,
-        }));
-        window.location.href = data.redirect || '/settings/profile';
+        // แสดงช่องกรอก OTP ในหน้านี้เลย (ไม่ต้องไปหน้าอื่น)
+        pendingUserId = data.userId;
+        document.getElementById('smsPhoneLabel').textContent = data.phoneMasked || 'เบอร์ของคุณ';
+        const devCode = data.dev && data.dev.devOtp;
+        document.getElementById('smsDevBanner').style.display = devCode ? 'block' : 'none';
+        document.getElementById('smsDevCode').textContent = devCode || '—';
+        smsBlock.style.display = '';
+        smsOtp.clear();
+        updateSubmitState();
+        smsBlock.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        smsOtp.focusFirst();
+        startCooldown('sms');
       } catch {
         showFormError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.classList.remove('loading');
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.textContent = oldText;
+        // reCAPTCHA v2 ใช้โทเคนได้ครั้งเดียว → รีเซ็ตเพื่อขอรหัสครั้งถัดไป
+        if (recaptchaWidgetId !== null && typeof grecaptcha !== 'undefined') grecaptcha.reset(recaptchaWidgetId);
       }
     });
+
+    // ---------- ขั้นที่ 2: สมัครสมาชิก → ยืนยันรหัส SMS → ส่ง OTP ไปที่อีเมล ----------
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorMsg.style.display = 'none';
+
+      if (!pendingUserId) {
+        showFormError('กรุณากด “ขอ OTP” ที่ช่องเบอร์โทร แล้วกรอกรหัสให้ครบก่อน');
+        return;
+      }
+      if (validateForm()) return;
+      const code = smsOtp.code();
+      if (code.length !== 6) {
+        smsOtp.invalid(true);
+        showFormError('กรุณากรอกรหัส OTP ให้ครบ 6 หลัก');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.classList.add('loading');
+
+      try {
+        const res = await fetch('/api/register/verify-sms', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: pendingUserId, code }),
+        });
+        const data = await res.json();
+
+        if (!data.ok) {
+          smsOtp.invalid(true);
+          showFormError(data.message || 'ยืนยันรหัส OTP ไม่สำเร็จ');
+          return;
+        }
+        // กรณียืนยันอีเมลไว้แล้ว → เข้าสู่ระบบต่อได้เลย
+        if (data.redirect) { window.location.href = data.redirect; return; }
+
+        // ไปขั้นที่ 3: กรอกรหัส OTP ที่ส่งไปทางอีเมล
+        const devCode = data.dev && data.dev.devOtp;
+        document.getElementById('emailLabel').textContent = data.emailMasked || 'อีเมลของคุณ';
+        document.getElementById('emailDevBanner').style.display = devCode ? 'block' : 'none';
+        document.getElementById('emailDevCode').textContent = devCode || '—';
+        form.style.display = 'none';
+        const authSwitch = document.querySelector('.auth-switch');
+        if (authSwitch) authSwitch.style.display = 'none';
+        document.getElementById('emailStep').style.display = '';
+        emailOtp.clear();
+        emailOtp.focusFirst();
+        startCooldown('email');
+        document.getElementById('emailStep').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } catch {
+        showFormError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+      } finally {
+        submitBtn.classList.remove('loading');
+        updateSubmitState();
+      }
+    });
+
+    // ---------- ขั้นที่ 3: ยืนยัน OTP ทางอีเมล ----------
+    document.getElementById('verifyEmailBtn').addEventListener('click', async (e) => {
+      const emailErrorMsg = document.getElementById('emailErrorMsg');
+      const btn = e.currentTarget;
+      emailErrorMsg.style.display = 'none';
+      const code = emailOtp.code();
+      if (code.length !== 6) {
+        emailOtp.invalid(true);
+        emailErrorMsg.textContent = 'กรุณากรอกรหัส OTP ให้ครบ 6 หลัก';
+        emailErrorMsg.style.display = 'block';
+        return;
+      }
+      btn.disabled = true;
+      btn.classList.add('loading');
+      try {
+        const res = await fetch('/api/register/verify-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: pendingUserId, code }),
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          emailOtp.invalid(true);
+          emailErrorMsg.textContent = data.message || 'ยืนยันอีเมลไม่สำเร็จ';
+          emailErrorMsg.style.display = 'block';
+          return;
+        }
+        window.location.href = data.redirect || '/settings/profile';
+      } catch {
+        emailErrorMsg.textContent = 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่';
+        emailErrorMsg.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('loading');
+      }
+    });
+
+    // ---------- ปุ่ม "ส่งรหัสใหม่" (ทั้งรหัส SMS และรหัสอีเมล) ----------
+    const RESEND_WAIT_SECONDS = 60;
+    function makeCooldown(kind) {
+      const btn = document.getElementById(kind + 'ResendBtn');
+      const timerEl = document.getElementById(kind + 'ResendTimer');
+      const devCodeEl = document.getElementById(kind === 'email' ? 'emailDevCode' : 'smsDevCode');
+      const devBanner = document.getElementById(kind === 'email' ? 'emailDevBanner' : 'smsDevBanner');
+      let remaining = 0;
+      let timerId = null;
+
+      function paint() {
+        if (remaining > 0) { btn.disabled = true; timerEl.textContent = '(อีก ' + remaining + ' วินาที)'; }
+        else { btn.disabled = false; timerEl.textContent = ''; }
+      }
+      function tick() {
+        remaining = Math.max(0, remaining - 1);
+        paint();
+        if (remaining <= 0) { clearInterval(timerId); timerId = null; }
+      }
+      function start() { remaining = RESEND_WAIT_SECONDS; paint(); clearInterval(timerId); timerId = setInterval(tick, 1000); }
+
+      btn.addEventListener('click', async () => {
+        if (remaining > 0) return;
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/resend-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: pendingUserId, purpose: kind === 'email' ? 'email_verify' : 'signup' }),
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            const wait = (data.message || '').match(/(\d+)\s*วินาที/);
+            if (wait) { remaining = Number(wait[1]); paint(); clearInterval(timerId); timerId = setInterval(tick, 1000); }
+            else {
+              btn.disabled = false;
+              if (kind === 'email') {
+                const el = document.getElementById('emailErrorMsg');
+                el.textContent = data.message || 'ขอรหัสใหม่ไม่สำเร็จ';
+                el.style.display = 'block';
+              } else {
+                showFormError(data.message || 'ขอรหัสใหม่ไม่สำเร็จ');
+              }
+            }
+            return;
+          }
+          if (data.dev && data.dev.devOtp) {
+            devCodeEl.textContent = data.dev.devOtp;
+            document.getElementById(devBanner).style.display = 'block';
+          }
+          const widget = kind === 'email' ? emailOtp : smsOtp;
+          widget.clear();
+          widget.focusFirst();
+          start();
+        } catch {
+          btn.disabled = false;
+          if (kind === 'email') {
+            const el = document.getElementById('emailErrorMsg');
+            el.textContent = 'ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่';
+            el.style.display = 'block';
+          } else {
+            showFormError('ไม่สามารถติดต่อเซิร์ฟเวอร์ได้ กรุณาลองใหม่');
+          }
+        }
+      });
+      return { start };
+    }
+    const cooldowns = { sms: makeCooldown('sms'), email: makeCooldown('email') };
+    function startCooldown(kind) { if (cooldowns[kind]) cooldowns[kind].start(); }
   </script>
 </body>
 </html>

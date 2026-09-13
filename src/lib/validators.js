@@ -9,6 +9,17 @@ function maskPhone(phone) {
   return `${digits.slice(0, 3)}-***-${digits.slice(-4)}`;
 }
 
+/** ปิดบางส่วนของอีเมลสำหรับแสดงผล เช่น somchai@x.com → s***i@x.com */
+function maskEmail(email) {
+  const s = String(email || '');
+  const at = s.indexOf('@');
+  if (at <= 0) return s;
+  const name = s.slice(0, at);
+  const head = name.slice(0, 1);
+  const tail = name.length > 2 ? name.slice(-1) : '';
+  return head + '***' + tail + s.slice(at);
+}
+
 function isValidEmail(value) {
   return typeof value === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
@@ -45,4 +56,4 @@ function passwordStrengthScore(pw) {
   return score;
 }
 
-module.exports = { maskPhone, isValidEmail, isValidThaiPhone, normalizeThaiPhone, passwordStrengthScore };
+module.exports = { maskPhone, maskEmail, isValidEmail, isValidThaiPhone, normalizeThaiPhone, passwordStrengthScore };

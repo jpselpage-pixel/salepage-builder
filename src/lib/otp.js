@@ -20,6 +20,9 @@ const { isExpired, futureSql } = require('./time');
 const OTP_TTL_MINUTES = Number(process.env.OTP_TTL_MINUTES || 5);
 const OTP_MAX_ATTEMPTS = Number(process.env.OTP_MAX_ATTEMPTS || 5);
 
+// purpose ที่ส่งรหัสทาง "อีเมล" — ที่เหลือส่งทาง SMS (ช่องทางอีเมลทำงานอิสระจากโหมด dev)
+const EMAIL_PURPOSES = new Set(['password_reset', 'email_verify']);
+
 // อ่านค่าตั้งค่าจากตาราง settings ก่อน (แอดมินปรับได้) แล้วค่อยใช้ค่า env เป็นค่าเริ่มต้น
 function getOtpTtlMinutes() {
   const s = db.getSetting('otp_ttl_minutes');
@@ -40,8 +43,8 @@ function generateOtp() {
 /**
  * สร้าง OTP ใหม่สำหรับผู้ใช้ + 'ส่ง' ผ่านช่องทางตาม purpose
  * @param {number} userId
- * @param {string} contact  เบอร์โทร (signup) หรืออีเมล (password_reset)
- * @param {string} purpose  'signup' | 'password_reset'
+ * @param {string} contact  เบอร์โทร (signup) หรืออีเมล (password_reset / email_verify)
+ * @param {string} purpose  'signup' | 'password_reset' | 'email_verify'
  * @returns {{ code: string, expiresAt: string, otpId: number }}
  */
 async function issueOtp(userId, contact, purpose = 'signup') {
@@ -58,9 +61,9 @@ async function issueOtp(userId, contact, purpose = 'signup') {
     codeVisible: code, // เก็บรหัส (plaintext) ให้แอดมินดูใน log — การยืนยันยังใช้ hash เสมอ
   });
 
-  // ส่งจริง + บันทึกผลลง log — ทำแบบไม่บล็อก response (ผู้ใช้ไม่ต้องรอ SMS)
-  if (purpose === 'password_reset') {
-    deliverOtpEmail(otpId, contact, code);
+  // ส่งจริง + บันทึกผลลง log — ทำแบบไม่บล็อก response (ผู้ใช้ไม่ต้องรอ SMS/อีเมล)
+  if (EMAIL_PURPOSES.has(purpose)) {
+    deliverOtpEmail(otpId, contact, code, purpose);
   } else {
     deliverOtpSms(otpId, contact, code, ttl);
   }
@@ -80,15 +83,16 @@ async function deliverOtpSms(otpId, phone, code, ttl) {
   }
 }
 
-/** ส่งอีเมล OTP (กู้รหัสผ่าน) + บันทึกผล — ช่องทางอีเมลทำงานอิสระจากโหมด dev */
-async function deliverOtpEmail(otpId, email, code) {
+/** ส่งอีเมล OTP (กู้รหัสผ่าน / ยืนยันอีเมล) + บันทึกผล — ช่องทางอีเมลทำงานอิสระจากโหมด dev */
+async function deliverOtpEmail(otpId, email, code, purpose = 'password_reset') {
+  const label = purpose === 'email_verify' ? 'รหัสยืนยันอีเมล' : 'OTP กู้รหัสผ่าน';
   try {
     if (!mailer.getSmtpConfig().configured) {
-      console.log(`🔐 [OTP กู้รหัสผ่าน — ยังไม่ได้ตั้งค่า SMTP] ${email}`);
+      console.log(`🔐 [${label} — ยังไม่ได้ตั้งค่า SMTP] ${email} → รหัส ${code}`);
       await db.setOtpNote(otpId, 'ยังไม่ได้ตั้งค่า SMTP — ไม่ได้ส่งอีเมลจริง');
       return;
     }
-    mailer.sendOtpEmail({ email, code });
+    mailer.sendOtpEmail({ email, code, purpose });
     await db.setOtpNote(otpId, 'ส่งอีเมล OTP แล้ว (ตรวจอินบ็อกซ์)');
   } catch (err) {
     await db.setOtpNote(otpId, 'ส่งอีเมลผิดพลาด: ' + String(err.message || err).slice(0, 200));

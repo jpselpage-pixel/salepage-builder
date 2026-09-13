@@ -88,7 +88,7 @@ async function initSchema() {
       id         BIGINT AUTO_INCREMENT PRIMARY KEY,
       user_id    BIGINT NOT NULL,
       code_hash  CHAR(64) NOT NULL,
-      phone      VARCHAR(30) NOT NULL,
+      phone      VARCHAR(255) NOT NULL,
       attempts   INT NOT NULL DEFAULT 0,
       used       TINYINT(1) NOT NULL DEFAULT 0,
       purpose    VARCHAR(20) NOT NULL DEFAULT 'signup',
@@ -391,6 +391,13 @@ async function initDb() {
       }
     }
     await setSetting('legacy_owner_promoted', 'true');
+  }
+
+  // ขยายคอลัมน์ผู้รับรหัส OTP ให้รองรับอีเมล (เดิม VARCHAR(30) ใส่อีเมลยาว ๆ ไม่ได้ ทำให้ส่ง OTP ทางอีเมลล้ม)
+  if (getSetting('otp_contact_widened') !== 'true') {
+    await pool.execute('ALTER TABLE otp_codes MODIFY phone VARCHAR(255) NOT NULL');
+    await setSetting('otp_contact_widened', 'true');
+    console.log('🔧 ขยายคอลัมน์ otp_codes.phone เป็น VARCHAR(255) เพื่อรองรับรหัส OTP ทางอีเมล');
   }
 }
 
