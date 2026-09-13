@@ -452,23 +452,39 @@
       text.textContent = code || '—';
     }
     // คืนสถานะที่ค้างไว้ตอนเปิด/รีเฟรชหน้า
-    function restorePending() {
+    async function restorePending() {
       let saved = null;
       try { saved = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null'); } catch { saved = null; }
       if (!saved || !saved.userId || !saved.savedAt) return;
       if (Date.now() - Number(saved.savedAt) > 24 * 60 * 60 * 1000) { clearPending(); return; } // เก่าเกินไป ทิ้ง
+      // คืนค่าอีเมล/เบอร์ + ติ๊กข้อกำหนด (ไม่กระตุ้น event เพื่อไม่ให้ถือว่า "แก้ข้อมูล" แล้วล้างขั้นตอน)
+      // ใช้ทั้งกรณีกลับมาที่ขั้นเดิม และกรณีต้องเริ่มสมัครใหม่ (จะได้ไม่ต้องพิมพ์ซ้ำทั้งหมด)
+      const prefill = () => {
+        if (saved.email) fields.email.value = saved.email;
+        if (saved.phone) fields.phone.value = saved.phone;
+        const t = document.getElementById('terms');
+        if (t) {
+          t.checked = true;
+          const te = document.getElementById('termsError');
+          if (te) te.style.display = 'none';
+        }
+      };
+      // ตรวจกับเซิร์ฟเวอร์ก่อน: ถ้าบัญชีถูกลบ/ถูกยกเลิกระหว่างทำขั้นตอน → กลับไปหน้าแบบฟอร์มทันที (ไม่ค้าง)
+      if (saved.email) {
+        try {
+          const res = await fetch('/api/check-email?email=' + encodeURIComponent(saved.email));
+          const info = await readJson(res);
+          if (info.ok && info.available && !info.pending) {
+            prefill();
+            clearPending();
+            showActionError('บัญชีนี้ถูกลบหรือถูกยกเลิกระหว่างทำขั้นตอน — กรุณาสมัครใหม่อีกครั้ง (ข้อมูลเดิมถูกกรอกไว้ให้แล้ว)');
+            return;
+          }
+        } catch { /* ตรวจไม่ได้ (เน็ต/เซิร์ฟเวอร์) → คืนค่าตามข้อมูลที่จำไว้ */ }
+      }
       pending = saved;
       pendingUserId = Number(saved.userId);
-      // คืนค่าช่องอีเมล/เบอร์ (ไม่กระตุ้น event เพื่อไม่ให้ถือว่า "แก้ข้อมูล" แล้วล้างขั้นตอน)
-      if (saved.email) fields.email.value = saved.email;
-      if (saved.phone) fields.phone.value = saved.phone;
-      // ผู้ใช้ยอมรับข้อกำหนดไปแล้วตอนกด "ขอ OTP" → คืนค่าให้ ไม่ต้องติ๊กซ้ำหลังรีเฟรช
-      const termsBox = document.getElementById('terms');
-      if (termsBox) {
-        termsBox.checked = true;
-        const termsErr = document.getElementById('termsError');
-        if (termsErr) termsErr.style.display = 'none';
-      }
+      prefill();
       // รหัสผ่านไม่ถูกเก็บไว้ (ความปลอดภัย) → ถ้าช่องว่าง ให้บอกผู้ใช้ตรงจุดว่าต้องกรอกอีกครั้ง
       const pwHint = document.getElementById('passwordRestoreHint');
       if (pwHint) pwHint.style.display = fields.password.value ? 'none' : 'block';
@@ -649,6 +665,11 @@
       sendOtpBtn.textContent = 'กำลังส่ง...';
 
       try {
+        // เซิร์ฟเวอร์กันบอทที่ส่งฟอร์มเร็วเกินไป (2 วินาทีแรกหลังเปิดหน้า) → รอให้ครบก่อนยิงจริง
+        // จำเป็นมากหลังรีเฟรช เพราะข้อมูลถูกเติมไว้ให้แล้ว ผู้ใช้อาจกดขอ OTP เร็วมาก
+        const elapsed = Date.now() - (window.__formStart || 0);
+        if (elapsed < 2400) await new Promise((r) => setTimeout(r, 2400 - elapsed));
+
         const res = await fetch('/api/register', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
